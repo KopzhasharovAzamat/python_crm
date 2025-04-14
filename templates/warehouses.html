@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Склады</h2>
+    <a href="{% url 'warehouse_add' %}" class="btn btn-success mb-3">Добавить склад</a>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Товары</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for warehouse in warehouses %}
+                <tr>
+                    <td>{{ warehouse.name }}</td>
+                    <td>{{ warehouse.product_set.count }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

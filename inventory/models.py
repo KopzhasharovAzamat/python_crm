@@ -1,6 +1,9 @@
-import uuid
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
+import qrcode
+from django.core.files import File
+from io import BytesIO
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -24,13 +27,23 @@ class Product(models.Model):
     photo = models.ImageField(upload_to='products/', blank=True, null=True)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    def __str__(self):
-        return self.name
 
     def save(self, *args, **kwargs):
         if not self.unique_id:
             self.unique_id = str(uuid.uuid4())[:50]
         super().save(*args, **kwargs)
+        # Генерация QR-кода
+        qr = qrcode.QRCode()
+        qr.add_data(self.unique_id)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+        self.photo.save(f"qr_{self.unique_id}.png", File(buffer), save=False)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
 
 class Sale(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)

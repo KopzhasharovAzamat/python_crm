@@ -1,0 +1,9 @@
+/* static/css/style.css */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+.low-stock {
+    color: red;
+}

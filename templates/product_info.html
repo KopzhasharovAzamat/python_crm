@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Информация о товаре</h2>
+    <p>Название: {{ product.name }}</p>
+    <p>Остаток: {{ product.quantity }}</p>
+    <p>Цена: {{ product.selling_price }}</p>
+    <p>Склад: {{ warehouse.name }}</p>
+    <a href="{% url 'sale_create' product.id %}" class="btn btn-primary">Продать</a>
+{% endblock %}

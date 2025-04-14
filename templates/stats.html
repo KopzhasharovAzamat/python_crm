@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Статистика</h2>
+    <p>Выручка за день: {{ daily_revenue }}</p>
+    <p>Выручка за неделю: {{ weekly_revenue }}</p>
+    <p>Выручка за месяц: {{ monthly_revenue }}</p>
+    {% if top_product %}
+        <p>Самый продаваемый товар: {{ top_product.product__name }} ({{ top_product.total }} шт)</p>
+    {% endif %}
+{% endblock %}

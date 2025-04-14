@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Админ-панель</h2>
+    <h3>Пользователи</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Имя</th>
+                <th>Дата регистрации</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+                <tr>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.first_name }}</td>
+                    <td>{{ user.date_joined }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h3>Категории</h3>
+    <ul>
+        {% for cat in categories %}
+            <li>{{ cat.name }}</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

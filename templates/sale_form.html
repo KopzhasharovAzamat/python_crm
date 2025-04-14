@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Продажа: {{ product.name }}</h2>
+    <p>Остаток: {{ product.quantity }}</p>
+    <p>Базовая цена: {{ product.selling_price }}</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Продать</button>
+    </form>
+{% endblock %}
