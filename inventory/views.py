@@ -299,6 +299,114 @@ def warehouse_delete(request, warehouse_id):
 ############
 
 @login_required
+def sales_list(request):
+    # Получаем все продажи текущего пользователя
+    sales = Sale.objects.filter(owner=request.user)
+
+    # Фильтры
+    product_name = request.GET.get('product_name', '')
+    warehouse = request.GET.get('warehouse', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    min_amount = request.GET.get('min_amount', '')
+    max_amount = request.GET.get('max_amount', '')
+    min_quantity = request.GET.get('min_quantity', '')
+    max_quantity = request.GET.get('max_quantity', '')
+    sort_by = request.GET.get('sort_by', '')
+
+    # Фильтрация по названию товара
+    if product_name:
+        sales = sales.filter(product__name__icontains=product_name)
+
+    # Фильтрация по складу
+    if warehouse:
+        sales = sales.filter(product__warehouse__name=warehouse)
+
+    # Фильтрация по дате
+    if date_from:
+        try:
+            date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
+            sales = sales.filter(date__gte=date_from)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
+    if date_to:
+        try:
+            date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d')
+            # Добавляем 1 день, чтобы включить выбранный день
+            date_to = date_to + timedelta(days=1)
+            sales = sales.filter(date__lt=date_to)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
+
+    # Фильтрация по сумме
+    if min_amount:
+        try:
+            min_amount = float(min_amount)
+            sales = sales.filter(actual_price_total__gte=min_amount)
+        except ValueError:
+            messages.error(request, 'Минимальная сумма должна быть числом.')
+    if max_amount:
+        try:
+            max_amount = float(max_amount)
+            sales = sales.filter(actual_price_total__lte=max_amount)
+        except ValueError:
+            messages.error(request, 'Максимальная сумма должна быть числом.')
+
+    # Фильтрация по количеству
+    if min_quantity:
+        try:
+            min_quantity = int(min_quantity)
+            sales = sales.filter(quantity__gte=min_quantity)
+        except ValueError:
+            messages.error(request, 'Минимальное количество должно быть целым числом.')
+    if max_quantity:
+        try:
+            max_quantity = int(max_quantity)
+            sales = sales.filter(quantity__lte=max_quantity)
+        except ValueError:
+            messages.error(request, 'Максимальное количество должно быть целым числом.')
+
+    # Сортировка
+    allowed_sort_fields = [
+        'date', '-date',
+        'product__name', '-product__name',
+        'quantity', '-quantity',
+        'product__warehouse__name', '-product__warehouse__name',
+        'actual_price_total', '-actual_price_total'
+    ]
+    if sort_by in allowed_sort_fields:
+        sales = sales.order_by(sort_by)
+    else:
+        # По умолчанию сортировка по дате (сначала новые)
+        sales = sales.order_by('-date')
+
+    # Получаем список складов для фильтра
+    warehouses = Warehouse.objects.filter(owner=request.user)
+
+    return render(request, 'sales_list.html', {
+        'sales': sales,
+        'warehouses': warehouses,
+        'product_name': product_name,
+        'warehouse': warehouse,
+        'date_from': date_from,
+        'date_to': date_to,
+        'min_amount': min_amount,
+        'max_amount': max_amount,
+        'min_quantity': min_quantity,
+        'max_quantity': max_quantity,
+        'sort_by': sort_by,
+    })
+
+@login_required
+def sale_detail(request, sale_id):
+    sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
+    actual_price_per_unit = sale.actual_price_total / sale.quantity if sale.quantity > 0 else 0
+    return render(request, 'sale_detail.html', {
+        'sale': sale,
+        'actual_price_per_unit': actual_price_per_unit
+    })
+
+@login_required
 def sale_create(request, product_id):
     product = get_object_or_404(Product, id=product_id, owner=request.user)
     if request.method == 'POST':
@@ -329,7 +437,9 @@ def sale_create(request, product_id):
         form = SaleForm(initial={'actual_price': product.selling_price})
     return render(request, 'sale_form.html', {'form': form, 'product': product})
 
+############
 ### SCAN ###
+############
 
 @login_required
 def scan_product(request):

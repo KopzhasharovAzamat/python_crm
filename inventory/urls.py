@@ -35,6 +35,8 @@ urlpatterns = [
     path('subcategories/delete/<int:subcategory_id>/', views.subcategory_delete, name='subcategory_delete'),
 
     # Sale
+    path('sales/', views.sales_list, name='sales_list'),
+    path('sales/<int:sale_id>/detail/', views.sale_detail, name='sale_detail'),
     path('sales/<int:product_id>/', views.sale_create, name='sale_create'),
 
     # Scan

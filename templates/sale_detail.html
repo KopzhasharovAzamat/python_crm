@@ -1,0 +1,23 @@
+<!--templates/sale_detail.html-->
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="mb-4 animate__animated animate__fadeIn">Подробности продажи</h2>
+<div class="card shadow-sm animate__animated animate__fadeInUp">
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+        <h3 class="mb-0">Продажа #{{ sale.id }}</h3>
+    </div>
+    <div class="card-body">
+        <p><strong>Дата продажи:</strong> {{ sale.date }}</p>
+        <p><strong>Товар:</strong> {{ sale.product.name }}</p>
+        <p><strong>Категория:</strong> {{ sale.product.category.name|default:"Не указана" }}</p>
+        <p><strong>Подкатегория:</strong> {{ sale.product.subcategory.name|default:"Не указана" }}</p>
+        <p><strong>Склад:</strong> {{ sale.product.warehouse.name }}</p>
+        <p><strong>Количество:</strong> {{ sale.quantity }}</p>
+        <p><strong>Базовая цена за единицу:</strong> {{ sale.product.selling_price }} ₽</p>
+        <p><strong>Базовая общая сумма:</strong> {{ sale.base_price_total }} ₽</p>
+        <p><strong>Фактическая цена за единицу:</strong> {{ actual_price_per_unit|floatformat:2 }} ₽</p>
+        <p><strong>Фактическая общая сумма:</strong> {{ sale.actual_price_total }} ₽</p>
+        <a href="{% url 'sales_list' %}" class="btn btn-secondary mt-3">Назад к списку продаж</a>
+    </div>
+</div>
+{% endblock %}
