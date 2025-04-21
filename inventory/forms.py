@@ -42,7 +42,7 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].queryset = Category.objects.all()  # Только категории
+        self.fields['category'].queryset = Category.objects.all()
         self.fields['subcategory'].queryset = Subcategory.objects.none()
         if 'category' in self.data:
             try:

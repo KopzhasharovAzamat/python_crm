@@ -89,20 +89,53 @@ def profile(request):
 def product_list(request):
     query = request.GET.get('q', '')
     category = request.GET.get('category', '')
+    subcategory = request.GET.get('subcategory', '')
+    warehouse = request.GET.get('warehouse', '')
     min_quantity = request.GET.get('min_quantity', '')
+    sort_by = request.GET.get('sort_by', '')
+
     products = Product.objects.filter(owner=request.user)
+
+    # Фильтрация
     if query:
         products = products.filter(Q(name__icontains=query) | Q(subcategory__name__icontains=query))
     if category:
         products = products.filter(category__name=category)
+    if subcategory:
+        products = products.filter(subcategory__name=subcategory)
+    if warehouse:
+        products = products.filter(warehouse__name=warehouse)
     if min_quantity:
         products = products.filter(quantity__gte=min_quantity)
+
+    # Сортировка
+    if sort_by:
+        # Разрешаем только определённые поля для сортировки
+        allowed_sort_fields = [
+            'name', '-name',
+            'category__name', '-category__name',
+            'subcategory__name', '-subcategory__name',
+            'selling_price', '-selling_price',
+            'quantity', '-quantity',
+            'warehouse__name', '-warehouse__name'
+        ]
+        if sort_by in allowed_sort_fields:
+            products = products.order_by(sort_by)
+        else:
+            # По умолчанию сортировка по названию
+            products = products.order_by('name')
+
     categories = Category.objects.all()
+    subcategories = Subcategory.objects.all()
+    warehouses = Warehouse.objects.filter(owner=request.user)
     low_stock_message = request.session.pop('low_stock', None)
+
     return render(request, 'products.html', {
         'products': products,
         'categories': categories,
-        'low_stock_message': low_stock_message
+        'subcategories': subcategories,
+        'warehouses': warehouses,
+        'low_stock_message': low_stock_message,
     })
 
 @login_required

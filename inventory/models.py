@@ -33,21 +33,23 @@ class Product(models.Model):
     quantity = models.PositiveIntegerField(default=0)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
-    photo = models.ImageField(upload_to='products/', blank=True, null=True)
+    photo = models.ImageField(upload_to='products/photos/', blank=True, null=True)  # Для изображения товара
+    qr_code = models.ImageField(upload_to='products/qr_codes/', blank=True, null=True)  # Для QR-кода
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if not self.unique_id:
             self.unique_id = str(uuid.uuid4())[:50]
+        # Генерация и сохранение QR-кода
         qr = qrcode.QRCode()
         qr.add_data(self.unique_id)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
         buffer = BytesIO()
         img.save(buffer, format="PNG")
-        self.photo.save(f"qr_{self.unique_id}.png", File(buffer), save=False)
-        super().save(*args, **kwargs)  # Single save
+        self.qr_code.save(f"qr_{self.unique_id}.png", File(buffer), save=False)
+        super().save(*args, **kwargs)
         if self.quantity < 5:
             if hasattr(self, 'request'):
                 self.request.session['low_stock'] = f"Товар {self.name} заканчивается (осталось {self.quantity})"

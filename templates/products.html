@@ -3,12 +3,14 @@
 {% block content %}
 <h2 class="mb-4 animate__animated animate__fadeIn">Товары</h2>
 <a href="{% url 'product_add' %}" class="btn btn-success mb-4"><i class="fas fa-plus"></i> Добавить товар</a>
+
+<!-- Форма фильтров и сортировки -->
 <form method="get" class="mb-4">
     <div class="row g-3">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <input type="text" name="q" placeholder="Поиск..." value="{{ request.GET.q }}" class="form-control">
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <select name="category" class="form-control">
                 <option value="">Все категории</option>
                 {% for cat in categories %}
@@ -16,20 +18,56 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
+            <select name="subcategory" class="form-control">
+                <option value="">Все подкатегории</option>
+                {% for subcat in subcategories %}
+                <option value="{{ subcat.name }}" {% if request.GET.subcategory == subcat.name %}selected{% endif %}>{{ subcat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="warehouse" class="form-control">
+                <option value="">Все склады</option>
+                {% for wh in warehouses %}
+                <option value="{{ wh.name }}" {% if request.GET.warehouse == wh.name %}selected{% endif %}>{{ wh.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
             <input type="number" name="min_quantity" placeholder="Мин. остаток" value="{{ request.GET.min_quantity }}" class="form-control">
         </div>
         <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Фильтр</button>
+            <select name="sort_by" class="form-control">
+                <option value="">Сортировать...</option>
+                <option value="name" {% if request.GET.sort_by == 'name' %}selected{% endif %}>По названию (А-Я)</option>
+                <option value="-name" {% if request.GET.sort_by == '-name' %}selected{% endif %}>По названию (Я-А)</option>
+                <option value="category__name" {% if request.GET.sort_by == 'category__name' %}selected{% endif %}>По категории (А-Я)</option>
+                <option value="-category__name" {% if request.GET.sort_by == '-category__name' %}selected{% endif %}>По категории (Я-А)</option>
+                <option value="subcategory__name" {% if request.GET.sort_by == 'subcategory__name' %}selected{% endif %}>По подкатегории (А-Я)</option>
+                <option value="-subcategory__name" {% if request.GET.sort_by == '-subcategory__name' %}selected{% endif %}>По подкатегории (Я-А)</option>
+                <option value="selling_price" {% if request.GET.sort_by == 'selling_price' %}selected{% endif %}>По цене (возр.)</option>
+                <option value="-selling_price" {% if request.GET.sort_by == '-selling_price' %}selected{% endif %}>По цене (убыв.)</option>
+                <option value="quantity" {% if request.GET.sort_by == 'quantity' %}selected{% endif %}>По количеству (возр.)</option>
+                <option value="-quantity" {% if request.GET.sort_by == '-quantity' %}selected{% endif %}>По количеству (убыв.)</option>
+                <option value="warehouse__name" {% if request.GET.sort_by == 'warehouse__name' %}selected{% endif %}>По складу (А-Я)</option>
+                <option value="-warehouse__name" {% if request.GET.sort_by == '-warehouse__name' %}selected{% endif %}>По складу (Я-А)</option>
+            </select>
+        </div>
+        <div class="col-md-1 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-fill"><i class="fas fa-filter"></i> Фильтр</button>
+            <a href="{% url 'products' %}" class="btn btn-secondary flex-fill"><i class="fas fa-times"></i> Очистить</a>
         </div>
     </div>
 </form>
+
 {% if low_stock_message %}
 <div class="alert alert-warning alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
     {{ low_stock_message }}
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
+
 <div class="row row-cols-1 row-cols-md-3 g-4">
     {% for product in products %}
     <div class="col">
@@ -46,6 +84,7 @@
                 <p class="card-text">
                     <strong>Категория:</strong> {{ product.category|default:"Не указана" }}<br>
                     <strong>Подкатегория:</strong> {{ product.subcategory|default:"Не указана" }}<br>
+                    <strong>Склад:</strong> {{ product.warehouse.name }}<br>
                     <strong>Количество:</strong> {{ product.quantity }}<br>
                     <strong>Цена:</strong> {{ product.selling_price }} ₽
                 </p>
