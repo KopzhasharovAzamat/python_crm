@@ -425,6 +425,11 @@ def admin_panel(request):
             user.save()
             logger.info(f'User {user.username} blocked by admin {request.user.username}')
             messages.success(request, f'Пользователь {user.username} заблокирован.')
+        elif action == 'unblock':
+            user.is_active = True
+            user.save()
+            logger.info(f'User {user.username} unblocked by admin {request.user.username}')
+            messages.success(request, f'Пользователь {user.username} разблокирован.')
         elif action == 'delete':
             logger.info(f'User {user.username} deleted by admin {request.user.username}')
             user.delete()

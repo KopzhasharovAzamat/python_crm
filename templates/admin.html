@@ -34,9 +34,11 @@
                         <td>{{ user.is_active|yesno:"Активен,Заблокирован" }}</td>
                         <td>
                             {% if user.is_active %}
-                            <button class="btn btn-warning btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="block" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите заблокировать пользователя \"{{ user.username }}\"?"><i class="fas fa-lock"></i> Блокировать</button>
+                            <button class="btn btn-warning btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="block" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите заблокировать пользователя {{ user.username }}?"><i class="fas fa-lock"></i> Блокировать</button>
+                            {% else %}
+                            <button class="btn btn-success btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="unblock" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите разблокировать пользователя {{ user.username }}?"><i class="fas fa-unlock"></i> Разблокировать</button>
                             {% endif %}
-                            <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="delete" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите удалить пользователя \"{{ user.username }}\"?"><i class="fas fa-trash"></i> Удалить</button>
+                            <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="delete" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите удалить пользователя {{ user.username }}?"><i class="fas fa-trash"></i> Удалить</button>
                         </td>
                     </tr>
                     {% endfor %}
