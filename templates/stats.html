@@ -7,4 +7,29 @@
     {% if top_product %}
         <p>Самый продаваемый товар: {{ top_product.product__name }} ({{ top_product.total }} шт)</p>
     {% endif %}
+    <h3>Продажи по категориям</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Категория</th>
+                <th>Количество</th>
+                <th>Выручка</th>
+                {% if show_cost_price %}
+                    <th>Себестоимость</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in category_stats %}
+                <tr>
+                    <td>{{ stat.product__category__name }}</td>
+                    <td>{{ stat.total_quantity }}</td>
+                    <td>{{ stat.total_revenue }}</td>
+                    {% if show_cost_price %}
+                        <td>{{ stat.total_cost|default:"N/A" }}</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endblock %}

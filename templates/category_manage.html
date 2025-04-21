@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+    <h2>Управление категориями</h2>
+    <h3>Добавить категорию</h3>
+    <form method="post">
+        {% csrf_token %}
+        {{ category_form.as_p }}
+        <button type="submit" class="btn btn-primary">Добавить категорию</button>
+    </form>
+    <h3>Добавить подкатегорию</h3>
+    <form method="post">
+        {% csrf_token %}
+        {{ subcategory_form.as_p }}
+        <button type="submit" class="btn btn-primary">Добавить подкатегорию</button>
+    </form>
+    <h3>Существующие категории и подкатегории</h3>
+    <ul>
+        {% for category in categories %}
+            <li>
+                {{ category.name }}
+                <a href="{% url 'category_delete' category.id %}" class="btn btn-danger btn-sm">Удалить</a>
+                <ul>
+                    {% for subcategory in category.subcategories.all %}
+                        <li>
+                            {{ subcategory.name }}
+                            <a href="{% url 'subcategory_delete' subcategory.id %}" class="btn btn-danger btn-sm">Удалить</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

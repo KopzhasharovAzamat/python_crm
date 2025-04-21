@@ -1,3 +1,4 @@
+# inventory/models.py
 from django.db import models
 from django.contrib.auth.models import User
 import uuid
@@ -10,6 +11,14 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+class Subcategory(models.Model):
+    name = models.CharField(max_length=100)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
+    class Meta:
+        unique_together = ['name', 'category']
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
 class Warehouse(models.Model):
     name = models.CharField(max_length=100)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -20,7 +29,7 @@ class Product(models.Model):
     name = models.CharField(max_length=200)
     unique_id = models.CharField(max_length=50, unique=True, editable=False)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
-    subcategory = models.CharField(max_length=100, blank=True)
+    subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, blank=True)
     quantity = models.PositiveIntegerField(default=0)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -31,8 +40,6 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         if not self.unique_id:
             self.unique_id = str(uuid.uuid4())[:50]
-        super().save(*args, **kwargs)
-        # Генерация QR-кода
         qr = qrcode.QRCode()
         qr.add_data(self.unique_id)
         qr.make(fit=True)
@@ -40,7 +47,10 @@ class Product(models.Model):
         buffer = BytesIO()
         img.save(buffer, format="PNG")
         self.photo.save(f"qr_{self.unique_id}.png", File(buffer), save=False)
-        super().save(*args, **kwargs)
+        super().save(*args, **kwargs)  # Single save
+        if self.quantity < 5:
+            if hasattr(self, 'request'):
+                self.request.session['low_stock'] = f"Товар {self.name} заканчивается (осталось {self.quantity})"
 
     def __str__(self):
         return self.name
@@ -52,3 +62,7 @@ class Sale(models.Model):
     base_price_total = models.DecimalField(max_digits=10, decimal_places=2)
     actual_price_total = models.DecimalField(max_digits=10, decimal_places=2)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+
+class UserSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    hide_cost_price = models.BooleanField(default=False)

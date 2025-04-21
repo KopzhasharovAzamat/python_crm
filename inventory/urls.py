@@ -1,3 +1,4 @@
+# inventory/urls.py
 from django.urls import path
 from . import views
 
@@ -5,6 +6,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('register/', views.register, name='register'),
     path('logout/', views.logout_view, name='logout'),
+    path('profile/', views.profile, name='profile'),
     path('products/', views.product_list, name='products'),
     path('products/add/', views.product_add, name='product_add'),
     path('products/<int:product_id>/edit/', views.product_edit, name='product_edit'),
@@ -15,4 +17,7 @@ urlpatterns = [
     path('scan/', views.scan_product, name='scan_product'),
     path('stats/', views.stats, name='stats'),
     path('admin-panel/', views.admin_panel, name='admin_panel'),
+    path('categories/', views.category_manage, name='category_manage'),
+    path('categories/delete/<int:category_id>/', views.category_delete, name='category_delete'),
+    path('subcategories/delete/<int:subcategory_id>/', views.subcategory_delete, name='subcategory_delete'),
 ]

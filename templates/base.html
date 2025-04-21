@@ -1,3 +1,4 @@
+<!--templates/base.html-->
 {% load static %}
 <!DOCTYPE html>
 <html>
@@ -12,11 +13,13 @@
             <a class="navbar-brand" href="{% url 'products' %}">CRM System</a>
             <div class="navbar-nav">
                 {% if user.is_authenticated %}
+                    <a class="nav-link" href="{% url 'profile' %}">Профиль</a>
                     <a class="nav-link" href="{% url 'products' %}">Товары</a>
                     <a class="nav-link" href="{% url 'warehouses' %}">Склады</a>
                     <a class="nav-link" href="{% url 'stats' %}">Статистика</a>
                     {% if user.is_superuser %}
                         <a class="nav-link" href="{% url 'admin_panel' %}">Админка</a>
+                        <a class="nav-link" href="{% url 'category_manage' %}">Категории</a>
                     {% endif %}
                     <a class="nav-link" href="{% url 'logout' %}">Выйти ({{ user.first_name }})</a>
                 {% else %}

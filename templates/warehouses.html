@@ -2,20 +2,30 @@
 {% block content %}
     <h2>Склады</h2>
     <a href="{% url 'warehouse_add' %}" class="btn btn-success mb-3">Добавить склад</a>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Название</th>
-                <th>Товары</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for warehouse in warehouses %}
+    {% for warehouse in warehouses %}
+        <h3>{{ warehouse.name }}</h3>
+        <p>Всего товаров: {{ warehouse.product_set.count }}</p>
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>{{ warehouse.name }}</td>
-                    <td>{{ warehouse.product_set.count }}</td>
+                    <th>Товар</th>
+                    <th>Категория</th>
+                    <th>Подкатегория</th>
+                    <th>Остаток</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for product in warehouse.product_set.all %}
+                    <tr>
+                        <td>{{ product.name }}</td>
+                        <td>{{ product.category }}</td>
+                        <td>{{ product.subcategory }}</td>
+                        <td>{{ product.quantity }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% empty %}
+        <p>Склады отсутствуют.</p>
+    {% endfor %}
 {% endblock %}

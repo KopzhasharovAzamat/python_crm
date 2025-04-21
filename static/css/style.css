@@ -7,3 +7,9 @@ body {
 .low-stock {
     color: red;
 }
+.table-danger {
+    background-color: #f8d7da;
+}
+canvas {
+    max-width: 100%;
+}
