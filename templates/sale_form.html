@@ -1,11 +1,35 @@
+<!--templates/sale_form.html-->
 {% extends 'base.html' %}
 {% block content %}
-    <h2>Продажа: {{ product.name }}</h2>
-    <p>Остаток: {{ product.quantity }}</p>
-    <p>Базовая цена: {{ product.selling_price }}</p>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Продать</button>
-    </form>
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm animate__animated animate__fadeIn">
+            <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h3 class="mb-0">Продажа: {{ product.name }}</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Остаток:</strong> {{ product.quantity }}</p>
+                <p><strong>Базовая цена:</strong> {{ product.selling_price }} ₽</p>
+                {% if product.photo %}
+                <img src="{{ product.photo.url }}" class="img-fluid rounded mb-3" alt="{{ product.name }}" style="max-height: 150px;">
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="text-danger">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-shopping-cart"></i> Продать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

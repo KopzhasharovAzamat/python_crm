@@ -1,31 +1,52 @@
+<!--templates/warehouses.html-->
 {% extends 'base.html' %}
 {% block content %}
-    <h2>Склады</h2>
-    <a href="{% url 'warehouse_add' %}" class="btn btn-success mb-3">Добавить склад</a>
+<h2 class="mb-4 animate__animated animate__fadeIn">Склады</h2>
+<a href="{% url 'warehouse_add' %}" class="btn btn-success mb-4 animate__animated animate__fadeIn"><i class="fas fa-plus"></i> Добавить склад</a>
+{% if warehouses %}
+<div class="row row-cols-1 row-cols-md-2 g-4">
     {% for warehouse in warehouses %}
-        <h3>{{ warehouse.name }}</h3>
-        <p>Всего товаров: {{ warehouse.product_set.count }}</p>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Товар</th>
-                    <th>Категория</th>
-                    <th>Подкатегория</th>
-                    <th>Остаток</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for product in warehouse.product_set.all %}
-                    <tr>
-                        <td>{{ product.name }}</td>
-                        <td>{{ product.category }}</td>
-                        <td>{{ product.subcategory }}</td>
-                        <td>{{ product.quantity }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% empty %}
-        <p>Склады отсутствуют.</p>
+    <div class="col">
+        <div class="card shadow-sm animate__animated animate__fadeInUp">
+            <div class="card-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE); color: #2D3748;">
+                <h5 class="mb-0">{{ warehouse.name }}</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Всего товаров:</strong> {{ warehouse.product_set.count }}</p>
+                {% if warehouse.product_set.exists %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Категория</th>
+                                <th>Подкатегория</th>
+                                <th>Остаток</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in warehouse.product_set.all %}
+                            <tr>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.category|default:"Не указана" }}</td>
+                                <td>{{ product.subcategory|default:"Не указана" }}</td>
+                                <td>{{ product.quantity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Товары отсутствуют.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
     {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info animate__animated animate__fadeIn">
+    Склады отсутствуют. Нажмите "Добавить склад", чтобы создать новый.
+</div>
+{% endif %}
 {% endblock %}

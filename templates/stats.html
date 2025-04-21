@@ -1,35 +1,61 @@
+<!--templates/stats.html-->
 {% extends 'base.html' %}
 {% block content %}
-    <h2>Статистика</h2>
-    <p>Выручка за день: {{ daily_revenue }}</p>
-    <p>Выручка за неделю: {{ weekly_revenue }}</p>
-    <p>Выручка за месяц: {{ monthly_revenue }}</p>
-    {% if top_product %}
-        <p>Самый продаваемый товар: {{ top_product.product__name }} ({{ top_product.total }} шт)</p>
-    {% endif %}
-    <h3>Продажи по категориям</h3>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Категория</th>
-                <th>Количество</th>
-                <th>Выручка</th>
-                {% if show_cost_price %}
-                    <th>Себестоимость</th>
-                {% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for stat in category_stats %}
-                <tr>
-                    <td>{{ stat.product__category__name }}</td>
-                    <td>{{ stat.total_quantity }}</td>
-                    <td>{{ stat.total_revenue }}</td>
-                    {% if show_cost_price %}
-                        <td>{{ stat.total_cost|default:"N/A" }}</td>
-                    {% endif %}
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<h2 class="mb-4 animate__animated animate__fadeIn">Статистика</h2>
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card shadow-sm animate__animated animate__fadeInUp">
+            <div class="card-body text-center">
+                <h5>Выручка за день</h5>
+                <p class="display-6">{{ daily_revenue }} ₽</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm animate__animated animate__fadeInUp">
+            <div class="card-body text-center">
+                <h5>Выручка за неделю</h5>
+                <p class="display-6">{{ weekly_revenue }} ₽</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm animate__animated animate__fadeInUp">
+            <div class="card-body text-center">
+                <h5>Выручка за месяц</h5>
+                <p class="display-6">{{ monthly_revenue }} ₽</p>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card shadow-sm mt-4 animate__animated animate__fadeInUp">
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+        <h3 class="mb-0">Динамика продаж по категориям</h3>
+    </div>
+    <div class="card-body">
+        <canvas id="categoryChart"></canvas>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for stat in category_stats %}'{{ stat.product__category__name }}',{% endfor %}],
+            datasets: [{
+                label: 'Выручка (₽)',
+                data: [{% for stat in category_stats %}{{ stat.total_revenue }},{% endfor %}],
+                backgroundColor: '#A3BFFA', /* Пастельный голубой */
+                borderColor: '#7F9CF5',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
 {% endblock %}

@@ -1,55 +1,73 @@
 <!-- templates/admin.html -->
 {% extends 'base.html' %}
 {% block content %}
-    <h2>Админ-панель</h2>
-    <h3>Общая статистика</h3>
-    <p>Всего товаров: {{ total_products }}</p>
-    <p>Всего складов: {{ total_warehouses }}</p>
-    <h3>Пользователи</h3>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Email</th>
-                <th>Имя</th>
-                <th>Дата регистрации</th>
-                <th>Статус</th>
-                <th>Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-                <tr>
-                    <td>{{ user.email }}</td>
-                    <td>{{ user.first_name }}</td>
-                    <td>{{ user.date_joined }}</td>
-                    <td>{{ user.is_active|yesno:"Активен,Заблокирован" }}</td>
-                    <td>
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="user_id" value="{{ user.id }}">
-                            {% if user.is_active %}
-                                <button type="submit" name="action" value="block" class="btn btn-warning">Блокировать</button>
-                            {% endif %}
-                            <button type="submit" name="action" value="delete" class="btn btn-danger">Удалить</button>
-                        </form>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <h3>Категории и подкатегории</h3>
-    <ul>
-        {% for cat in categories %}
-            <li>
-                {{ cat.name }}
-                {% if cat.subcategories.exists %}
-                    <ul>
-                        {% for subcat in cat.subcategories.all %}
-                            <li>{{ subcat.name }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
+<h2 class="mb-4 animate__animated animate__fadeIn">Админ-панель</h2>
+<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
+    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+        <h3 class="mb-0">Общая статистика</h3>
+    </div>
+    <div class="card-body">
+        <p><strong>Всего товаров:</strong> {{ total_products }}</p>
+        <p><strong>Всего складов:</strong> {{ total_warehouses }}</p>
+    </div>
+</div>
+<h3 class="mb-3 animate__animated animate__fadeIn">Пользователи</h3>
+<div class="card shadow-sm animate__animated animate__fadeInUp">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Имя</th>
+                        <th>Дата регистрации</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.first_name }}</td>
+                        <td>{{ user.date_joined }}</td>
+                        <td>{{ user.is_active|yesno:"Активен,Заблокирован" }}</td>
+                        <td>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                {% if user.is_active %}
+                                <button type="submit" name="action" value="block" class="btn btn-warning btn-sm"><i class="fas fa-lock"></i> Блокировать</button>
+                                {% endif %}
+                                <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<h3 class="mt-4 mb-3 animate__animated animate__fadeIn">Категории и подкатегории</h3>
+<div class="list-group animate__animated animate__fadeInUp">
+    {% for cat in categories %}
+    <div class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ cat.name }}</h5>
+            <a href="{% url 'category_delete' cat.id %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</a>
+        </div>
+        {% if cat.subcategories.exists %}
+        <ul class="list-group mt-2">
+            {% for subcat in cat.subcategories.all %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ subcat.name }}
+                <a href="{% url 'subcategory_delete' subcat.id %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</a>
             </li>
-        {% endfor %}
-    </ul>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
 {% endblock %}

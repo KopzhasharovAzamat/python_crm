@@ -1,15 +1,285 @@
-/* static/css/style.css */
+/* staticfiles/css/style.css */
+/* Подключение шрифта Poppins */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
+/* Общие стили */
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
+    font-family: 'Poppins', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+    background-color: #F5F7FA; /* Пастельный молочный фон */
+    color: #2D3748; /* Темный текст */
 }
-.low-stock {
-    color: red;
+
+body.dark-theme {
+    background-color: #2D3748; /* Темный серо-синий фон */
+    color: #E2E8F0; /* Светлый текст */
 }
-.table-danger {
-    background-color: #f8d7da;
+
+/* Все текстовые элементы в темной теме */
+body.dark-theme h1,
+body.dark-theme h2,
+body.dark-theme h3,
+body.dark-theme h4,
+body.dark-theme h5,
+body.dark-theme h6,
+body.dark-theme p,
+body.dark-theme a,
+body.dark-theme label,
+body.dark-theme button,
+body.dark-theme .nav-link,
+body.dark-theme .card-title,
+body.dark-theme .card-text,
+body.dark-theme .form-label,
+body.dark-theme .table,
+body.dark-theme th,
+body.dark-theme td {
+    color: #E2E8F0 !important; /* Принудительно светлый текст */
 }
-canvas {
-    max-width: 100%;
+
+/* Элементы в темной теме */
+body.dark-theme .card,
+body.dark-theme .alert,
+body.dark-theme .form-control,
+body.dark-theme .list-group-item,
+body.dark-theme .table {
+    background-color: #4A5568; /* Темная карточка */
+    color: #E2E8F0;
+    border-color: #718096; /* Серо-синий бордер */
+}
+
+body.dark-theme .btn-primary {
+    background-color: #7F9CF5; /* Темный пастельный голубой */
+    border-color: #7F9CF5;
+    color: #E2E8F0;
+}
+
+body.dark-theme .btn-primary:hover {
+    background-color: #667EEA; /* Более темный голубой */
+    border-color: #667EEA;
+}
+
+body.dark-theme .navbar {
+    background-color: #1A202C; /* Очень темный фон навигации */
+}
+
+body.dark-theme .card-header {
+    background-color: #7F9CF5; /* Пастельный голубой заголовок */
+    color: #E2E8F0;
+}
+
+/* Навигация */
+.navbar {
+    background-color: #A3BFFA; /* Пастельный голубой */
+    transition: background-color 0.3s;
+}
+
+.navbar .nav-link {
+    color: #2D3748;
+}
+
+.navbar .nav-link:hover {
+    color: #FBB6CE; /* Пастельный розовый при наведении */
+    transition: color 0.3s;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    color: #2D3748 !important;
+}
+
+/* Кнопка смены темы */
+#theme-toggle {
+    border-color: #A3BFFA; /* Пастельный голубой */
+    color: #A3BFFA;
+}
+
+body.dark-theme #theme-toggle {
+    border-color: #F6E05E; /* Пастельный желтый */
+    color: #F6E05E;
+}
+
+/* Карточки */
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-radius: 12px;
+    border: none;
+    background-color: #FFFFFF; /* Белая карточка в светлой теме */
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #A3BFFA; /* Пастельный голубой заголовок */
+    color: #2D3748;
+    border-radius: 12px 12px 0 0;
+}
+
+.card-img-top {
+    height: 200px;
+    object-fit: contain; /* Исправление для QR-кодов */
+    background-color: #FFFFFF; /* Белый фон для QR-кодов */
+    padding: 10px;
+}
+
+/* Формы */
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #CBD5E0; /* Светло-серый бордер */
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background-color: #EDF2F7; /* Очень светлый пастельный фон */
+    color: #2D3748;
+}
+
+body.dark-theme .form-control {
+    background-color: #718096; /* Темный серый фон для форм */
+    border-color: #A0AEC0;
+    color: #E2E8F0;
+}
+
+.form-control:focus {
+    border-color: #FBB6CE; /* Пастельный розовый при фокусе */
+    box-shadow: 0 0 8px rgba(251, 182, 206, 0.3);
+}
+
+.form-label {
+    font-weight: 500;
+    color: #2D3748;
+}
+
+body.dark-theme .form-label {
+    color: #E2E8F0;
+}
+
+/* Кнопки */
+.btn {
+    border-radius: 8px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.btn-primary {
+    background-color: #A3BFFA; /* Пастельный голубой */
+    border-color: #A3BFFA;
+    color: #2D3748;
+}
+
+.btn-primary:hover {
+    background-color: #7F9CF5; /* Темнее голубой */
+    border-color: #7F9CF5;
+    transform: scale(1.05);
+}
+
+.btn-success {
+    background-color: #9AE6B4; /* Пастельный зеленый */
+    border-color: #9AE6B4;
+    color: #2D3748;
+}
+
+.btn-success:hover {
+    background-color: #68D391;
+    border-color: #68D391;
+}
+
+.btn-danger {
+    background-color: #FEB2B2; /* Пастельный красный */
+    border-color: #FEB2B2;
+    color: #2D3748;
+}
+
+.btn-danger:hover {
+    background-color: #F56565;
+    border-color: #F56565;
+}
+
+/* Таблицы */
+.table {
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    color: #2D3748;
+}
+
+body.dark-theme .table {
+    background-color: #4A5568; /* Темный фон таблицы */
+}
+
+body.dark-theme .table thead th {
+    background-color: #718096; /* Темный заголовок таблицы */
+    color: #E2E8F0;
+}
+
+body.dark-theme .table tbody tr {
+    background-color: #4A5568;
+    color: #E2E8F0;
+}
+
+body.dark-theme .table-hover tbody tr:hover {
+    background-color: #718096; /* Темный фон при наведении */
+}
+
+.table-hover tbody tr:hover {
+    background-color: #EDF2F7; /* Светлый фон при наведении */
+}
+
+/* Списки */
+.list-group-item {
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background-color: #FFFFFF;
+}
+
+body.dark-theme .list-group-item {
+    background-color: #4A5568;
+}
+
+/* Анимация загрузки */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.container {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Адаптивность */
+@media (max-width: 576px) {
+    .card {
+        margin-bottom: 1.5rem;
+    }
+    .navbar-nav {
+        text-align: center;
+    }
+    .form-control {
+        font-size: 0.9rem;
+    }
+}
+
+
+.card-img-top {
+    height: 200px;
+    object-fit: contain;
+    background-color: #FFFFFF;
+    padding: 10px;
+}
+
+/* Алерт */
+.alert {
+    border-radius: 8px;
+    background-color: #E6FFFA; /* Пастельный мятный для алертов */
+    color: #2D3748;
+}
+
+body.dark-theme .alert {
+    background-color: #4A5568;
+    color: #E2E8F0;
+}
+
+.alert-warning {
+    background-color: #FEF3C7; /* Пастельный желтый */
+}
+
+body.dark-theme .alert-warning {
+    background-color: #D69E2E;
 }

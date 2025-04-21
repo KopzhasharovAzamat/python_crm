@@ -163,20 +163,20 @@ def sale_create(request, product_id):
         form = SaleForm(request.POST)
         if form.is_valid():
             sale = form.save(commit=False)
-            if sale.quantity > product.quantity:
-                messages.error(request, 'Недостаточно товара на складе')
-                return render(request, 'sale_form.html', {'form': form, 'product': product})
             sale.product = product
             sale.owner = request.user
-            sale.base_price_total = product.selling_price * sale.quantity
-            sale.actual_price_total = form.cleaned_data['actual_price'] * sale.quantity if form.cleaned_data['actual_price'] else sale.base_price_total
-            product.quantity -= sale.quantity
-            product.request = request  # Для уведомлений
-            product.save()
-            sale.save()
-            return redirect('products')
+            sale.actual_price_total = sale.quantity * (form.cleaned_data['actual_price'] or product.selling_price)
+            if sale.quantity <= product.quantity:
+                product.quantity -= sale.quantity
+                product.save()
+                sale.save()
+                logger.info(f'Sale of {sale.quantity} {product.name} by {request.user.username}')
+                messages.success(request, f'Продажа товара "{product.name}" на {sale.quantity} шт. успешно завершена!')
+                return redirect('products')
+            else:
+                form.add_error('quantity', 'Недостаточно товара на складе.')
     else:
-        form = SaleForm()
+        form = SaleForm(initial={'actual_price': product.selling_price})
     return render(request, 'sale_form.html', {'form': form, 'product': product})
 
 @login_required
@@ -187,6 +187,7 @@ def scan_product(request):
         return render(request, 'product_info.html', {
             'product': product,
             'warehouse': product.warehouse,
+            'form': SaleForm()  # Форма для продажи
         })
     except Product.DoesNotExist:
         return render(request, 'error.html', {'message': 'Товар не найден'})

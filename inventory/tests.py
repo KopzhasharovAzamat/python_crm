@@ -375,3 +375,39 @@ class LoggingTestCase(TestCase):
         with open(self.log_file, 'r') as f:
             log_content = f.read()
         self.assertIn('Category New Category added by admin admin', log_content)
+
+
+class ScanAndSaleTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.category = Category.objects.create(name='Процессоры')
+        self.subcategory = Subcategory.objects.create(name='Intel', category=self.category)
+        self.warehouse = Warehouse.objects.create(name='Склад 1', owner=self.user)
+        self.product = Product.objects.create(
+            name='Core i9',
+            category=self.category,
+            subcategory=self.subcategory,
+            quantity=10,
+            selling_price=500,
+            warehouse=self.warehouse,
+            owner=self.user
+        )
+        self.client.login(username='testuser', password='testpass')
+
+    def test_scan_product(self):
+        response = self.client.get(reverse('scan_product'), {'code': self.product.unique_id})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.product.name)
+        self.assertContains(response, str(self.product.selling_price))
+        self.assertContains(response, self.warehouse.name)
+
+    def test_sale_with_custom_price(self):
+        response = self.client.post(
+            reverse('sale_create', args=[self.product.id]),
+            {'quantity': 2, 'actual_price': 400}
+        )
+        self.assertEqual(response.status_code, 302)  # Редирект на /products/
+        sale = Sale.objects.get(product=self.product)
+        self.assertEqual(sale.quantity, 2)
+        self.assertEqual(sale.actual_price_total, 800)  # 400 * 2
+        self.assertEqual(self.product.quantity, 8)  # 10 - 2
