@@ -25,6 +25,7 @@ class UserSettingsForm(forms.ModelForm):
         model = UserSettings
         fields = ['hide_cost_price']
 
+
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
@@ -36,22 +37,30 @@ class ProductForm(forms.ModelForm):
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'cost_price': forms.NumberInput(attrs={'class': 'form-control'}),
             'selling_price': forms.NumberInput(attrs={'class': 'form-control'}),
-            'photo': forms.FileInput(attrs={'class': 'form-control'}),
+            'photo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'warehouse': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['category'].queryset = Category.objects.all()
-        self.fields['subcategory'].queryset = Subcategory.objects.none()
+
+        # Инициализация подкатегорий
+        if self.instance and self.instance.pk and self.instance.category:
+            # Если редактируем товар, загружаем подкатегории для текущей категории
+            self.fields['subcategory'].queryset = Subcategory.objects.filter(category=self.instance.category)
+        else:
+            # Если добавляем новый товар, оставляем подкатегории пустыми
+            self.fields['subcategory'].queryset = Subcategory.objects.none()
+
+        # Если это POST-запрос и категория изменилась
         if 'category' in self.data:
             try:
                 category_id = int(self.data.get('category'))
                 self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id)
             except (ValueError, TypeError):
-                pass
-        elif self.instance.pk and self.instance.category:
-            self.fields['subcategory'].queryset = Subcategory.objects.filter(category=self.instance.category)
+                self.fields['subcategory'].queryset = Subcategory.objects.none()
+
 
 class WarehouseForm(forms.ModelForm):
     class Meta:

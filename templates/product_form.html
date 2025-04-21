@@ -18,6 +18,12 @@
                             {% if field.errors %}
                             <div class="text-danger">{{ field.errors }}</div>
                             {% endif %}
+                            {% if field.name == 'photo' and form.instance.photo %}
+                            <div class="mt-2">
+                                <p>Текущее изображение:</p>
+                                <img src="{{ form.instance.photo.url }}" alt="Текущее изображение" style="max-width: 200px; max-height: 200px;">
+                            </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>
@@ -50,9 +56,9 @@
     const csrftoken = getCookie('csrftoken');
 
     $(document).ready(function() {
-        $('#id_category').change(function() {
-            var categoryId = $(this).val();
-            console.log('Selected category ID:', categoryId);
+        // Функция для загрузки подкатегорий
+        function loadSubcategories(categoryId) {
+            console.log('Loading subcategories for category ID:', categoryId);
             $.ajax({
                 url: '{% url 'get_subcategories' %}',
                 type: 'GET',
@@ -68,18 +74,27 @@
                     $subcategory.empty();
                     $subcategory.append('<option value="">---------</option>');
                     $.each(data.subcategories, function(index, subcategory) {
-                        $subcategory.append('<option value="' + subcategory.id + '">' + subcategory.name + '</option>');
+                        var selected = (subcategory.id == '{{ form.instance.subcategory.id }}') ? 'selected' : '';
+                        $subcategory.append('<option value="' + subcategory.id + '" ' + selected + '>' + subcategory.name + '</option>');
                     });
                 },
                 error: function(xhr, status, error) {
                     console.error('AJAX error:', status, error);
                 }
             });
+        }
+
+        // При изменении категории
+        $('#id_category').change(function() {
+            var categoryId = $(this).val();
+            loadSubcategories(categoryId);
         });
 
-        if ($('#id_category').val()) {
+        // При загрузке страницы
+        var initialCategoryId = $('#id_category').val();
+        if (initialCategoryId) {
             console.log('Triggering initial subcategory load');
-            $('#id_category').trigger('change');
+            loadSubcategories(initialCategoryId);
         }
     });
 </script>
