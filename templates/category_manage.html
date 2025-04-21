@@ -1,33 +1,36 @@
+<!-- templates/category_manage.html -->
 {% extends 'base.html' %}
 {% block content %}
-    <h2>Управление категориями</h2>
-    <h3>Добавить категорию</h3>
-    <form method="post">
-        {% csrf_token %}
-        {{ category_form.as_p }}
-        <button type="submit" class="btn btn-primary">Добавить категорию</button>
-    </form>
-    <h3>Добавить подкатегорию</h3>
-    <form method="post">
-        {% csrf_token %}
-        {{ subcategory_form.as_p }}
-        <button type="submit" class="btn btn-primary">Добавить подкатегорию</button>
-    </form>
-    <h3>Существующие категории и подкатегории</h3>
-    <ul>
-        {% for category in categories %}
-            <li>
-                {{ category.name }}
-                <a href="{% url 'category_delete' category.id %}" class="btn btn-danger btn-sm">Удалить</a>
+<h2>Управление категориями</h2>
+<h3>Добавить категорию</h3>
+<form method="post">
+    {% csrf_token %}
+    {{ category_form.as_p }}
+    <button type="submit" name="add_category" class="btn btn-primary">Добавить категорию</button>
+</form>
+<h3>Добавить подкатегорию</h3>
+<form method="post">
+    {% csrf_token %}
+    {{ subcategory_form.as_p }}
+    <button type="submit" name="add_subcategory" class="btn btn-primary">Добавить подкатегорию</button>
+</form>
+<h3>Существующие категории и подкатегории</h3>
+<ul>
+    {% for cat in categories %}
+        <li>
+            {{ cat.name }}
+            <a href="{% url 'category_delete' cat.id %}" class="btn btn-sm btn-danger">Удалить</a>
+            {% if cat.subcategories.exists %}
                 <ul>
-                    {% for subcategory in category.subcategories.all %}
+                    {% for subcat in cat.subcategories.all %}
                         <li>
-                            {{ subcategory.name }}
-                            <a href="{% url 'subcategory_delete' subcategory.id %}" class="btn btn-danger btn-sm">Удалить</a>
+                            {{ subcat.name }}
+                            <a href="{% url 'subcategory_delete' subcat.id %}" class="btn btn-sm btn-danger">Удалить</a>
                         </li>
                     {% endfor %}
                 </ul>
-            </li>
-        {% endfor %}
-    </ul>
+            {% endif %}
+        </li>
+    {% endfor %}
+</ul>
 {% endblock %}

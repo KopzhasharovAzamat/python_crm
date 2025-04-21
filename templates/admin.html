@@ -1,3 +1,4 @@
+<!-- templates/admin.html -->
 {% extends 'base.html' %}
 {% block content %}
     <h2>Админ-панель</h2>
@@ -36,10 +37,19 @@
             {% endfor %}
         </tbody>
     </table>
-    <h3>Категории</h3>
+    <h3>Категории и подкатегории</h3>
     <ul>
         {% for cat in categories %}
-            <li>{{ cat.name }}</li>
+            <li>
+                {{ cat.name }}
+                {% if cat.subcategories.exists %}
+                    <ul>
+                        {% for subcat in cat.subcategories.all %}
+                            <li>{{ subcat.name }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </li>
         {% endfor %}
     </ul>
 {% endblock %}

@@ -20,4 +20,5 @@ urlpatterns = [
     path('categories/', views.category_manage, name='category_manage'),
     path('categories/delete/<int:category_id>/', views.category_delete, name='category_delete'),
     path('subcategories/delete/<int:subcategory_id>/', views.subcategory_delete, name='subcategory_delete'),
+    path('get-subcategories/', views.get_subcategories, name='get_subcategories'),
 ]

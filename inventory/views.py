@@ -10,7 +10,7 @@ from django.contrib import messages
 import logging
 from .forms import RegisterForm, LoginForm, ProductForm, WarehouseForm, SaleForm, UserChangeForm, UserSettingsForm, CategoryForm, SubcategoryForm
 from .models import Product, Warehouse, Sale, Category, Subcategory, UserSettings, User
-
+from django.http import JsonResponse
 
 logger = logging.getLogger('inventory')
 
@@ -246,18 +246,29 @@ def category_manage(request):
     if not request.user.is_superuser:
         return HttpResponseForbidden("You do not have permission to access this page.")
     if request.method == 'POST':
-        category_form = CategoryForm(request.POST)
-        subcategory_form = SubcategoryForm(request.POST)
-        if category_form.is_valid():
-            category_form.save()
-            logger.info(f'Category {category_form.cleaned_data["name"]} added by admin {request.user.username}')
-            messages.success(request, 'Категория добавлена.')
-            return redirect('category_manage')
-        elif subcategory_form.is_valid():
-            subcategory_form.save()
-            logger.info(f'Subcategory {subcategory_form.cleaned_data["name"]} added by admin {request.user.username}')
-            messages.success(request, 'Подкатегория добавлена.')
-            return redirect('category_manage')
+        if 'add_category' in request.POST:
+            category_form = CategoryForm(request.POST)
+            if category_form.is_valid():
+                category_form.save()
+                logger.info(f'Category {category_form.cleaned_data["name"]} added by admin {request.user.username}')
+                messages.success(request, 'Категория добавлена.')
+                return redirect('category_manage')
+            else:
+                messages.error(request, 'Ошибка при добавлении категории.')
+                subcategory_form = SubcategoryForm()  # Пустая форма для подкатегорий
+        elif 'add_subcategory' in request.POST:
+            subcategory_form = SubcategoryForm(request.POST)
+            if subcategory_form.is_valid():
+                subcategory_form.save()
+                logger.info(f'Subcategory {subcategory_form.cleaned_data["name"]} added by admin {request.user.username}')
+                messages.success(request, 'Подкатегория добавлена.')
+                return redirect('category_manage')
+            else:
+                messages.error(request, 'Ошибка при добавлении подкатегории.')
+                category_form = CategoryForm()  # Пустая форма для категорий
+        else:
+            category_form = CategoryForm()
+            subcategory_form = SubcategoryForm()
     else:
         category_form = CategoryForm()
         subcategory_form = SubcategoryForm()
@@ -285,3 +296,9 @@ def subcategory_delete(request, subcategory_id):
     logger.info(f'Subcategory {subcategory_name} deleted by admin {request.user.username}')
     messages.success(request, f'Подкатегория {subcategory_name} удалена.')
     return redirect('category_manage')
+
+@login_required
+def get_subcategories(request):
+    category_id = request.GET.get('category_id')
+    subcategories = Subcategory.objects.filter(category_id=category_id).values('id', 'name')
+    return JsonResponse({'subcategories': list(subcategories)})

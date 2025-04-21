@@ -29,19 +29,29 @@ class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
         fields = ['name', 'category', 'subcategory', 'quantity', 'cost_price', 'selling_price', 'photo', 'warehouse']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control', 'id': 'id_category'}),
+            'subcategory': forms.Select(attrs={'class': 'form-control', 'id': 'id_subcategory'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'cost_price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'selling_price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'photo': forms.FileInput(attrs={'class': 'form-control'}),
+            'warehouse': forms.Select(attrs={'class': 'form-control'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['category'].queryset = Category.objects.all()  # Только категории
+        self.fields['subcategory'].queryset = Subcategory.objects.none()
         if 'category' in self.data:
             try:
                 category_id = int(self.data.get('category'))
                 self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id)
             except (ValueError, TypeError):
-                self.fields['subcategory'].queryset = Subcategory.objects.none()
-        elif self.instance.pk and self.instance.subcategory:
+                pass
+        elif self.instance.pk and self.instance.category:
             self.fields['subcategory'].queryset = Subcategory.objects.filter(category=self.instance.category)
-        else:
-            self.fields['subcategory'].queryset = Subcategory.objects.none()
 
 class WarehouseForm(forms.ModelForm):
     class Meta:
@@ -63,3 +73,17 @@ class SubcategoryForm(forms.ModelForm):
     class Meta:
         model = Subcategory
         fields = ['name', 'category']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['category'].queryset = Category.objects.all()
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        if Category.objects.filter(name=name).exists():
+            raise forms.ValidationError("Это имя уже используется для категории.")
+        return name

@@ -1,9 +1,66 @@
+<!-- templates/product_form.html -->
 {% extends 'base.html' %}
 {% block content %}
-    <h2>{% if form.instance.id %}Редактировать товар{% else %}Добавить товар{% endif %}</h2>
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Сохранить</button>
-    </form>
+<h2>Добавить/Редактировать товар</h2>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+</form>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    // Функция для настройки CSRF-токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+
+    $(document).ready(function() {
+        $('#id_category').change(function() {
+            var categoryId = $(this).val();
+            console.log('Selected category ID:', categoryId);  // Отладка
+            $.ajax({
+                url: '{% url 'get_subcategories' %}',
+                type: 'GET',
+                data: {
+                    'category_id': categoryId
+                },
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-CSRFToken', csrftoken);  // Добавляем CSRF-токен
+                },
+                success: function(data) {
+                    console.log('Received subcategories:', data);  // Отладка
+                    var $subcategory = $('#id_subcategory');
+                    $subcategory.empty();
+                    $subcategory.append('<option value="">---------</option>');
+                    $.each(data.subcategories, function(index, subcategory) {
+                        $subcategory.append('<option value="' + subcategory.id + '">' + subcategory.name + '</option>');
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX error:', status, error);  // Отладка
+                }
+            });
+        });
+
+        // При загрузке страницы, если категория уже выбрана, загрузить подкатегории
+        if ($('#id_category').val()) {
+            console.log('Triggering initial subcategory load');  // Отладка
+            $('#id_category').trigger('change');
+        }
+    });
+</script>
 {% endblock %}

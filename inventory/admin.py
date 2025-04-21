@@ -1,3 +1,4 @@
+# inventory/admin.py
 from django.contrib import admin
 from .models import Category, Subcategory, Product, Warehouse, Sale, UserSettings
 
