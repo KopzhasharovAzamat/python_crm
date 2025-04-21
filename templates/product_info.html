@@ -1,101 +1,16 @@
 <!--templates/product_info.html-->
 {% extends 'base.html' %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h3 class="mb-0">{% if form.instance.pk %}Редактировать товар{% else %}Добавить товар{% endif %}</h3>
-            </div>
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <div class="row g-3">
-                        {% for field in form %}
-                        <div class="col-md-6">
-                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.errors %}
-                            <div class="text-danger">{{ field.errors }}</div>
-                            {% endif %}
-                            {% if field.name == 'photo' and form.instance.photo %}
-                            <div class="mt-2">
-                                <p>Текущее изображение:</p>
-                                <img src="{{ form.instance.photo.url }}" alt="Текущее изображение" style="max-width: 200px; max-height: 200px;">
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <div class="mt-4 text-end">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+<div class="container">
+    <h2>Информация о товаре</h2>
+    <p><strong>Название:</strong> {{ product.name }}</p>
+    <p><strong>Цена:</strong> {{ product.selling_price }}</p>
+    <p><strong>Склад:</strong> {{ warehouse.name }}</p>
+    <form method="post" action="{% url 'sale_create' product.id %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Продать</button>
+    </form>
 </div>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    const csrftoken = getCookie('csrftoken');
-
-    $(document).ready(function() {
-        // Функция для загрузки подкатегорий
-        function loadSubcategories(categoryId) {
-            console.log('Loading subcategories for category ID:', categoryId);
-            $.ajax({
-                url: '{% url 'get_subcategories' %}',
-                type: 'GET',
-                data: {
-                    'category_id': categoryId
-                },
-                beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-CSRFToken', csrftoken);
-                },
-                success: function(data) {
-                    console.log('Received subcategories:', data);
-                    var $subcategory = $('#id_subcategory');
-                    $subcategory.empty();
-                    $subcategory.append('<option value="">---------</option>');
-                    $.each(data.subcategories, function(index, subcategory) {
-                        var selected = (subcategory.id == '{{ form.instance.subcategory.id }}') ? 'selected' : '';
-                        $subcategory.append('<option value="' + subcategory.id + '" ' + selected + '>' + subcategory.name + '</option>');
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX error:', status, error);
-                }
-            });
-        }
-
-        // При изменении категории
-        $('#id_category').change(function() {
-            var categoryId = $(this).val();
-            loadSubcategories(categoryId);
-        });
-
-        // При загрузке страницы
-        var initialCategoryId = $('#id_category').val();
-        if (initialCategoryId) {
-            console.log('Triggering initial subcategory load');
-            loadSubcategories(initialCategoryId);
-        }
-    });
-</script>
 {% endblock %}
