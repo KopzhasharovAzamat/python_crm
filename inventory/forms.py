@@ -59,10 +59,15 @@ class WarehouseForm(forms.ModelForm):
         fields = ['name']
 
 class SaleForm(forms.ModelForm):
-    actual_price = forms.DecimalField(decimal_places=2, required=False)
+    actual_price = forms.DecimalField(decimal_places=2, required=False, label="Фактическая цена за единицу")
+
     class Meta:
         model = Sale
         fields = ['quantity', 'actual_price']
+        widgets = {
+            'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'actual_price': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
 
 class CategoryForm(forms.ModelForm):
     class Meta:

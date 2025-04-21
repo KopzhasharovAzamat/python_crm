@@ -217,7 +217,11 @@ def sale_create(request, product_id):
             sale = form.save(commit=False)
             sale.product = product
             sale.owner = request.user
-            sale.actual_price_total = sale.quantity * (form.cleaned_data['actual_price'] or product.selling_price)
+            # Рассчитываем base_price_total как quantity * product.selling_price
+            sale.base_price_total = sale.quantity * product.selling_price
+            # Рассчитываем actual_price_total
+            actual_price = form.cleaned_data['actual_price'] or product.selling_price
+            sale.actual_price_total = sale.quantity * actual_price
             if sale.quantity <= product.quantity:
                 product.quantity -= sale.quantity
                 product.save()

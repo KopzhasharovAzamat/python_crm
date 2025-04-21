@@ -9,11 +9,11 @@
             </div>
             <div class="card-body">
                 <p><strong>Остаток:</strong> {{ product.quantity }}</p>
-                <p><strong>Базовая цена:</strong> {{ product.selling_price }} ₽</p>
+                <p><strong>Базовая цена за единицу:</strong> {{ product.selling_price }} ₽</p>
                 {% if product.photo %}
                 <img src="{{ product.photo.url }}" class="img-fluid rounded mb-3" alt="{{ product.name }}" style="max-height: 150px;">
                 {% endif %}
-                <form method="post">
+                <form method="post" id="saleForm">
                     {% csrf_token %}
                     {% for field in form %}
                     <div class="mb-3">
@@ -24,6 +24,10 @@
                         {% endif %}
                     </div>
                     {% endfor %}
+                    <div class="mb-3">
+                        <label class="form-label">Итоговая цена:</label>
+                        <p id="totalPrice" class="form-text">0.00 ₽</p>
+                    </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary"><i class="fas fa-shopping-cart"></i> Продать</button>
                     </div>
@@ -32,4 +36,45 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const quantityInput = document.querySelector('#id_quantity');
+        const actualPriceInput = document.querySelector('#id_actual_price');
+        const totalPriceDisplay = document.querySelector('#totalPrice');
+        const basePricePerUnit = {{ product.selling_price }};
+
+        // Флаг для отслеживания, изменил ли пользователь actual_price вручную
+        let isActualPriceModified = false;
+
+        // Функция для пересчёта итоговой цены
+        function updateTotalPrice() {
+            const quantity = parseInt(quantityInput.value) || 0;
+            let actualPrice = parseFloat(actualPriceInput.value) || 0;
+
+            // Если пользователь не менял actual_price, используем базовую цену
+            if (!isActualPriceModified) {
+                actualPrice = basePricePerUnit;
+                actualPriceInput.value = actualPrice.toFixed(2);
+            }
+
+            const totalPrice = quantity * actualPrice;
+            totalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+        }
+
+        // Пересчёт при изменении количества
+        quantityInput.addEventListener('input', function() {
+            updateTotalPrice();
+        });
+
+        // Отслеживаем изменение actual_price пользователем
+        actualPriceInput.addEventListener('input', function() {
+            isActualPriceModified = true;
+            updateTotalPrice();
+        });
+
+        // Инициализация при загрузке страницы
+        updateTotalPrice();
+    });
+</script>
 {% endblock %}
