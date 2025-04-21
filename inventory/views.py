@@ -7,12 +7,9 @@ from django.http import HttpResponseForbidden
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib import messages
-import logging
 from .forms import RegisterForm, LoginForm, ProductForm, WarehouseForm, SaleForm, UserChangeForm, UserSettingsForm, CategoryForm, SubcategoryForm
-from .models import Product, Warehouse, Sale, Category, Subcategory, UserSettings, User
+from .models import Product, Warehouse, Sale, Category, Subcategory, UserSettings, User, LogEntry
 from django.http import JsonResponse
-
-logger = logging.getLogger('inventory')
 
 ######################
 ### LOGIN / LOGOUT ###
@@ -27,6 +24,11 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user:
                 login(request, user)
+                LogEntry.objects.create(
+                    user=user,
+                    action_type='LOGIN',
+                    message=f'Пользователь {user.username} вошёл в систему'
+                )
                 messages.success(request, 'Вход выполнен успешно!')
                 return redirect('products')
             else:
@@ -38,7 +40,14 @@ def login_view(request):
     return render(request, 'login.html', {'form': form})
 
 def logout_view(request):
+    user = request.user
     logout(request)
+    if user.is_authenticated:
+        LogEntry.objects.create(
+            user=user,
+            action_type='LOGOUT',
+            message=f'Пользователь {user.username} вышел из системы'
+        )
     messages.success(request, 'Вы вышли из системы.')
     return redirect('login')
 
@@ -52,7 +61,11 @@ def register(request):
         if form.is_valid():
             user = form.save()
             UserSettings.objects.create(user=user)  # Создаем настройки пользователя
-            logger.info(f'New user registered: {user.username}')
+            LogEntry.objects.create(
+                user=user,
+                action_type='REGISTER',
+                message=f'Новый пользователь {user.username} зарегистрирован'
+            )
             messages.success(request, 'Регистрация успешна! Пожалуйста, войдите.')
             return redirect('login')
         else:
@@ -74,6 +87,11 @@ def profile(request):
         if user_form.is_valid() and settings_form.is_valid():
             user_form.save()
             settings_form.save()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                message=f'Пользователь {request.user.username} обновил свой профиль'
+            )
             messages.success(request, 'Профиль обновлен.')
             return redirect('profile')
     else:
@@ -147,6 +165,11 @@ def product_add(request):
             product.owner = request.user
             product.request = request  # Для уведомлений
             product.save()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='ADD',
+                message=f'Товар "{product.name}" добавлен пользователем {request.user.username}'
+            )
             return redirect('products')
     else:
         form = ProductForm()
@@ -160,6 +183,11 @@ def product_edit(request, product_id):
         form = ProductForm(request.POST, request.FILES, instance=product)
         if form.is_valid():
             form.save()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                message=f'Товар "{product.name}" обновлён пользователем {request.user.username}'
+            )
             return redirect('products')
     else:
         form = ProductForm(instance=product)
@@ -172,8 +200,12 @@ def product_delete(request, product_id):
     if request.method == 'POST':
         product_name = product.name
         product.delete()
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            message=f'Товар "{product_name}" удалён пользователем {request.user.username}'
+        )
         messages.success(request, f'Товар "{product_name}" удален.')
-        logger.info(f'Product "{product_name}" deleted by user {request.user.username}')
     return redirect('products')
 
 #################
@@ -189,11 +221,22 @@ def warehouse_list(request):
                 warehouse = form.save(commit=False)
                 warehouse.owner = request.user
                 warehouse.save()
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='ADD',
+                    message=f'Склад "{warehouse.name}" добавлен пользователем {request.user.username}'
+                )
                 messages.success(request, 'Склад добавлен.')
                 return redirect('warehouses')
         elif 'warehouse_id' in request.POST and request.POST.get('action') == 'delete':
             warehouse = get_object_or_404(Warehouse, id=request.POST['warehouse_id'], owner=request.user)
+            warehouse_name = warehouse.name
             warehouse.delete()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                message=f'Склад "{warehouse_name}" удалён пользователем {request.user.username}'
+            )
             messages.success(request, 'Склад удален.')
             return redirect('warehouses')
     warehouses = Warehouse.objects.filter(owner=request.user)
@@ -208,6 +251,11 @@ def warehouse_add(request):
             warehouse = form.save(commit=False)
             warehouse.owner = request.user
             warehouse.save()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='ADD',
+                message=f'Склад "{warehouse.name}" добавлен пользователем {request.user.username}'
+            )
             return redirect('warehouses')
     else:
         form = WarehouseForm()
@@ -220,6 +268,11 @@ def warehouse_edit(request, warehouse_id):
         form = WarehouseForm(request.POST, instance=warehouse)
         if form.is_valid():
             form.save()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                message=f'Склад "{warehouse.name}" обновлён пользователем {request.user.username}'
+            )
             messages.success(request, 'Название склада обновлено.')
             return redirect('warehouses')
     else:
@@ -232,8 +285,12 @@ def warehouse_delete(request, warehouse_id):
     if request.method == 'POST':
         warehouse_name = warehouse.name
         warehouse.delete()
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            message=f'Склад "{warehouse_name}" удалён пользователем {request.user.username}'
+        )
         messages.success(request, f'Склад "{warehouse_name}" удален.')
-        logger.info(f'Warehouse "{warehouse_name}" deleted by user {request.user.username}')
         return redirect('warehouses')
     return redirect('warehouses')
 
@@ -259,7 +316,11 @@ def sale_create(request, product_id):
                 product.quantity -= sale.quantity
                 product.save()
                 sale.save()
-                logger.info(f'Sale of {sale.quantity} {product.name} by {request.user.username}')
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='SALE',
+                    message=f'Продажа {sale.quantity} ед. товара "{product.name}" пользователем {request.user.username}'
+                )
                 messages.success(request, f'Продажа товара "{product.name}" на {sale.quantity} шт. успешно завершена!')
                 return redirect('products')
             else:
@@ -322,8 +383,12 @@ def category_manage(request):
         if 'add_category' in request.POST:
             category_form = CategoryForm(request.POST)
             if category_form.is_valid():
-                category_form.save()
-                logger.info(f'Category {category_form.cleaned_data["name"]} added by admin {request.user.username}')
+                category = category_form.save()
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='ADD',
+                    message=f'Категория "{category.name}" добавлена администратором {request.user.username}'
+                )
                 messages.success(request, 'Категория добавлена.')
                 return redirect('category_manage')
             else:
@@ -332,8 +397,12 @@ def category_manage(request):
         elif 'add_subcategory' in request.POST:
             subcategory_form = SubcategoryForm(request.POST)
             if subcategory_form.is_valid():
-                subcategory_form.save()
-                logger.info(f'Subcategory {subcategory_form.cleaned_data["name"]} added by admin {request.user.username}')
+                subcategory = subcategory_form.save()
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='ADD',
+                    message=f'Подкатегория "{subcategory.name}" добавлена администратором {request.user.username}'
+                )
                 messages.success(request, 'Подкатегория добавлена.')
                 return redirect('category_manage')
             else:
@@ -359,8 +428,12 @@ def category_edit(request, category_id):
         form = CategoryForm(request.POST, instance=category)
         if form.is_valid():
             form.save()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                message=f'Категория "{category.name}" обновлена администратором {request.user.username}'
+            )
             messages.success(request, 'Категория обновлена.')
-            logger.info(f'Category "{category.name}" updated by admin {request.user.username}')
             return redirect('category_manage')
     else:
         form = CategoryForm(instance=category)
@@ -372,8 +445,12 @@ def category_delete(request, category_id):
     if request.method == 'POST':
         category_name = category.name
         category.delete()
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            message=f'Категория "{category_name}" удалена администратором {request.user.username}'
+        )
         messages.success(request, f'Категория "{category_name}" удалена.')
-        logger.info(f'Category "{category_name}" deleted by admin {request.user.username}')
     return redirect('category_manage')
 
 ####################
@@ -393,8 +470,12 @@ def subcategory_edit(request, subcategory_id):
         form = SubcategoryForm(request.POST, instance=subcategory)
         if form.is_valid():
             form.save()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                message=f'Подкатегория "{subcategory.name}" обновлена администратором {request.user.username}'
+            )
             messages.success(request, 'Подкатегория обновлена.')
-            logger.info(f'Subcategory "{subcategory.name}" updated by admin {request.user.username}')
             return redirect('category_manage')
     else:
         form = SubcategoryForm(instance=subcategory)
@@ -406,8 +487,12 @@ def subcategory_delete(request, subcategory_id):
     if request.method == 'POST':
         subcategory_name = subcategory.name
         subcategory.delete()
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            message=f'Подкатегория "{subcategory_name}" удалена администратором {request.user.username}'
+        )
         messages.success(request, f'Подкатегория "{subcategory_name}" удалена.')
-        logger.info(f'Subcategory "{subcategory_name}" deleted by admin {request.user.username}')
     return redirect('category_manage')
 
 ############################
@@ -423,15 +508,27 @@ def admin_panel(request):
         if action == 'block':
             user.is_active = False
             user.save()
-            logger.info(f'User {user.username} blocked by admin {request.user.username}')
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='BLOCK',
+                message=f'Пользователь {user.username} заблокирован администратором {request.user.username}'
+            )
             messages.success(request, f'Пользователь {user.username} заблокирован.')
         elif action == 'unblock':
             user.is_active = True
             user.save()
-            logger.info(f'User {user.username} unblocked by admin {request.user.username}')
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='UNBLOCK',
+                message=f'Пользователь {user.username} разблокирован администратором {request.user.username}'
+            )
             messages.success(request, f'Пользователь {user.username} разблокирован.')
         elif action == 'delete':
-            logger.info(f'User {user.username} deleted by admin {request.user.username}')
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='DELETE',
+                message=f'Пользователь {user.username} удалён администратором {request.user.username}'
+            )
             user.delete()
             messages.success(request, f'Пользователь {user.username} удален.')
         return redirect('admin_panel')
@@ -445,3 +542,8 @@ def admin_panel(request):
         'total_products': total_products,
         'total_warehouses': total_warehouses,
     })
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_logs(request):
+    logs = LogEntry.objects.all().order_by('-timestamp')
+    return render(request, 'admin_logs.html', {'logs': logs})

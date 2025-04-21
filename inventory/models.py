@@ -68,3 +68,24 @@ class Sale(models.Model):
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     hide_cost_price = models.BooleanField(default=False)
+
+class LogEntry(models.Model):
+    ACTION_TYPES = (
+        ('LOGIN', 'Вход'),
+        ('LOGOUT', 'Выход'),
+        ('REGISTER', 'Регистрация'),
+        ('ADD', 'Добавление'),
+        ('DELETE', 'Удаление'),
+        ('UPDATE', 'Обновление'),
+        ('SALE', 'Продажа'),
+        ('BLOCK', 'Блокировка'),
+        ('UNBLOCK', 'Разблокировка'),
+    )
+
+    timestamp = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='inventory_log_entries')
+    action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
+    message = models.TextField()
+
+    def __str__(self):
+        return f"{self.timestamp} - {self.get_action_type_display()} - {self.message}"
