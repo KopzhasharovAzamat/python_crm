@@ -53,7 +53,7 @@
             <div class="card-footer text-center">
                 <a href="{% url 'sale_create' product.id %}" class="btn btn-primary btn-sm"><i class="fas fa-shopping-cart"></i> Продать</a>
                 <a href="{% url 'product_edit' product.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
-                <a href="{% url 'product_delete' product.id %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</a>
+                <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'product_delete' product.id %}" data-message="Вы уверены, что хотите удалить товар {{ product.name }}?"><i class="fas fa-trash"></i> Удалить</button>
             </div>
         </div>
     </div>

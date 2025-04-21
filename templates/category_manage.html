@@ -58,14 +58,20 @@
     <div class="list-group-item">
         <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">{{ cat.name }}</h5>
-            <a href="{% url 'category_delete' cat.id %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</a>
+            <div>
+                <a href="{% url 'category_edit' cat.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
+                <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'category_delete' cat.id %}" data-message="Вы уверены, что хотите удалить категорию {{ cat.name }}? Все связанные подкатегории и товары будут затронуты."><i class="fas fa-trash"></i> Удалить</button>
+            </div>
         </div>
         {% if cat.subcategories.exists %}
         <ul class="list-group mt-2">
             {% for subcat in cat.subcategories.all %}
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 {{ subcat.name }}
-                <a href="{% url 'subcategory_delete' subcat.id %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</a>
+                <div>
+                    <a href="{% url 'subcategory_edit' subcat.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
+                    <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'subcategory_delete' subcat.id %}" data-message="Вы уверены, что хотите удалить подкатегорию {{ subcat.name }}? Все связанные товары будут затронуты."><i class="fas fa-trash"></i> Удалить</button>
+                </div>
             </li>
             {% endfor %}
         </ul>

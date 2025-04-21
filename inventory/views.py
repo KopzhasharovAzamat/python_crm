@@ -14,20 +14,9 @@ from django.http import JsonResponse
 
 logger = logging.getLogger('inventory')
 
-def register(request):
-    if request.method == 'POST':
-        form = RegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            UserSettings.objects.create(user=user)  # Создаем настройки пользователя
-            logger.info(f'New user registered: {user.username}')
-            messages.success(request, 'Регистрация успешна! Пожалуйста, войдите.')
-            return redirect('login')
-        else:
-            messages.error(request, 'Ошибка при регистрации. Проверьте данные.')
-    else:
-        form = RegisterForm()
-    return render(request, 'register.html', {'form': form})
+######################
+### LOGIN / LOGOUT ###
+######################
 
 def login_view(request):
     if request.method == 'POST':
@@ -53,6 +42,29 @@ def logout_view(request):
     messages.success(request, 'Вы вышли из системы.')
     return redirect('login')
 
+################
+### REGISTER ###
+################
+
+def register(request):
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            UserSettings.objects.create(user=user)  # Создаем настройки пользователя
+            logger.info(f'New user registered: {user.username}')
+            messages.success(request, 'Регистрация успешна! Пожалуйста, войдите.')
+            return redirect('login')
+        else:
+            messages.error(request, 'Ошибка при регистрации. Проверьте данные.')
+    else:
+        form = RegisterForm()
+    return render(request, 'register.html', {'form': form})
+
+###############
+### PROFILE ###
+###############
+
 @login_required
 def profile(request):
     user_settings, created = UserSettings.objects.get_or_create(user=request.user)
@@ -69,6 +81,10 @@ def profile(request):
         settings_form = UserSettingsForm(instance=user_settings)
     return render(request, 'profile.html', {'user_form': user_form, 'settings_form': settings_form})
 
+###############
+### PRODUCT ###
+###############
+
 @login_required
 def product_list(request):
     query = request.GET.get('q', '')
@@ -82,7 +98,7 @@ def product_list(request):
     if min_quantity:
         products = products.filter(quantity__gte=min_quantity)
     categories = Category.objects.all()
-    low_stock_message = request.session.pop('low_stock', None)  # Retrieve and clear session message
+    low_stock_message = request.session.pop('low_stock', None)
     return render(request, 'products.html', {
         'products': products,
         'categories': categories,
@@ -120,8 +136,16 @@ def product_edit(request, product_id):
 @login_required
 def product_delete(request, product_id):
     product = get_object_or_404(Product, id=product_id, owner=request.user)
-    product.delete()
+    if request.method == 'POST':
+        product_name = product.name
+        product.delete()
+        messages.success(request, f'Товар "{product_name}" удален.')
+        logger.info(f'Product "{product_name}" deleted by user {request.user.username}')
     return redirect('products')
+
+#################
+### WAREHOUSE ###
+#################
 
 @login_required
 def warehouse_list(request):
@@ -157,6 +181,34 @@ def warehouse_add(request):
     return render(request, 'warehouse_form.html', {'form': form})
 
 @login_required
+def warehouse_edit(request, warehouse_id):
+    warehouse = get_object_or_404(Warehouse, id=warehouse_id, owner=request.user)
+    if request.method == 'POST':
+        form = WarehouseForm(request.POST, instance=warehouse)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Название склада обновлено.')
+            return redirect('warehouses')
+    else:
+        form = WarehouseForm(instance=warehouse)
+    return render(request, 'warehouse_form.html', {'form': form, 'warehouse': warehouse})
+
+@login_required
+def warehouse_delete(request, warehouse_id):
+    warehouse = get_object_or_404(Warehouse, id=warehouse_id, owner=request.user)
+    if request.method == 'POST':
+        warehouse_name = warehouse.name
+        warehouse.delete()
+        messages.success(request, f'Склад "{warehouse_name}" удален.')
+        logger.info(f'Warehouse "{warehouse_name}" deleted by user {request.user.username}')
+        return redirect('warehouses')
+    return redirect('warehouses')
+
+############
+### SALE ###
+############
+
+@login_required
 def sale_create(request, product_id):
     product = get_object_or_404(Product, id=product_id, owner=request.user)
     if request.method == 'POST':
@@ -179,6 +231,8 @@ def sale_create(request, product_id):
         form = SaleForm(initial={'actual_price': product.selling_price})
     return render(request, 'sale_form.html', {'form': form, 'product': product})
 
+### SCAN ###
+
 @login_required
 def scan_product(request):
     unique_id = request.GET.get('code')
@@ -191,6 +245,10 @@ def scan_product(request):
         })
     except Product.DoesNotExist:
         return render(request, 'error.html', {'message': 'Товар не найден'})
+
+##################
+### STATISTICS ###
+##################
 
 @login_required
 def stats(request):
@@ -215,32 +273,9 @@ def stats(request):
         'show_cost_price': show_cost_price,
     })
 
-@user_passes_test(lambda u: u.is_superuser)
-def admin_panel(request):
-    if request.method == 'POST':
-        user_id = request.POST.get('user_id')
-        action = request.POST.get('action')
-        user = User.objects.get(id=user_id)
-        if action == 'block':
-            user.is_active = False
-            user.save()
-            logger.info(f'User {user.username} blocked by admin {request.user.username}')
-            messages.success(request, f'Пользователь {user.username} заблокирован.')
-        elif action == 'delete':
-            logger.info(f'User {user.username} deleted by admin {request.user.username}')
-            user.delete()
-            messages.success(request, f'Пользователь {user.username} удален.')
-        return redirect('admin_panel')
-    users = User.objects.all()
-    categories = Category.objects.all()
-    total_products = Product.objects.count()
-    total_warehouses = Warehouse.objects.count()
-    return render(request, 'admin.html', {
-        'users': users,
-        'categories': categories,
-        'total_products': total_products,
-        'total_warehouses': total_warehouses,
-    })
+################
+### CATEGORY ###
+################
 
 @user_passes_test(lambda u: u.is_superuser)
 def category_manage(request):
@@ -281,25 +316,90 @@ def category_manage(request):
     })
 
 @user_passes_test(lambda u: u.is_superuser)
-def category_delete(request, category_id):
+def category_edit(request, category_id):
     category = get_object_or_404(Category, id=category_id)
-    category_name = category.name
-    category.delete()
-    logger.info(f'Category {category_name} deleted by admin {request.user.username}')
-    messages.success(request, f'Категория {category_name} удалена.')
-    return redirect('category_manage')
+    if request.method == 'POST':
+        form = CategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Категория обновлена.')
+            logger.info(f'Category "{category.name}" updated by admin {request.user.username}')
+            return redirect('category_manage')
+    else:
+        form = CategoryForm(instance=category)
+    return render(request, 'category_form.html', {'form': form, 'category': category})
 
 @user_passes_test(lambda u: u.is_superuser)
-def subcategory_delete(request, subcategory_id):
-    subcategory = get_object_or_404(Subcategory, id=subcategory_id)
-    subcategory_name = subcategory.name
-    subcategory.delete()
-    logger.info(f'Subcategory {subcategory_name} deleted by admin {request.user.username}')
-    messages.success(request, f'Подкатегория {subcategory_name} удалена.')
+def category_delete(request, category_id):
+    category = get_object_or_404(Category, id=category_id)
+    if request.method == 'POST':
+        category_name = category.name
+        category.delete()
+        messages.success(request, f'Категория "{category_name}" удалена.')
+        logger.info(f'Category "{category_name}" deleted by admin {request.user.username}')
     return redirect('category_manage')
+
+####################
+### SUBCATEGORY ###
+####################
 
 @login_required
 def get_subcategories(request):
     category_id = request.GET.get('category_id')
     subcategories = Subcategory.objects.filter(category_id=category_id).values('id', 'name')
     return JsonResponse({'subcategories': list(subcategories)})
+
+@user_passes_test(lambda u: u.is_superuser)
+def subcategory_edit(request, subcategory_id):
+    subcategory = get_object_or_404(Subcategory, id=subcategory_id)
+    if request.method == 'POST':
+        form = SubcategoryForm(request.POST, instance=subcategory)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Подкатегория обновлена.')
+            logger.info(f'Subcategory "{subcategory.name}" updated by admin {request.user.username}')
+            return redirect('category_manage')
+    else:
+        form = SubcategoryForm(instance=subcategory)
+    return render(request, 'subcategory_form.html', {'form': form, 'subcategory': subcategory})
+
+@user_passes_test(lambda u: u.is_superuser)
+def subcategory_delete(request, subcategory_id):
+    subcategory = get_object_or_404(Subcategory, id=subcategory_id)
+    if request.method == 'POST':
+        subcategory_name = subcategory.name
+        subcategory.delete()
+        messages.success(request, f'Подкатегория "{subcategory_name}" удалена.')
+        logger.info(f'Subcategory "{subcategory_name}" deleted by admin {request.user.username}')
+    return redirect('category_manage')
+
+############################
+### ADMIN PANEL (manual) ###
+############################
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_panel(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        action = request.POST.get('action')
+        user = User.objects.get(id=user_id)
+        if action == 'block':
+            user.is_active = False
+            user.save()
+            logger.info(f'User {user.username} blocked by admin {request.user.username}')
+            messages.success(request, f'Пользователь {user.username} заблокирован.')
+        elif action == 'delete':
+            logger.info(f'User {user.username} deleted by admin {request.user.username}')
+            user.delete()
+            messages.success(request, f'Пользователь {user.username} удален.')
+        return redirect('admin_panel')
+    users = User.objects.all()
+    categories = Category.objects.all()
+    total_products = Product.objects.count()
+    total_warehouses = Warehouse.objects.count()
+    return render(request, 'admin.html', {
+        'users': users,
+        'categories': categories,
+        'total_products': total_products,
+        'total_warehouses': total_warehouses,
+    })
