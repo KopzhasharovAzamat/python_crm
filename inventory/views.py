@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count, Avg
 from django.http import HttpResponseForbidden
 from django.utils import timezone
 from datetime import timedelta
@@ -462,23 +462,101 @@ def scan_product(request):
 def stats(request):
     sales = Sale.objects.filter(owner=request.user)
     today = timezone.now()
+
+    # Общая выручка
     daily_revenue = sales.filter(date__date=today).aggregate(total=Sum('actual_price_total'))['total'] or 0
     weekly_revenue = sales.filter(date__gte=today - timedelta(days=7)).aggregate(total=Sum('actual_price_total'))['total'] or 0
     monthly_revenue = sales.filter(date__gte=today - timedelta(days=30)).aggregate(total=Sum('actual_price_total'))['total'] or 0
-    top_product = sales.values('product__name').annotate(total=Sum('quantity')).order_by('-total').first()
+    total_revenue = sales.aggregate(total=Sum('actual_price_total'))['total'] or 0
+
+    # Общее количество продаж
+    total_sales_count = sales.count()
+
+    # Средний чек
+    average_check = sales.aggregate(avg=Avg('actual_price_total'))['avg'] or 0
+
+    # Самый продаваемый товар
+    top_product_by_quantity = sales.values('product__name').annotate(total_quantity=Sum('quantity')).order_by('-total_quantity').first()
+    top_product_by_revenue = sales.values('product__name').annotate(total_revenue=Sum('actual_price_total')).order_by('-total_revenue').first()
+
+    # Динамика продаж по категориям
     category_stats = sales.values('product__category__name').annotate(
         total_quantity=Sum('quantity'),
         total_revenue=Sum('actual_price_total')
-    )
+    ).order_by('-total_revenue')
+
+    # Динамика продаж по подкатегориям
+    subcategory_stats = sales.values('product__subcategory__name').annotate(
+        total_quantity=Sum('quantity'),
+        total_revenue=Sum('actual_price_total')
+    ).order_by('-total_revenue')
+
+    # Динамика продаж по складам
+    warehouse_stats = sales.values('product__warehouse__name').annotate(
+        total_quantity=Sum('quantity'),
+        total_revenue=Sum('actual_price_total')
+    ).order_by('-total_revenue')
+
+    # Динамика продаж по дням за последнюю неделю
+    daily_sales_last_week = []
+    for i in range(6, -1, -1):  # От 6 дней назад до сегодня
+        day = today - timedelta(days=i)
+        day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        day_revenue = sales.filter(date__gte=day_start, date__lt=day_end).aggregate(total=Sum('actual_price_total'))['total'] or 0
+        daily_sales_last_week.append({
+            'date': day_start.strftime('%Y-%m-%d'),
+            'revenue': day_revenue
+        })
+
+    # Расчёт прибыли (фактическая выручка - себестоимость)
     user_settings = UserSettings.objects.get(user=request.user)
     show_cost_price = not user_settings.hide_cost_price
+    total_profit = None
+    daily_profit = None
+    weekly_profit = None
+    monthly_profit = None
+
+    if show_cost_price:
+        # Для каждой продажи считаем (actual_price_total - cost_price * quantity)
+        total_cost = sales.annotate(
+            cost=Sum('product__cost_price') * Sum('quantity')
+        ).aggregate(total_cost=Sum('cost'))['total_cost'] or 0
+        total_profit = total_revenue - total_cost if total_cost is not None else total_revenue
+
+        daily_cost = sales.filter(date__date=today).annotate(
+            cost=Sum('product__cost_price') * Sum('quantity')
+        ).aggregate(total_cost=Sum('cost'))['total_cost'] or 0
+        daily_profit = daily_revenue - daily_cost if daily_cost is not None else daily_revenue
+
+        weekly_cost = sales.filter(date__gte=today - timedelta(days=7)).annotate(
+            cost=Sum('product__cost_price') * Sum('quantity')
+        ).aggregate(total_cost=Sum('cost'))['total_cost'] or 0
+        weekly_profit = weekly_revenue - weekly_cost if weekly_cost is not None else weekly_revenue
+
+        monthly_cost = sales.filter(date__gte=today - timedelta(days=30)).annotate(
+            cost=Sum('product__cost_price') * Sum('quantity')
+        ).aggregate(total_cost=Sum('cost'))['total_cost'] or 0
+        monthly_profit = monthly_revenue - monthly_cost if monthly_cost is not None else monthly_revenue
+
     return render(request, 'stats.html', {
         'daily_revenue': daily_revenue,
         'weekly_revenue': weekly_revenue,
         'monthly_revenue': monthly_revenue,
-        'top_product': top_product,
+        'total_revenue': total_revenue,
+        'total_sales_count': total_sales_count,
+        'average_check': average_check,
+        'top_product_by_quantity': top_product_by_quantity,
+        'top_product_by_revenue': top_product_by_revenue,
         'category_stats': category_stats,
+        'subcategory_stats': subcategory_stats,
+        'warehouse_stats': warehouse_stats,
+        'daily_sales_last_week': daily_sales_last_week,
         'show_cost_price': show_cost_price,
+        'total_profit': total_profit,
+        'daily_profit': daily_profit,
+        'weekly_profit': weekly_profit,
+        'monthly_profit': monthly_profit,
     })
 
 ################
