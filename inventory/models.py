@@ -38,6 +38,7 @@ class Product(models.Model):
     qr_code = models.ImageField(upload_to='products/qr_codes/', blank=True, null=True)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_archived = models.BooleanField(default=False)  # Поле для архивации
 
     def save(self, *args, **kwargs):
         if not self.unique_id:

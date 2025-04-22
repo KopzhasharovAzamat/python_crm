@@ -114,7 +114,8 @@ def product_list(request):
     min_quantity = request.GET.get('min_quantity', '')
     sort_by = request.GET.get('sort_by', '')
 
-    products = Product.objects.filter(owner=request.user)
+    # Фильтруем только неархивированные товары
+    products = Product.objects.filter(owner=request.user, is_archived=False)
 
     if query:
         products = products.filter(Q(name__icontains=query) | Q(subcategory__name__icontains=query))
@@ -205,6 +206,44 @@ def product_delete(request, product_id):
         )
         messages.success(request, f'Товар "{product_name}" удален.')
     return redirect('products')
+
+###############
+### ARCHIVE ###
+###############
+
+@login_required
+def archived_products(request):
+    # Отображаем только архивированные товары
+    products = Product.objects.filter(owner=request.user, is_archived=True).order_by('name')
+    return render(request, 'archived_products.html', {'products': products})
+
+@login_required
+def product_archive(request, product_id):
+    product = get_object_or_404(Product, id=product_id, owner=request.user)
+    if request.method == 'POST':
+        product.is_archived = True
+        product.save()
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            message=f'Товар "{product.name}" архивирован пользователем {request.user.username}'
+        )
+        messages.success(request, f'Товар "{product.name}" архивирован.')
+    return redirect('products')
+
+@login_required
+def product_unarchive(request, product_id):
+    product = get_object_or_404(Product, id=product_id, owner=request.user)
+    if request.method == 'POST':
+        product.is_archived = False
+        product.save()
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            message=f'Товар "{product.name}" разархивирован пользователем {request.user.username}'
+        )
+        messages.success(request, f'Товар "{product.name}" разархивирован.')
+    return redirect('archived_products')
 
 #################
 ### WAREHOUSE ###

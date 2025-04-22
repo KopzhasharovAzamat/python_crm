@@ -19,6 +19,11 @@ urlpatterns = [
     path('products/<int:product_id>/edit/', views.product_edit, name='product_edit'),
     path('products/<int:product_id>/delete/', views.product_delete, name='product_delete'),
 
+    # Archive
+    path('products/<int:product_id>/archive/', views.product_archive, name='product_archive'),
+    path('products/<int:product_id>/unarchive/', views.product_unarchive, name='product_unarchive'),
+    path('products/archived/', views.archived_products, name='archived_products'),
+
     # Warehouse
     path('warehouses/', views.warehouse_list, name='warehouses'),
     path('warehouses/add/', views.warehouse_add, name='warehouse_add'),
