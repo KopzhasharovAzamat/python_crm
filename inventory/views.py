@@ -7,8 +7,10 @@ from django.http import HttpResponseForbidden
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib import messages
-from .forms import RegisterForm, LoginForm, ProductForm, WarehouseForm, UserChangeForm, UserSettingsForm, CategoryForm, SubcategoryForm, CartItemForm
-from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, LogEntry
+from .forms import RegisterForm, LoginForm, ProductForm, WarehouseForm, UserChangeForm, UserSettingsForm, CategoryForm, \
+    SubcategoryForm, CartItemForm, ReturnForm, SaleItemForm
+from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, \
+    LogEntry, Return
 from django.http import JsonResponse
 
 ######################
@@ -392,6 +394,112 @@ def sale_detail(request, sale_id):
         'items': items,
         'base_total': base_total,
         'actual_total': actual_total
+    })
+
+@login_required
+def sale_edit(request, sale_id):
+    sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
+    products = Product.objects.filter(owner=request.user)
+
+    # Инициализируем форму для добавления нового товара в продажу
+    form = SaleItemForm()
+    form.fields['product'].queryset = products
+
+    if request.method == 'POST':
+        if 'add_item' in request.POST:
+            form = SaleItemForm(request.POST)
+            if form.is_valid():
+                sale_item = form.save(commit=False)
+                product = sale_item.product
+                sale_item.sale = sale  # Привязываем к продаже, а не к корзине
+                sale_item.base_price_total = sale_item.quantity * product.selling_price
+                actual_price = form.cleaned_data['actual_price'] or product.selling_price
+                sale_item.actual_price_total = sale_item.quantity * actual_price
+
+                if sale_item.quantity <= product.quantity:
+                    product.quantity -= sale_item.quantity  # Уменьшаем остаток
+                    product.save()
+                    sale_item.save()
+                    LogEntry.objects.create(
+                        user=request.user,
+                        action_type='UPDATE',
+                        message=f'Товар "{product.name}" (кол-во: {sale_item.quantity}) добавлен в продажу {sale.id} пользователем {request.user.username}'
+                    )
+                    messages.success(request, f'Товар "{product.name}" добавлен в продажу.')
+                    return redirect('sale_edit', sale_id=sale.id)
+                else:
+                    messages.error(request, 'Недостаточно товара на складе.')
+        elif 'delete_item' in request.POST:
+            item_id = request.POST.get('item_id')
+            sale_item = get_object_or_404(SaleItem, id=item_id, sale=sale)
+            product = sale_item.product
+            product.quantity += sale_item.quantity  # Возвращаем остаток на склад
+            product.save()
+            sale_item.delete()
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='UPDATE',
+                message=f'Товар "{product.name}" (кол-во: {sale_item.quantity}) удалён из продажи {sale.id} пользователем {request.user.username}'
+            )
+            messages.success(request, f'Товар "{product.name}" удалён из продажи.')
+            return redirect('sale_edit', sale_id=sale.id)
+
+    return render(request, 'sale_edit.html', {
+        'sale': sale,
+        'form': form,
+        'products': products
+    })
+
+@login_required
+def return_item(request, sale_id, item_id):
+    sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
+    sale_item = get_object_or_404(SaleItem, id=item_id, sale=sale)
+
+    if request.method == 'POST':
+        form = ReturnForm(request.POST)
+        if form.is_valid():
+            return_quantity = form.cleaned_data['quantity']
+            if return_quantity > sale_item.quantity:
+                messages.error(request, 'Нельзя вернуть больше, чем было продано.')
+                return redirect('sale_detail', sale_id=sale.id)
+
+            # Создаём запись о возврате
+            return_record = Return.objects.create(
+                sale=sale,
+                sale_item=sale_item,
+                quantity=return_quantity,
+                owner=request.user
+            )
+
+            # Уменьшаем количество в SaleItem
+            sale_item.quantity -= return_quantity
+            if sale_item.quantity == 0:
+                sale_item.delete()
+            else:
+                sale_item.base_price_total = sale_item.quantity * sale_item.product.selling_price
+                sale_item.actual_price_total = sale_item.quantity * (sale_item.actual_price_total / (sale_item.quantity + return_quantity))
+                sale_item.save()
+
+            # Увеличиваем остаток на складе
+            product = sale_item.product
+            product.quantity += return_quantity
+            product.save()
+
+            # Логируем возврат
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='RETURN',
+                message=f'Возврат {return_quantity} x "{product.name}" из продажи {sale.id} пользователем {request.user.username}'
+            )
+            messages.success(request, f'Возвращено {return_quantity} шт. товара "{product.name}".')
+            return redirect('sale_detail', sale_id=sale.id)
+    else:
+        form = ReturnForm()
+
+    return render(request, 'return_item.html', {
+        'sale': sale,
+        'sale_item': sale_item,
+        'form': form
     })
 
 ############

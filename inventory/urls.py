@@ -38,6 +38,8 @@ urlpatterns = [
     # Sale
     path('sales/', views.sales_list, name='sales_list'),
     path('sales/<int:sale_id>/detail/', views.sale_detail, name='sale_detail'),
+    path('sales/<int:sale_id>/edit/', views.sale_edit, name='sale_edit'),
+    path('sales/<int:sale_id>/return/<int:item_id>/', views.return_item, name='return_item'),
 
     # Cart
     path('carts/', views.cart_list, name='cart_list'),

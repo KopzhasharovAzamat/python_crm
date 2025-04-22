@@ -1,25 +1,37 @@
 <!--templates/sale_detail.html-->
 {% extends 'base.html' %}
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4 animate__animated animate__fadeIn">Детали продажи №{{ sale.id }}</h2>
-    <div class="card shadow-sm animate__animated animate__fadeInUp">
-        <div class="card-body">
-            <p><strong>Дата:</strong> {{ sale.date }}</p>
-            <h5>Товары:</h5>
-            <ul class="list-group mb-3">
-                {% for item in items %}
-                <li class="list-group-item">
-                    <strong>{{ item.product.name }}</strong><br>
-                    Количество: {{ item.quantity }} шт.<br>
-                    Базовая цена: {{ item.base_price_total|floatformat:2 }} ₽<br>
-                    Фактическая цена: {{ item.actual_price_total|floatformat:2 }} ₽
-                </li>
-                {% endfor %}
-            </ul>
-            <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} ₽</p>
-            <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} ₽</p>
-            <a href="{% url 'sales_list' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Назад к списку</a>
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm animate__animated animate__fadeIn">
+            <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h3 class="mb-0">Продажа №{{ sale.id }}</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Дата:</strong> {{ sale.date }}</p>
+                <p><strong>Владелец:</strong> {{ sale.owner.username }}</p>
+
+                {% if items %}
+                <h5>Товары в продаже:</h5>
+                <ul class="list-group mb-4">
+                    {% for item in items %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ item.product.name }} - {{ item.quantity }} шт. по {{ item.actual_price_total|floatformat:2 }} ₽ (базовая: {{ item.base_price_total|floatformat:2 }} ₽)
+                        <a href="{% url 'return_item' sale.id item.id %}" class="btn btn-danger btn-sm"><i class="fas fa-undo"></i> Вернуть</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} ₽</p>
+                <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} ₽</p>
+                {% else %}
+                <p>В этой продаже нет товаров.</p>
+                {% endif %}
+
+                <div class="d-flex gap-2">
+                    <a href="{% url 'sale_edit' sale.id %}" class="btn btn-primary flex-fill"><i class="fas fa-edit"></i> Редактировать продажу</a>
+                    <a href="{% url 'sales_list' %}" class="btn btn-secondary flex-fill"><i class="fas fa-arrow-left"></i> Назад к списку продаж</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

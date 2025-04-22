@@ -2,7 +2,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Product, Warehouse, Category, Subcategory, UserSettings, CartItem
+from .models import Product, Warehouse, Category, Subcategory, UserSettings, CartItem, SaleItem
+
 
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -94,3 +95,13 @@ class SubcategoryForm(forms.ModelForm):
         if Category.objects.filter(name=name).exists():
             raise forms.ValidationError("Это имя уже используется для категории.")
         return name
+
+class SaleItemForm(forms.ModelForm):
+    actual_price = forms.DecimalField(required=False, decimal_places=2, max_digits=10, label="Actual Price per Unit")
+
+    class Meta:
+        model = SaleItem
+        fields = ['product', 'quantity', 'actual_price']
+
+class ReturnForm(forms.Form):
+    quantity = forms.IntegerField(min_value=1, label="Quantity to Return")

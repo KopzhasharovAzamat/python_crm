@@ -5,6 +5,7 @@ import uuid
 import qrcode
 from django.core.files import File
 from io import BytesIO
+from django.utils import timezone
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -101,6 +102,16 @@ class SaleItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} в продаже {self.sale.id}"
+
+class Return(models.Model):
+    sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='returns')
+    sale_item = models.ForeignKey(SaleItem, on_delete=models.CASCADE, related_name='returns')
+    quantity = models.PositiveIntegerField()
+    returned_at = models.DateTimeField(default=timezone.now)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='returns')
+
+    def __str__(self):
+        return f"Return of {self.quantity} x {self.sale_item.product.name} from Sale {self.sale.id}"
 
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
