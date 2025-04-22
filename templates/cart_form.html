@@ -1,4 +1,4 @@
-<!--templates/cart_from.html-->
+<!--templates/cart_form.html-->
 {% extends 'base.html' %}
 {% block content %}
 <div class="row justify-content-center mt-4">
@@ -26,6 +26,9 @@
                 </div>
                 {% endif %}
                 <h5>Добавить товар:</h5>
+                <div class="d-flex gap-2 mb-3">
+                    <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#scanModal"><i class="fas fa-qrcode"></i> Сканировать код</button>
+                </div>
                 <form method="post" id="cartForm">
                     {% csrf_token %}
                     {% for field in form %}
@@ -43,6 +46,60 @@
                     </div>
                     <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить товар</button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Modal -->
+<div class="modal" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="scanModalLabel">Сканировать QR-код</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if scanned_product %}
+                <h5>{{ scanned_product.name }}</h5>
+                <p><strong>Категория:</strong> {{ scanned_product.category.name }}</p>
+                {% if scanned_product.subcategory %}
+                <p><strong>Подкатегория:</strong> {{ scanned_product.subcategory.name }}</p>
+                {% endif %}
+                <p><strong>Склад:</strong> {{ scanned_product.warehouse.name }}</p>
+                <p><strong>Количество на складе:</strong> {{ scanned_product.quantity }} шт.</p>
+                <p><strong>Цена продажи:</strong> {{ scanned_product.selling_price|floatformat:2 }} ₽</p>
+                {% if scanned_product.photo %}
+                <img src="{{ scanned_product.photo.url }}" alt="{{ scanned_product.name }}" class="img-fluid mb-2" style="max-height: 200px;">
+                {% endif %}
+                <form method="post" action="{% url 'cart_add_item' cart.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="product" value="{{ scanned_product.id }}">
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Количество:</label>
+                        <input type="number" name="quantity" class="form-control" min="1" value="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="actual_price" class="form-label">Фактическая цена за единицу:</label>
+                        <input type="number" step="0.01" name="actual_price" class="form-control" placeholder="{{ scanned_product.selling_price|floatformat:2 }}">
+                    </div>
+                    <button type="submit" name="add_scanned_item" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                </form>
+                <form method="post" action="{% url 'cart_add_item' cart.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="cancel_scan" value="true">
+                    <button type="submit" class="btn btn-secondary w-100 mt-2"><i class="fas fa-times"></i> Отменить добавление сканированного товара</button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'cart_add_item' cart.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="unique_id" class="form-label">Введите код товара (или отсканируйте):</label>
+                        <input type="text" name="unique_id" id="unique_id" class="form-control" required autofocus>
+                    </div>
+                    <button type="submit" name="scan_code" class="btn btn-primary w-100"><i class="fas fa-search"></i> Найти товар</button>
+                </form>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -77,14 +134,36 @@
             totalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
         }
 
-        productSelect.addEventListener('change', updateTotalPrice);
-        quantityInput.addEventListener('input', updateTotalPrice);
-        actualPriceInput.addEventListener('input', function() {
-            isActualPriceModified = true;
+        if (productSelect && quantityInput && actualPriceInput) {
+            productSelect.addEventListener('change', updateTotalPrice);
+            quantityInput.addEventListener('input', updateTotalPrice);
+            actualPriceInput.addEventListener('input', function() {
+                isActualPriceModified = true;
+                updateTotalPrice();
+            });
+
             updateTotalPrice();
+        }
+
+        // Автофокус на поле ввода QR-кода при открытии модального окна
+        const scanModal = document.getElementById('scanModal');
+        scanModal.addEventListener('shown.bs.modal', function() {
+            const uniqueIdInput = document.getElementById('unique_id');
+            if (uniqueIdInput) {
+                uniqueIdInput.focus();
+            }
         });
 
-        updateTotalPrice();
+        // Автоматическое открытие модального окна с небольшой задержкой
+        {% if scanned_product or auto_open_modal %}
+        setTimeout(function() {
+            const modal = new bootstrap.Modal(document.getElementById('scanModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
+            modal.show();
+        }, 100); // Задержка 100 мс для корректной инициализации
+        {% endif %}
     });
 </script>
 {% endblock %}

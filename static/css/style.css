@@ -256,12 +256,51 @@ body.dark-theme .list-group-item {
     }
 }
 
+/* Стили для модального окна */
+.modal {
+    z-index: 1055; /* Устанавливаем высокий z-index для модального окна */
+}
 
-.card-img-top {
-    height: 200px;
-    object-fit: contain;
-    background-color: #FFFFFF;
-    padding: 10px;
+.modal-backdrop {
+    z-index: 1050; /* Устанавливаем z-index ниже, чем у модального окна */
+    background-color: rgba(0, 0, 0, 0.5); /* Полупрозрачный фон */
+}
+
+.modal-content {
+    background-color: #FFFFFF; /* Белый фон для модального окна */
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out; /* Плавная анимация появления */
+}
+
+/* Анимация для модального окна */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+body.dark-theme .modal-content {
+    background-color: #4A5568; /* Темный фон в тёмной теме */
+    color: #E2E8F0;
+}
+
+body.dark-theme .modal-header {
+    background-color: #7F9CF5; /* Пастельный голубой заголовок в тёмной теме */
+}
+
+body.dark-theme .modal-body {
+    color: #E2E8F0;
+}
+
+/* Убираем серость при открытии */
+.modal.show .modal-content {
+    opacity: 1 !important;
 }
 
 /* Алерт */
