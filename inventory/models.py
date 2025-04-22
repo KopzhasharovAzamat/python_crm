@@ -128,6 +128,7 @@ class LogEntry(models.Model):
         ('SALE', 'Продажа'),
         ('BLOCK', 'Блокировка'),
         ('UNBLOCK', 'Разблокировка'),
+        ('RETURN', 'Возврат'),
     )
 
     timestamp = models.DateTimeField(auto_now_add=True)

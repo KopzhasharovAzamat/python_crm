@@ -56,6 +56,9 @@ urlpatterns = [
     # Statistics
     path('stats/', views.stats, name='stats'),
 
+    # Logs
+    path('logs/', views.user_logs, name='user_logs'),
+
     # Admin panel
     path('admin-panel/', views.admin_panel, name='admin_panel'),
     path('admin-logs/', views.admin_logs, name='admin_logs'),

@@ -951,6 +951,52 @@ def admin_panel(request):
         'total_warehouses': total_warehouses,
     })
 
+############
+### LOGS ###
+############
+
+@user_passes_test(lambda u: u.is_superuser)
+def admin_logs(request):
+    logs = LogEntry.objects.all().order_by('-timestamp')
+    return render(request, 'admin_logs.html', {'logs': logs})
+
+@login_required
+def user_logs(request):
+    # Получаем логи только для текущего пользователя
+    logs = LogEntry.objects.filter(user=request.user).order_by('-timestamp')
+
+    # Фильтры
+    action_type = request.GET.get('action_type', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+
+    if action_type:
+        logs = logs.filter(action_type=action_type)
+    if date_from:
+        try:
+            date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
+            logs = logs.filter(timestamp__gte=date_from)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
+    if date_to:
+        try:
+            date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d')
+            date_to = date_to + timedelta(days=1)
+            logs = logs.filter(timestamp__lt=date_to)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
+
+    # Получаем список типов действий для фильтра
+    action_types = LogEntry.ACTION_TYPES
+
+    return render(request, 'user_logs.html', {
+        'logs': logs,
+        'action_types': action_types,
+        'action_type': action_type,
+        'date_from': date_from,
+        'date_to': date_to,
+    })
+
 @user_passes_test(lambda u: u.is_superuser)
 def admin_logs(request):
     logs = LogEntry.objects.all().order_by('-timestamp')
