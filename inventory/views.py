@@ -7,8 +7,8 @@ from django.http import HttpResponseForbidden
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib import messages
-from .forms import RegisterForm, LoginForm, ProductForm, WarehouseForm, SaleForm, UserChangeForm, UserSettingsForm, CategoryForm, SubcategoryForm
-from .models import Product, Warehouse, Sale, Category, Subcategory, UserSettings, User, LogEntry
+from .forms import RegisterForm, LoginForm, ProductForm, WarehouseForm, UserChangeForm, UserSettingsForm, CategoryForm, SubcategoryForm, CartItemForm
+from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, LogEntry
 from django.http import JsonResponse
 
 ######################
@@ -60,7 +60,7 @@ def register(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            UserSettings.objects.create(user=user)  # Создаем настройки пользователя
+            UserSettings.objects.create(user=user)
             LogEntry.objects.create(
                 user=user,
                 action_type='REGISTER',
@@ -114,7 +114,6 @@ def product_list(request):
 
     products = Product.objects.filter(owner=request.user)
 
-    # Фильтрация
     if query:
         products = products.filter(Q(name__icontains=query) | Q(subcategory__name__icontains=query))
     if category:
@@ -126,9 +125,7 @@ def product_list(request):
     if min_quantity:
         products = products.filter(quantity__gte=min_quantity)
 
-    # Сортировка
     if sort_by:
-        # Разрешаем только определённые поля для сортировки
         allowed_sort_fields = [
             'name', '-name',
             'category__name', '-category__name',
@@ -140,7 +137,6 @@ def product_list(request):
         if sort_by in allowed_sort_fields:
             products = products.order_by(sort_by)
         else:
-            # По умолчанию сортировка по названию
             products = products.order_by('name')
 
     categories = Category.objects.all()
@@ -163,7 +159,7 @@ def product_add(request):
         if form.is_valid():
             product = form.save(commit=False)
             product.owner = request.user
-            product.request = request  # Для уведомлений
+            product.request = request
             product.save()
             LogEntry.objects.create(
                 user=request.user,
@@ -300,10 +296,8 @@ def warehouse_delete(request, warehouse_id):
 
 @login_required
 def sales_list(request):
-    # Получаем все продажи текущего пользователя
-    sales = Sale.objects.filter(owner=request.user)
+    sales = Sale.objects.filter(owner=request.user).prefetch_related('items__product')
 
-    # Фильтры
     product_name = request.GET.get('product_name', '')
     warehouse = request.GET.get('warehouse', '')
     date_from = request.GET.get('date_from', '')
@@ -314,15 +308,10 @@ def sales_list(request):
     max_quantity = request.GET.get('max_quantity', '')
     sort_by = request.GET.get('sort_by', '')
 
-    # Фильтрация по названию товара
     if product_name:
-        sales = sales.filter(product__name__icontains=product_name)
-
-    # Фильтрация по складу
+        sales = sales.filter(items__product__name__icontains=product_name)
     if warehouse:
-        sales = sales.filter(product__warehouse__name=warehouse)
-
-    # Фильтрация по дате
+        sales = sales.filter(items__product__warehouse__name=warehouse)
     if date_from:
         try:
             date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
@@ -332,55 +321,51 @@ def sales_list(request):
     if date_to:
         try:
             date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d')
-            # Добавляем 1 день, чтобы включить выбранный день
             date_to = date_to + timedelta(days=1)
             sales = sales.filter(date__lt=date_to)
         except ValueError:
             messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
+    if min_amount or max_amount:
+        sales = sales.annotate(total_amount=Sum('items__actual_price_total'))
+        if min_amount:
+            try:
+                min_amount = float(min_amount)
+                sales = sales.filter(total_amount__gte=min_amount)
+            except ValueError:
+                messages.error(request, 'Минимальная сумма должна быть числом.')
+        if max_amount:
+            try:
+                max_amount = float(max_amount)
+                sales = sales.filter(total_amount__lte=max_amount)
+            except ValueError:
+                messages.error(request, 'Максимальная сумма должна быть числом.')
+    if min_quantity or max_quantity:
+        sales = sales.annotate(total_quantity=Sum('items__quantity'))
+        if min_quantity:
+            try:
+                min_quantity = int(min_quantity)
+                sales = sales.filter(total_quantity__gte=min_quantity)
+            except ValueError:
+                messages.error(request, 'Минимальное количество должно быть целым числом.')
+        if max_quantity:
+            try:
+                max_quantity = int(max_quantity)
+                sales = sales.filter(total_quantity__lte=max_quantity)
+            except ValueError:
+                messages.error(request, 'Максимальное количество должно быть целым числом.')
 
-    # Фильтрация по сумме
-    if min_amount:
-        try:
-            min_amount = float(min_amount)
-            sales = sales.filter(actual_price_total__gte=min_amount)
-        except ValueError:
-            messages.error(request, 'Минимальная сумма должна быть числом.')
-    if max_amount:
-        try:
-            max_amount = float(max_amount)
-            sales = sales.filter(actual_price_total__lte=max_amount)
-        except ValueError:
-            messages.error(request, 'Максимальная сумма должна быть числом.')
-
-    # Фильтрация по количеству
-    if min_quantity:
-        try:
-            min_quantity = int(min_quantity)
-            sales = sales.filter(quantity__gte=min_quantity)
-        except ValueError:
-            messages.error(request, 'Минимальное количество должно быть целым числом.')
-    if max_quantity:
-        try:
-            max_quantity = int(max_quantity)
-            sales = sales.filter(quantity__lte=max_quantity)
-        except ValueError:
-            messages.error(request, 'Максимальное количество должно быть целым числом.')
-
-    # Сортировка
     allowed_sort_fields = [
         'date', '-date',
-        'product__name', '-product__name',
-        'quantity', '-quantity',
-        'product__warehouse__name', '-product__warehouse__name',
-        'actual_price_total', '-actual_price_total'
+        'items__product__name', '-items__product__name',
+        'items__quantity', '-items__quantity',
+        'items__product__warehouse__name', '-items__product__warehouse__name',
+        'items__actual_price_total', '-items__actual_price_total'
     ]
     if sort_by in allowed_sort_fields:
         sales = sales.order_by(sort_by)
     else:
-        # По умолчанию сортировка по дате (сначала новые)
         sales = sales.order_by('-date')
 
-    # Получаем список складов для фильтра
     warehouses = Warehouse.objects.filter(owner=request.user)
 
     return render(request, 'sales_list.html', {
@@ -400,42 +385,135 @@ def sales_list(request):
 @login_required
 def sale_detail(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
-    actual_price_per_unit = sale.actual_price_total / sale.quantity if sale.quantity > 0 else 0
+    items = sale.items.all()
+    base_total, actual_total = sale.calculate_totals()
     return render(request, 'sale_detail.html', {
         'sale': sale,
-        'actual_price_per_unit': actual_price_per_unit
+        'items': items,
+        'base_total': base_total,
+        'actual_total': actual_total
     })
 
+############
+### CART ###
+############
+
 @login_required
-def sale_create(request, product_id):
-    product = get_object_or_404(Product, id=product_id, owner=request.user)
+def cart_list(request):
+    carts = Cart.objects.filter(owner=request.user).prefetch_related('items__product')
+    return render(request, 'cart_list.html', {'carts': carts})
+
+@login_required
+def cart_create(request):
     if request.method == 'POST':
-        form = SaleForm(request.POST)
+        cart = Cart.objects.create(owner=request.user)
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='ADD',
+            message=f'Новая корзина {cart.id} создана пользователем {request.user.username}'
+        )
+        return redirect('cart_add_item', cart_id=cart.id)
+    return render(request, 'cart_create.html')
+
+@login_required
+def cart_add_item(request, cart_id):
+    cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
+    products = Product.objects.filter(owner=request.user)
+
+    if request.method == 'POST':
+        form = CartItemForm(request.POST)
         if form.is_valid():
-            sale = form.save(commit=False)
-            sale.product = product
-            sale.owner = request.user
-            # Рассчитываем base_price_total как quantity * product.selling_price
-            sale.base_price_total = sale.quantity * product.selling_price
-            # Рассчитываем actual_price_total
+            cart_item = form.save(commit=False)
+            cart_item.cart = cart
+            product = cart_item.product
+            cart_item.base_price_total = cart_item.quantity * product.selling_price
             actual_price = form.cleaned_data['actual_price'] or product.selling_price
-            sale.actual_price_total = sale.quantity * actual_price
-            if sale.quantity <= product.quantity:
-                product.quantity -= sale.quantity
-                product.save()
-                sale.save()
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='SALE',
-                    message=f'Продажа {sale.quantity} ед. товара "{product.name}" пользователем {request.user.username}'
-                )
-                messages.success(request, f'Продажа товара "{product.name}" на {sale.quantity} шт. успешно завершена!')
-                return redirect('products')
+            cart_item.actual_price_total = cart_item.quantity * actual_price
+
+            if cart_item.quantity <= product.quantity:
+                cart_item.save()
+                messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
+                return redirect('cart_add_item', cart_id=cart.id)
             else:
                 form.add_error('quantity', 'Недостаточно товара на складе.')
     else:
-        form = SaleForm(initial={'actual_price': product.selling_price})
-    return render(request, 'sale_form.html', {'form': form, 'product': product})
+        form = CartItemForm()
+        form.fields['product'].queryset = products
+
+    return render(request, 'cart_form.html', {
+        'form': form,
+        'cart': cart,
+        'products': products
+    })
+
+@login_required
+def cart_remove_item(request, cart_id, item_id):
+    cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
+    cart_item = get_object_or_404(CartItem, id=item_id, cart=cart)
+    product_name = cart_item.product.name
+    cart_item.delete()
+    messages.success(request, f'Товар "{product_name}" удалён из корзины.')
+    return redirect('cart_add_item', cart_id=cart.id)
+
+@login_required
+def cart_confirm(request, cart_id):
+    cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
+    cart_items = cart.items.all()
+
+    if not cart_items:
+        messages.error(request, 'Корзина пуста. Добавьте товары перед подтверждением.')
+        return redirect('cart_add_item', cart_id=cart.id)
+
+    for item in cart_items:
+        product = item.product
+        if item.quantity > product.quantity:
+            messages.error(request, f'Недостаточно товара "{product.name}" на складе (осталось {product.quantity} шт.).')
+            return redirect('cart_add_item', cart_id=cart.id)
+
+    sale = Sale.objects.create(owner=request.user)
+    for cart_item in cart_items:
+        product = cart_item.product
+        product.quantity -= cart_item.quantity
+        product.save()
+        SaleItem.objects.create(
+            sale=sale,
+            product=cart_item.product,
+            quantity=cart_item.quantity,
+            base_price_total=cart_item.base_price_total,
+            actual_price_total=cart_item.actual_price_total
+        )
+
+    LogEntry.objects.create(
+        user=request.user,
+        action_type='SALE',
+        message=f'Продажа {sale.id} на основе корзины {cart.id} завершена пользователем {request.user.username}'
+    )
+
+    cart.delete()
+
+    messages.success(request, 'Продажа успешно завершена!')
+    return redirect('sales_list')
+
+@login_required
+def cart_cancel(request, cart_id):
+    cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
+    cart.delete()
+    messages.success(request, 'Корзина отменена.')
+    return redirect('products')
+
+@login_required
+def cart_delete(request, cart_id):
+    cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
+    if request.method == 'POST':
+        cart.delete()
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            message=f'Корзина {cart.id} удалена пользователем {request.user.username}'
+        )
+        messages.success(request, 'Корзина удалена.')
+        return redirect('cart_list')
+    return redirect('cart_list')
 
 ############
 ### SCAN ###
@@ -446,11 +524,13 @@ def scan_product(request):
     unique_id = request.GET.get('code')
     try:
         product = Product.objects.get(unique_id=unique_id, owner=request.user)
-        return render(request, 'product_info.html', {
-            'product': product,
-            'warehouse': product.warehouse,
-            'form': SaleForm()  # Форма для продажи
-        })
+        cart = Cart.objects.create(owner=request.user)
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='ADD',
+            message=f'Новая корзина {cart.id} создана пользователем {request.user.username} через сканирование'
+        )
+        return redirect('cart_add_item', cart_id=cart.id)
     except Product.DoesNotExist:
         return render(request, 'error.html', {'message': 'Товар не найден'})
 
@@ -460,56 +540,53 @@ def scan_product(request):
 
 @login_required
 def stats(request):
-    sales = Sale.objects.filter(owner=request.user)
+    sales = Sale.objects.filter(owner=request.user).prefetch_related('items__product')
     today = timezone.now()
 
-    # Общая выручка
-    daily_revenue = sales.filter(date__date=today).aggregate(total=Sum('actual_price_total'))['total'] or 0
-    weekly_revenue = sales.filter(date__gte=today - timedelta(days=7)).aggregate(total=Sum('actual_price_total'))['total'] or 0
-    monthly_revenue = sales.filter(date__gte=today - timedelta(days=30)).aggregate(total=Sum('actual_price_total'))['total'] or 0
-    total_revenue = sales.aggregate(total=Sum('actual_price_total'))['total'] or 0
+    daily_sales = sales.filter(date__date=today)
+    weekly_sales = sales.filter(date__gte=today - timedelta(days=7))
+    monthly_sales = sales.filter(date__gte=today - timedelta(days=30))
 
-    # Общее количество продаж
+    daily_revenue = sum(item.actual_price_total for sale in daily_sales for item in sale.items.all())
+    weekly_revenue = sum(item.actual_price_total for sale in weekly_sales for item in sale.items.all())
+    monthly_revenue = sum(item.actual_price_total for sale in monthly_sales for item in sale.items.all())
+    total_revenue = sum(item.actual_price_total for sale in sales for item in sale.items.all())
+
     total_sales_count = sales.count()
 
-    # Средний чек
-    average_check = sales.aggregate(avg=Avg('actual_price_total'))['avg'] or 0
+    total_amounts = [sum(item.actual_price_total for item in sale.items.all()) for sale in sales]
+    average_check = sum(total_amounts) / len(total_amounts) if total_amounts else 0
 
-    # Самый продаваемый товар
-    top_product_by_quantity = sales.values('product__name').annotate(total_quantity=Sum('quantity')).order_by('-total_quantity').first()
-    top_product_by_revenue = sales.values('product__name').annotate(total_revenue=Sum('actual_price_total')).order_by('-total_revenue').first()
+    top_product_by_quantity = SaleItem.objects.filter(sale__owner=request.user).values('product__name').annotate(total_quantity=Sum('quantity')).order_by('-total_quantity').first()
+    top_product_by_revenue = SaleItem.objects.filter(sale__owner=request.user).values('product__name').annotate(total_revenue=Sum('actual_price_total')).order_by('-total_revenue').first()
 
-    # Динамика продаж по категориям
-    category_stats = sales.values('product__category__name').annotate(
+    category_stats = SaleItem.objects.filter(sale__owner=request.user).values('product__category__name').annotate(
         total_quantity=Sum('quantity'),
         total_revenue=Sum('actual_price_total')
     ).order_by('-total_revenue')
 
-    # Динамика продаж по подкатегориям
-    subcategory_stats = sales.values('product__subcategory__name').annotate(
+    subcategory_stats = SaleItem.objects.filter(sale__owner=request.user).values('product__subcategory__name').annotate(
         total_quantity=Sum('quantity'),
         total_revenue=Sum('actual_price_total')
     ).order_by('-total_revenue')
 
-    # Динамика продаж по складам
-    warehouse_stats = sales.values('product__warehouse__name').annotate(
+    warehouse_stats = SaleItem.objects.filter(sale__owner=request.user).values('product__warehouse__name').annotate(
         total_quantity=Sum('quantity'),
         total_revenue=Sum('actual_price_total')
     ).order_by('-total_revenue')
 
-    # Динамика продаж по дням за последнюю неделю
     daily_sales_last_week = []
-    for i in range(6, -1, -1):  # От 6 дней назад до сегодня
+    for i in range(6, -1, -1):
         day = today - timedelta(days=i)
         day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
         day_end = day_start + timedelta(days=1)
-        day_revenue = sales.filter(date__gte=day_start, date__lt=day_end).aggregate(total=Sum('actual_price_total'))['total'] or 0
+        day_sales = sales.filter(date__gte=day_start, date__lt=day_end)
+        day_revenue = sum(item.actual_price_total for sale in day_sales for item in sale.items.all())
         daily_sales_last_week.append({
             'date': day_start.strftime('%Y-%m-%d'),
             'revenue': day_revenue
         })
 
-    # Расчёт прибыли (фактическая выручка - себестоимость)
     user_settings = UserSettings.objects.get(user=request.user)
     show_cost_price = not user_settings.hide_cost_price
     total_profit = None
@@ -518,25 +595,16 @@ def stats(request):
     monthly_profit = None
 
     if show_cost_price:
-        # Для каждой продажи считаем (actual_price_total - cost_price * quantity)
-        total_cost = sales.annotate(
-            cost=Sum('product__cost_price') * Sum('quantity')
-        ).aggregate(total_cost=Sum('cost'))['total_cost'] or 0
+        total_cost = sum(item.quantity * (item.product.cost_price or 0) for sale in sales for item in sale.items.all())
         total_profit = total_revenue - total_cost if total_cost is not None else total_revenue
 
-        daily_cost = sales.filter(date__date=today).annotate(
-            cost=Sum('product__cost_price') * Sum('quantity')
-        ).aggregate(total_cost=Sum('cost'))['total_cost'] or 0
+        daily_cost = sum(item.quantity * (item.product.cost_price or 0) for sale in daily_sales for item in sale.items.all())
         daily_profit = daily_revenue - daily_cost if daily_cost is not None else daily_revenue
 
-        weekly_cost = sales.filter(date__gte=today - timedelta(days=7)).annotate(
-            cost=Sum('product__cost_price') * Sum('quantity')
-        ).aggregate(total_cost=Sum('cost'))['total_cost'] or 0
+        weekly_cost = sum(item.quantity * (item.product.cost_price or 0) for sale in weekly_sales for item in sale.items.all())
         weekly_profit = weekly_revenue - weekly_cost if weekly_cost is not None else weekly_revenue
 
-        monthly_cost = sales.filter(date__gte=today - timedelta(days=30)).annotate(
-            cost=Sum('product__cost_price') * Sum('quantity')
-        ).aggregate(total_cost=Sum('cost'))['total_cost'] or 0
+        monthly_cost = sum(item.quantity * (item.product.cost_price or 0) for sale in monthly_sales for item in sale.items.all())
         monthly_profit = monthly_revenue - monthly_cost if monthly_cost is not None else monthly_revenue
 
     return render(request, 'stats.html', {
@@ -581,7 +649,7 @@ def category_manage(request):
                 return redirect('category_manage')
             else:
                 messages.error(request, 'Ошибка при добавлении категории.')
-                subcategory_form = SubcategoryForm()  # Пустая форма для подкатегорий
+                subcategory_form = SubcategoryForm()
         elif 'add_subcategory' in request.POST:
             subcategory_form = SubcategoryForm(request.POST)
             if subcategory_form.is_valid():
@@ -595,7 +663,7 @@ def category_manage(request):
                 return redirect('category_manage')
             else:
                 messages.error(request, 'Ошибка при добавлении подкатегории.')
-                category_form = CategoryForm()  # Пустая форма для категорий
+                category_form = CategoryForm()
         else:
             category_form = CategoryForm()
             subcategory_form = SubcategoryForm()

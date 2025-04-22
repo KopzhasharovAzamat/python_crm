@@ -1,3 +1,4 @@
+# inventory/urls.py
 from django.urls import path
 from . import views
 
@@ -37,7 +38,15 @@ urlpatterns = [
     # Sale
     path('sales/', views.sales_list, name='sales_list'),
     path('sales/<int:sale_id>/detail/', views.sale_detail, name='sale_detail'),
-    path('sales/<int:product_id>/', views.sale_create, name='sale_create'),
+
+    # Cart
+    path('carts/', views.cart_list, name='cart_list'),
+    path('cart/create/', views.cart_create, name='cart_create'),
+    path('cart/<int:cart_id>/add_item/', views.cart_add_item, name='cart_add_item'),
+    path('cart/<int:cart_id>/remove_item/<int:item_id>/', views.cart_remove_item, name='cart_remove_item'),
+    path('cart/<int:cart_id>/confirm/', views.cart_confirm, name='cart_confirm'),
+    path('cart/<int:cart_id>/cancel/', views.cart_cancel, name='cart_cancel'),
+    path('cart/<int:cart_id>/delete/', views.cart_delete, name='cart_delete'),
 
     # Scan
     path('scan/', views.scan_product, name='scan_product'),

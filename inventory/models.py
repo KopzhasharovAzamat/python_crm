@@ -33,15 +33,14 @@ class Product(models.Model):
     quantity = models.PositiveIntegerField(default=0)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
-    photo = models.ImageField(upload_to='products/photos/', blank=True, null=True)  # Для изображения товара
-    qr_code = models.ImageField(upload_to='products/qr_codes/', blank=True, null=True)  # Для QR-кода
+    photo = models.ImageField(upload_to='products/photos/', blank=True, null=True)
+    qr_code = models.ImageField(upload_to='products/qr_codes/', blank=True, null=True)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if not self.unique_id:
             self.unique_id = str(uuid.uuid4())[:50]
-        # Генерация и сохранение QR-кода
         qr = qrcode.QRCode()
         qr.add_data(self.unique_id)
         qr.make(fit=True)
@@ -57,13 +56,51 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
-class Sale(models.Model):
+class Cart(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def calculate_totals(self):
+        items = self.items.all()
+        base_total = sum(item.base_price_total for item in items)
+        actual_total = sum(item.actual_price_total for item in items)
+        return base_total, actual_total
+
+    def __str__(self):
+        return f"Корзина пользователя {self.owner.username} от {self.created_at}"
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
-    date = models.DateTimeField(auto_now_add=True)
     base_price_total = models.DecimalField(max_digits=10, decimal_places=2)
     actual_price_total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} в корзине {self.cart.id}"
+
+class Sale(models.Model):
+    date = models.DateTimeField(auto_now_add=True)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def calculate_totals(self):
+        items = self.items.all()
+        base_total = sum(item.base_price_total for item in items)
+        actual_total = sum(item.actual_price_total for item in items)
+        return base_total, actual_total
+
+    def __str__(self):
+        return f"Продажа {self.id} от {self.date}"
+
+class SaleItem(models.Model):
+    sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    base_price_total = models.DecimalField(max_digits=10, decimal_places=2)
+    actual_price_total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} в продаже {self.sale.id}"
 
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)

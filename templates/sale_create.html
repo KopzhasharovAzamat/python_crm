@@ -1,0 +1,19 @@
+<!--templates/sale_create.html-->
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm animate__animated animate__fadeIn">
+            <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h3 class="mb-0">Создать новую продажу</h3>
+            </div>
+            <div class="card-body text-center">
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Начать продажу</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

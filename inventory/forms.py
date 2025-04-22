@@ -2,7 +2,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import Product, Warehouse, Sale, Category, Subcategory, UserSettings
+from .models import Product, Warehouse, Category, Subcategory, UserSettings, CartItem
 
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -25,7 +25,6 @@ class UserSettingsForm(forms.ModelForm):
         model = UserSettings
         fields = ['hide_cost_price']
 
-
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
@@ -44,16 +43,10 @@ class ProductForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['category'].queryset = Category.objects.all()
-
-        # Инициализация подкатегорий
         if self.instance and self.instance.pk and self.instance.category:
-            # Если редактируем товар, загружаем подкатегории для текущей категории
             self.fields['subcategory'].queryset = Subcategory.objects.filter(category=self.instance.category)
         else:
-            # Если добавляем новый товар, оставляем подкатегории пустыми
             self.fields['subcategory'].queryset = Subcategory.objects.none()
-
-        # Если это POST-запрос и категория изменилась
         if 'category' in self.data:
             try:
                 category_id = int(self.data.get('category'))
@@ -61,19 +54,19 @@ class ProductForm(forms.ModelForm):
             except (ValueError, TypeError):
                 self.fields['subcategory'].queryset = Subcategory.objects.none()
 
-
 class WarehouseForm(forms.ModelForm):
     class Meta:
         model = Warehouse
         fields = ['name']
 
-class SaleForm(forms.ModelForm):
+class CartItemForm(forms.ModelForm):
     actual_price = forms.DecimalField(decimal_places=2, required=False, label="Фактическая цена за единицу")
 
     class Meta:
-        model = Sale
-        fields = ['quantity', 'actual_price']
+        model = CartItem
+        fields = ['product', 'quantity', 'actual_price']
         widgets = {
+            'product': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'actual_price': forms.NumberInput(attrs={'class': 'form-control'}),
         }

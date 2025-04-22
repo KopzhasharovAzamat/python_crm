@@ -35,6 +35,9 @@
                         <a class="nav-link" href="{% url 'sales_list' %}">Продажи</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{% url 'cart_list' %}">Корзины</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{% url 'stats' %}">Статистика</a>
                     </li>
                     {% if user.is_superuser %}
@@ -90,6 +93,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="action" id="confirmAction">
                         <input type="hidden" name="user_id" id="confirmUserId">
+                        <input type="hidden" name="cart_id" id="confirmCartId">
                         <button type="submit" class="btn btn-danger">Подтвердить</button>
                     </form>
                 </div>
@@ -117,6 +121,7 @@
             const confirmForm = document.getElementById('confirmDeleteForm');
             const confirmActionInput = document.getElementById('confirmAction');
             const confirmUserIdInput = document.getElementById('confirmUserId');
+            const confirmCartIdInput = document.getElementById('confirmCartId');
 
             deleteButtons.forEach(button => {
                 button.addEventListener('click', function(event) {
@@ -125,6 +130,7 @@
                     const message = this.getAttribute('data-message') || 'Вы уверены, что хотите выполнить это действие?';
                     const actionType = this.getAttribute('data-action-type');
                     const userId = this.getAttribute('data-user-id');
+                    const cartId = this.getAttribute('data-cart-id');
 
                     // Устанавливаем сообщение и action формы
                     confirmMessage.textContent = message;
@@ -140,6 +146,11 @@
                         confirmUserIdInput.value = userId;
                     } else {
                         confirmUserIdInput.value = '';
+                    }
+                    if (cartId) {
+                        confirmCartIdInput.value = cartId;
+                    } else {
+                        confirmCartIdInput.value = '';
                     }
 
                     // Показываем модальное окно
