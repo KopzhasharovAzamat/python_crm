@@ -83,24 +83,3 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/login/'
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs/activity.log',
-            'maxBytes': 1024 * 1024 * 5,  # 5 MB
-            'backupCount': 5,
-        },
-    },
-    'loggers': {
-        'inventory': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    },
-}
