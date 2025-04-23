@@ -18,7 +18,7 @@
             </div>
             {% endif %}
             <div class="card-body">
-                <h5 class="card-title">{{ product.name }}</h5>
+                <h5 class="card-title"><a href="{% url 'product_detail' product.id %}" class="text-decoration-none">{{ product.name }}</a></h5>
                 <p class="card-text">
                     <strong>Категория:</strong> {{ product.category|default:"Не указана" }}<br>
                     <strong>Подкатегория:</strong> {{ product.subcategory|default:"Не указана" }}<br>
@@ -27,9 +27,9 @@
                     <strong>Цена:</strong> {{ product.selling_price }} ₽
                 </p>
             </div>
-            <div class="card-footer text-center">
-                <button class="btn btn-success btn-sm delete-btn" data-action="{% url 'product_unarchive' product.id %}" data-message="Вы уверены, что хотите разархивировать товар {{ product.name }}?"><i class="fas fa-undo"></i> Разархивировать</button>
-                <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'product_delete' product.id %}" data-message="Вы уверены, что хотите удалить товар {{ product.name }}?"><i class="fas fa-trash"></i> Удалить</button>
+            <div class="card-footer d-flex gap-2 justify-content-center flex-wrap">
+                <button class="btn btn-success shadow-sm delete-btn" data-action="{% url 'product_unarchive' product.id %}" data-message="Вы уверены, что хотите разархивировать товар {{ product.name }}?" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-undo me-1"></i> Разархивировать</button>
+                <button class="btn btn-danger shadow-sm delete-btn" data-action="{% url 'product_delete' product.id %}" data-message="Вы уверены, что хотите удалить товар {{ product.name }}?" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-trash me-1"></i> Удалить</button>
             </div>
         </div>
     </div>

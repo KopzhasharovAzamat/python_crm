@@ -1,0 +1,57 @@
+<!--templates/product_detail.html-->
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-8">
+        <div class="card shadow-sm animate__animated animate__fadeIn">
+            <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h3 class="mb-0">Детали товара: {{ product.name }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Фото товара -->
+                    <div class="col-md-6 mb-3">
+                        {% if product.photo %}
+                            <img src="{{ product.photo.url }}" alt="{{ product.name }}" class="img-fluid rounded" style="max-height: 300px;">
+                        {% else %}
+                            <p class="text-muted">Фото отсутствует</p>
+                        {% endif %}
+                    </div>
+                    <!-- QR-код -->
+                    <div class="col-md-6 mb-3">
+                        {% if product.qr_code %}
+                            <img src="{{ product.qr_code.url }}" alt="QR-код товара" class="img-fluid rounded" style="max-height: 200px;">
+                        {% else %}
+                            <p class="text-muted">QR-код отсутствует</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item"><strong>Название:</strong> {{ product.name }}</li>
+                            <li class="list-group-item"><strong>Уникальный идентификатор:</strong> {{ product.unique_id }}</li>
+                            <li class="list-group-item"><strong>Категория:</strong> {{ product.category|default:"Не указана" }}</li>
+                            <li class="list-group-item"><strong>Подкатегория:</strong> {{ product.subcategory|default:"Не указана" }}</li>
+                            <li class="list-group-item"><strong>Количество:</strong> {{ product.quantity }} шт.</li>
+                            {% if show_cost_price %}
+                                <li class="list-group-item"><strong>Себестоимость:</strong> {{ product.cost_price|default:"Не указана" }} ₽</li>
+                            {% endif %}
+                            <li class="list-group-item"><strong>Цена продажи:</strong> {{ product.selling_price }} ₽</li>
+                            <li class="list-group-item"><strong>Склад:</strong> {{ product.warehouse.name }}</li>
+                            <li class="list-group-item"><strong>Владелец:</strong> {{ product.owner.username }}</li>
+                            <li class="list-group-item"><strong>Архивировано:</strong> {% if product.is_archived %}Да{% else %}Нет{% endif %}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'products' %}" class="btn btn-secondary">Назад к списку товаров</a>
+                    <a href="{% url 'product_edit' product.id %}" class="btn btn-primary">Редактировать</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

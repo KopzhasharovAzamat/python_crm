@@ -86,7 +86,7 @@
             </div>
             {% endif %}
             <div class="card-body">
-                <h5 class="card-title">{{ product.name }}</h5>
+                <h5 class="card-title"><a href="{% url 'product_detail' product.id %}" class="text-decoration-none">{{ product.name }}</a></h5>
                 <p class="card-text">
                     <strong>Категория:</strong> {{ product.category|default:"Не указана" }}<br>
                     <strong>Подкатегория:</strong> {{ product.subcategory|default:"Не указана" }}<br>
@@ -98,11 +98,11 @@
                     <strong>Цена:</strong> {{ product.selling_price }} ₽
                 </p>
             </div>
-            <div class="card-footer text-center">
-                <a href="{% url 'cart_create' %}" class="btn btn-primary btn-sm"><i class="fas fa-shopping-cart"></i> Продать</a>
-                <a href="{% url 'product_edit' product.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
-                <button class="btn btn-secondary btn-sm delete-btn" data-action="{% url 'product_archive' product.id %}" data-message="Вы уверены, что хотите архивировать товар {{ product.name }}?"><i class="fas fa-archive"></i> Архивировать</button>
-                <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'product_delete' product.id %}" data-message="Вы уверены, что хотите удалить товар {{ product.name }}?"><i class="fas fa-trash"></i> Удалить</button>
+            <div class="card-footer d-flex gap-2 justify-content-center flex-wrap">
+                <a href="{% url 'cart_create' %}" class="btn btn-primary shadow-sm" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-shopping-cart me-1"></i> Продать</a>
+                <a href="{% url 'product_edit' product.id %}" class="btn btn-warning shadow-sm" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-edit me-1"></i> Редактировать</a>
+                <button class="btn btn-secondary shadow-sm delete-btn" data-action="{% url 'product_archive' product.id %}" data-message="Вы уверены, что хотите архивировать товар {{ product.name }}?" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-archive me-1"></i> Архивировать</button>
+                <button class="btn btn-danger shadow-sm delete-btn" data-action="{% url 'product_delete' product.id %}" data-message="Вы уверены, что хотите удалить товар {{ product.name }}?" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-trash me-1"></i> Удалить</button>
             </div>
         </div>
     </div>

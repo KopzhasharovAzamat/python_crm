@@ -6,25 +6,38 @@ from .models import Product, Warehouse, Category, Subcategory, UserSettings, Car
 
 
 class RegisterForm(UserCreationForm):
-    email = forms.EmailField(required=True)
-    first_name = forms.CharField(max_length=100, required=True)
+    email = forms.EmailField(required=True, label="Электронная почта")
+    first_name = forms.CharField(max_length=100, required=True, label="Имя")
+
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'password1', 'password2']
+        labels = {
+            'username': 'Имя пользователя',
+            'password1': 'Пароль',
+            'password2': 'Подтверждение пароля',
+        }
 
 class LoginForm(forms.Form):
-    username = forms.CharField()
-    password = forms.CharField(widget=forms.PasswordInput)
+    username = forms.CharField(label="Имя пользователя")
+    password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
 
 class UserChangeForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['email', 'first_name']
+        labels = {
+            'email': 'Электронная почта',
+            'first_name': 'Имя',
+        }
 
 class UserSettingsForm(forms.ModelForm):
     class Meta:
         model = UserSettings
         fields = ['hide_cost_price']
+        labels = {
+            'hide_cost_price': 'Скрыть себестоимость',
+        }
 
 class ProductForm(forms.ModelForm):
     class Meta:
@@ -59,6 +72,9 @@ class WarehouseForm(forms.ModelForm):
     class Meta:
         model = Warehouse
         fields = ['name']
+        labels = {
+            'name': 'Название',
+        }
 
 class CartItemForm(forms.ModelForm):
     actual_price = forms.DecimalField(decimal_places=2, required=False, label="Фактическая цена за единицу")
@@ -66,6 +82,10 @@ class CartItemForm(forms.ModelForm):
     class Meta:
         model = CartItem
         fields = ['product', 'quantity', 'actual_price']
+        labels = {
+            'product': 'Товар',
+            'quantity': 'Количество',
+        }
         widgets = {
             'product': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -76,11 +96,18 @@ class CategoryForm(forms.ModelForm):
     class Meta:
         model = Category
         fields = ['name']
+        labels = {
+            'name': 'Название',
+        }
 
 class SubcategoryForm(forms.ModelForm):
     class Meta:
         model = Subcategory
         fields = ['name', 'category']
+        labels = {
+            'name': 'Название',
+            'category': 'Категория',
+        }
         widgets = {
             'category': forms.Select(attrs={'class': 'form-control'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -97,11 +124,15 @@ class SubcategoryForm(forms.ModelForm):
         return name
 
 class SaleItemForm(forms.ModelForm):
-    actual_price = forms.DecimalField(required=False, decimal_places=2, max_digits=10, label="Actual Price per Unit")
+    actual_price = forms.DecimalField(required=False, decimal_places=2, max_digits=10, label="Фактическая цена за единицу")
 
     class Meta:
         model = SaleItem
         fields = ['product', 'quantity', 'actual_price']
+        labels = {
+            'product': 'Товар',
+            'quantity': 'Количество',
+        }
 
 class ReturnForm(forms.Form):
-    quantity = forms.IntegerField(min_value=1, label="Quantity to Return")
+    quantity = forms.IntegerField(min_value=1, label="Количество для возврата")

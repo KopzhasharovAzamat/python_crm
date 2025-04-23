@@ -156,6 +156,16 @@ def product_list(request):
     })
 
 @login_required
+def product_detail(request, product_id):
+    product = get_object_or_404(Product, id=product_id, owner=request.user)
+    user_settings, created = UserSettings.objects.get_or_create(user=request.user)
+    show_cost_price = not user_settings.hide_cost_price
+    return render(request, 'product_detail.html', {
+        'product': product,
+        'show_cost_price': show_cost_price,
+    })
+
+@login_required
 def product_add(request):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES)
