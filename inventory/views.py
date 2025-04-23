@@ -778,7 +778,7 @@ def stats(request):
             'revenue': day_revenue
         })
 
-    user_settings = UserSettings.objects.get(user=request.user)
+    user_settings, created = UserSettings.objects.get_or_create(user=request.user)
     show_cost_price = not user_settings.hide_cost_price
     total_profit = None
     daily_profit = None
