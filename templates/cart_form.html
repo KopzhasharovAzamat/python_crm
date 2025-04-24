@@ -19,18 +19,36 @@
                     </li>
                     {% endfor %}
                 </ul>
-                <p><strong>Общая базовая стоимость:</strong> {{ cart.calculate_totals.0|floatformat:2 }} ₽</p>
-                <p><strong>Общая фактическая стоимость:</strong> {{ cart.calculate_totals.1|floatformat:2 }} ₽</p>
+                <p><strong>Общее количество товаров:</strong> {{ total_quantity }} шт.</p>
+                <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} ₽</p>
+                <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} ₽</p>
                 <div class="d-flex gap-2 mb-4">
                     <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success flex-fill"><i class="fas fa-check"></i> Совершить продажу</a>
                     <a href="{% url 'cart_cancel' cart.id %}" class="btn btn-secondary flex-fill"><i class="fas fa-times"></i> Отменить</a>
                 </div>
+                {% else %}
+                <p class="text-muted">Корзина пуста. Добавьте товары, чтобы продолжить.</p>
                 {% endif %}
                 <h5>Добавить товар:</h5>
                 <div class="d-flex gap-2 mb-3">
+                    <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#manualAddModal"><i class="fas fa-search"></i> Ручной поиск</button>
                     <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#scanModal"><i class="fas fa-qrcode"></i> Сканировать код</button>
                 </div>
-                <form method="post" id="cartForm">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Manual Add -->
+<div class="modal" id="manualAddModal" tabindex="-1" aria-labelledby="manualAddModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="manualAddModalLabel">Добавить товар</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'cart_add_item' cart.id %}" id="manualAddForm">
                     {% csrf_token %}
                     {% for field in form %}
                     <div class="mb-3">
@@ -42,166 +60,300 @@
                         {% if field.name == "product" %}
                         <div class="mt-2">
                             <label class="form-label">Цена продажи:</label>
-                            <p id="sellingPriceDisplay" class="form-text">0.00 ₽</p>
+                            <p id="manualSellingPriceDisplay" class="form-text">0.00 ₽</p>
+                            <label class="form-label">Количество на складе:</label>
+                            <p id="manualStockQuantity" class="form-text">0 шт.</p>
                         </div>
                         {% endif %}
                     </div>
                     {% endfor %}
                     <div class="mb-3">
                         <label class="form-label">Итоговая цена:</label>
-                        <p id="totalPrice" class="form-text">0.00 ₽</p>
+                        <p id="manualTotalPrice" class="form-text">0.00 ₽</p>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить товар</button>
+                    <p id="manualValidationError" class="text-danger d-none"></p>
+                    <button type="submit" id="manualAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Scan Modal -->
+<!-- Modal for Scan -->
 <div class="modal" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="scanModalLabel">Сканировать QR-код</h5>
+                <h5 class="modal-title text-white" id="scanModalLabel">Сканировать код товара</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                {% if scanned_product %}
-                <h5>{{ scanned_product.name }}</h5>
-                <p><strong>Категория:</strong> {{ scanned_product.category.name }}</p>
-                {% if scanned_product.subcategory %}
-                <p><strong>Подкатегория:</strong> {{ scanned_product.subcategory.name }}</p>
-                {% endif %}
-                <p><strong>Склад:</strong> {{ scanned_product.warehouse.name }}</p>
-                <p><strong>Количество на складе:</strong> {{ scanned_product.quantity }} шт.</p>
-                <p><strong>Цена продажи:</strong> {{ scanned_product.selling_price|floatformat:2 }} ₽</p>
-                {% if scanned_product.photo %}
-                <img src="{{ scanned_product.photo.url }}" alt="{{ scanned_product.name }}" class="img-fluid mb-2" style="max-height: 200px;">
-                {% endif %}
-                <form method="post" action="{% url 'cart_add_item' cart.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="product" value="{{ scanned_product.id }}">
-                    <div class="mb-3">
-                        <label for="quantity" class="form-label">Количество:</label>
-                        <input type="number" name="quantity" class="form-control" min="1" value="1" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="actual_price" class="form-label">Фактическая цена за единицу:</label>
-                        <input type="number" step="0.01" name="actual_price" class="form-control" value="{{ scanned_product.selling_price|floatformat:2 }}" placeholder="{{ scanned_product.selling_price|floatformat:2 }}">
-                    </div>
-                    <button type="submit" name="add_scanned_item" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
-                </form>
-                <form method="post" action="{% url 'cart_add_item' cart.id %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="cancel_scan" value="true">
-                    <button type="submit" class="btn btn-secondary w-100 mt-2"><i class="fas fa-times"></i> Отменить добавление сканированного товара</button>
-                </form>
-                {% else %}
-                <form method="post" action="{% url 'cart_add_item' cart.id %}">
-                    {% csrf_token %}
+                <div id="scanInputForm">
                     <div class="mb-3">
                         <label for="unique_id" class="form-label">Введите код товара (или отсканируйте):</label>
-                        <input type="text" name="unique_id" id="unique_id" class="form-control" required autofocus>
+                        <div class="input-group">
+                            <input type="text" id="unique_id" class="form-control" placeholder="UUID товара" required>
+                            <button type="button" id="pasteCodeBtn" class="btn btn-outline-secondary"><i class="fas fa-paste"></i></button>
+                        </div>
                     </div>
-                    <button type="submit" name="scan_code" class="btn btn-primary w-100"><i class="fas fa-search"></i> Найти товар</button>
-                </form>
-                {% endif %}
+                    <p id="scanError" class="text-danger d-none">Товар не найден.</p>
+                </div>
+                <div id="scanProductDetails" class="d-none">
+                    <h5 id="scanProductName"></h5>
+                    <p><strong>Категория:</strong> <span id="scanCategory"></span></p>
+                    <p><strong>Подкатегория:</strong> <span id="scanSubcategory"></span></p>
+                    <p><strong>Склад:</strong> <span id="scanWarehouse"></span></p>
+                    <p><strong>Количество на складе:</strong> <span id="scanStockQuantity"></span> шт.</p>
+                    <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> ₽</p>
+                    <img id="scanProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
+                    <form method="post" action="{% url 'cart_add_item' cart.id %}" id="scanAddForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="product" id="scanProductId">
+                        <div class="mb-3">
+                            <label for="scanQuantity" class="form-label">Количество:</label>
+                            <input type="number" name="quantity" id="scanQuantity" class="form-control" min="1" value="1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="scanActualPrice" class="form-label">Фактическая цена за единицу:</label>
+                            <input type="number" step="0.01" name="actual_price" id="scanActualPrice" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Итоговая цена:</label>
+                            <p id="scanTotalPrice" class="form-text">0.00 ₽</p>
+                        </div>
+                        <p id="scanValidationError" class="text-danger d-none"></p>
+                        <div class="d-flex gap-2">
+                            <button type="submit" id="scanAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                            <button type="button" id="cancelScanBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const productSelect = document.querySelector('#id_product');
-        const quantityInput = document.querySelector('#id_quantity');
-        const actualPriceInput = document.querySelector('#id_actual_price');
-        const totalPriceDisplay = document.querySelector('#totalPrice');
-        const sellingPriceDisplay = document.querySelector('#sellingPriceDisplay');
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Логика для модального окна ручного добавления ---
+    const manualModal = document.getElementById('manualAddModal');
+    const productSelect = document.querySelector('#id_product');
+    const manualQuantityInput = document.querySelector('#id_quantity');
+    const manualActualPriceInput = document.querySelector('#id_actual_price');
+    const manualTotalPriceDisplay = document.querySelector('#manualTotalPrice');
+    const manualSellingPriceDisplay = document.querySelector('#manualSellingPriceDisplay');
+    const manualStockQuantity = document.querySelector('#manualStockQuantity');
+    const manualAddButton = document.querySelector('#manualAddButton');
+    const manualValidationError = document.querySelector('#manualValidationError');
 
-        function updateTotalPrice() {
-            const quantity = parseInt(quantityInput.value) || 0;
-            const actualPrice = parseFloat(actualPriceInput.value) || 0;
-            const totalPrice = quantity * actualPrice;
-            totalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+    let manualStock = 0; // Для хранения количества на складе
+
+    function updateManualTotalPrice() {
+        const quantity = parseInt(manualQuantityInput.value) || 0;
+        const actualPrice = parseFloat(manualActualPriceInput.value) || 0;
+        const totalPrice = quantity * actualPrice;
+        manualTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+
+        // Валидация
+        manualValidationError.classList.add('d-none');
+        manualAddButton.disabled = false;
+
+        if (quantity <= 0) {
+            manualValidationError.textContent = 'Количество должно быть больше 0.';
+            manualValidationError.classList.remove('d-none');
+            manualAddButton.disabled = true;
+        } else if (quantity > manualStock) {
+            manualValidationError.textContent = `Количество не может быть больше, чем на складе (${manualStock} шт.).`;
+            manualValidationError.classList.remove('d-none');
+            manualAddButton.disabled = true;
+        } else if (actualPrice < 0) {
+            manualValidationError.textContent = 'Цена за единицу не может быть меньше 0.';
+            manualValidationError.classList.remove('d-none');
+            manualAddButton.disabled = true;
+        }
+    }
+
+    async function updateManualProductDetails() {
+        const productId = productSelect.value;
+        if (!productId) {
+            manualSellingPriceDisplay.textContent = '0.00 ₽';
+            manualStockQuantity.textContent = '0 шт.';
+            manualQuantityInput.value = 1;
+            manualActualPriceInput.value = '0.00';
+            manualStock = 0;
+            updateManualTotalPrice();
+            return;
         }
 
-        async function updateProductDetails() {
-            const productId = productSelect.value;
-            if (!productId) {
-                sellingPriceDisplay.textContent = '0.00 ₽';
-                quantityInput.value = 1;
-                actualPriceInput.value = '0.00';
-                updateTotalPrice();
-                return;
+        try {
+            const response = await fetch(`/get-product-price/?product_id=${productId}`);
+            const data = await response.json();
+
+            if (response.ok && !data.error) {
+                const sellingPrice = parseFloat(data.selling_price);
+                manualStock = data.quantity; // Сохраняем количество на складе
+                manualSellingPriceDisplay.textContent = sellingPrice.toFixed(2) + ' ₽';
+                manualStockQuantity.textContent = manualStock + ' шт.';
+                manualQuantityInput.value = 1;
+                manualActualPriceInput.value = sellingPrice.toFixed(2);
+                updateManualTotalPrice();
+            } else {
+                manualSellingPriceDisplay.textContent = 'Ошибка';
+                manualStockQuantity.textContent = 'Ошибка';
+                manualStock = 0;
+                manualQuantityInput.value = 1;
+                manualActualPriceInput.value = '0.00';
+                updateManualTotalPrice();
             }
-
-            try {
-                const response = await fetch(`/get-product-price/?product_id=${productId}`);
-                const data = await response.json();
-
-                if (response.ok && !data.error) {
-                    const sellingPrice = parseFloat(data.selling_price);
-
-                    // Отображаем selling_price
-                    sellingPriceDisplay.textContent = sellingPrice.toFixed(2) + ' ₽';
-
-                    // Устанавливаем количество = 1
-                    quantityInput.value = 1;
-
-                    // Всегда устанавливаем actual_price = selling_price при смене товара
-                    actualPriceInput.value = sellingPrice.toFixed(2);
-
-                    // Обновляем итоговую цену
-                    updateTotalPrice();
-                } else {
-                    console.error('Ошибка при получении цены:', data.error);
-                    sellingPriceDisplay.textContent = 'Ошибка';
-                    quantityInput.value = 1;
-                    actualPriceInput.value = '0.00';
-                    updateTotalPrice();
-                }
-            } catch (error) {
-                console.error('Ошибка AJAX-запроса:', error);
-                sellingPriceDisplay.textContent = 'Ошибка';
-                quantityInput.value = 1;
-                actualPriceInput.value = '0.00';
-                updateTotalPrice();
-            }
+        } catch (error) {
+            manualSellingPriceDisplay.textContent = 'Ошибка';
+            manualStockQuantity.textContent = 'Ошибка';
+            manualStock = 0;
+            manualQuantityInput.value = 1;
+            manualActualPriceInput.value = '0.00';
+            updateManualTotalPrice();
         }
+    }
 
-        if (productSelect && quantityInput && actualPriceInput) {
-            // При изменении выбранного товара
-            productSelect.addEventListener('change', updateProductDetails);
+    if (productSelect && manualQuantityInput && manualActualPriceInput) {
+        productSelect.addEventListener('change', updateManualProductDetails);
+        manualQuantityInput.addEventListener('input', updateManualTotalPrice);
+        manualActualPriceInput.addEventListener('input', updateManualTotalPrice);
+        updateManualProductDetails();
+    }
 
-            // При изменении количества или фактической цены
-            quantityInput.addEventListener('input', updateTotalPrice);
-            actualPriceInput.addEventListener('input', updateTotalPrice);
-
-            // Инициализация при загрузке страницы
-            updateProductDetails();
-        }
-
-        // Автофокус на поле ввода QR-кода при открытии модального окна
-        const scanModal = document.getElementById('scanModal');
-        scanModal.addEventListener('shown.bs.modal', function() {
-            const uniqueIdInput = document.getElementById('unique_id');
-            if (uniqueIdInput) {
-                uniqueIdInput.focus();
-            }
-        });
-
-        // Автоматическое открытие модального окна с небольшой задержкой
-        {% if scanned_product or auto_open_modal %}
-        setTimeout(function() {
-            const modal = new bootstrap.Modal(document.getElementById('scanModal'), {
-                backdrop: 'static',
-                keyboard: false
-            });
-            modal.show();
-        }, 100); // Задержка 100 мс для корректной инициализации
-        {% endif %}
+    manualModal.addEventListener('shown.bs.modal', function() {
+        updateManualProductDetails();
     });
+
+    // --- Логика для модального окна сканирования ---
+    const scanModal = new bootstrap.Modal(document.getElementById('scanModal'), {
+        backdrop: 'static',
+        keyboard: false
+    });
+    const uniqueIdInput = document.getElementById('unique_id');
+    const pasteCodeBtn = document.getElementById('pasteCodeBtn');
+    const scanInputForm = document.getElementById('scanInputForm');
+    const scanProductDetails = document.getElementById('scanProductDetails');
+    const scanError = document.getElementById('scanError');
+    const scanProductName = document.getElementById('scanProductName');
+    const scanCategory = document.getElementById('scanCategory');
+    const scanSubcategory = document.getElementById('scanSubcategory');
+    const scanWarehouse = document.getElementById('scanWarehouse');
+    const scanStockQuantity = document.getElementById('scanStockQuantity');
+    const scanSellingPrice = document.getElementById('scanSellingPrice');
+    const scanProductPhoto = document.getElementById('scanProductPhoto');
+    const scanProductId = document.getElementById('scanProductId');
+    const scanQuantityInput = document.getElementById('scanQuantity');
+    const scanActualPriceInput = document.getElementById('scanActualPrice');
+    const scanTotalPriceDisplay = document.getElementById('scanTotalPrice');
+    const scanAddButton = document.getElementById('scanAddButton');
+    const scanValidationError = document.getElementById('scanValidationError');
+    const cancelScanBtn = document.getElementById('cancelScanBtn');
+
+    let scanStock = 0; // Для хранения количества на складе
+
+    function resetScanForm() {
+        uniqueIdInput.value = '';
+        scanError.classList.add('d-none');
+        scanInputForm.classList.remove('d-none');
+        scanProductDetails.classList.add('d-none');
+        scanProductPhoto.classList.add('d-none');
+        scanStock = 0;
+        scanValidationError.classList.add('d-none');
+        scanAddButton.disabled = false;
+    }
+
+    async function checkProductByUUID() {
+        const uniqueId = uniqueIdInput.value.trim();
+        if (!uniqueId) return;
+
+        try {
+            const response = await fetch(`/get-product-by-uuid/?unique_id=${uniqueId}`);
+            const data = await response.json();
+
+            if (response.ok && !data.error) {
+                scanInputForm.classList.add('d-none');
+                scanProductDetails.classList.remove('d-none');
+                scanError.classList.add('d-none');
+
+                scanProductName.textContent = data.name;
+                scanCategory.textContent = data.category || 'Не указана';
+                scanSubcategory.textContent = data.subcategory || 'Не указана';
+                scanWarehouse.textContent = data.warehouse || 'Не указан';
+                scanStock = data.quantity; // Сохраняем количество на складе
+                scanStockQuantity.textContent = scanStock;
+                scanSellingPrice.textContent = data.selling_price.toFixed(2);
+                scanProductId.value = data.id;
+                scanQuantityInput.value = 1;
+                scanActualPriceInput.value = data.selling_price.toFixed(2);
+
+                if (data.photo) {
+                    scanProductPhoto.src = data.photo;
+                    scanProductPhoto.classList.remove('d-none');
+                }
+
+                updateScanTotalPrice();
+            } else {
+                scanError.textContent = 'Товар не найден.';
+                scanError.classList.remove('d-none');
+            }
+        } catch (error) {
+            scanError.textContent = 'Ошибка при поиске товара.';
+            scanError.classList.remove('d-none');
+        }
+    }
+
+    function updateScanTotalPrice() {
+        const quantity = parseInt(scanQuantityInput.value) || 0;
+        const actualPrice = parseFloat(scanActualPriceInput.value) || 0;
+        const totalPrice = quantity * actualPrice;
+        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+
+        // Валидация
+        scanValidationError.classList.add('d-none');
+        scanAddButton.disabled = false;
+
+        if (quantity <= 0) {
+            scanValidationError.textContent = 'Количество должно быть больше 0.';
+            scanValidationError.classList.remove('d-none');
+            scanAddButton.disabled = true;
+        } else if (quantity > scanStock) {
+            scanValidationError.textContent = `Количество не может быть больше, чем на складе (${scanStock} шт.).`;
+            scanValidationError.classList.remove('d-none');
+            scanAddButton.disabled = true;
+        } else if (actualPrice < 0) {
+            scanValidationError.textContent = 'Цена за единицу не может быть меньше 0.';
+            scanValidationError.classList.remove('d-none');
+            scanAddButton.disabled = true;
+        }
+    }
+
+    uniqueIdInput.addEventListener('input', checkProductByUUID);
+    scanQuantityInput.addEventListener('input', updateScanTotalPrice);
+    scanActualPriceInput.addEventListener('input', updateScanTotalPrice);
+
+    pasteCodeBtn.addEventListener('click', async function() {
+        try {
+            const text = await navigator.clipboard.readText();
+            uniqueIdInput.value = text;
+            checkProductByUUID();
+        } catch (err) {
+            console.error('Ошибка при вставке из буфера обмена:', err);
+        }
+    });
+
+    cancelScanBtn.addEventListener('click', function() {
+        resetScanForm();
+    });
+
+    document.getElementById('scanModal').addEventListener('shown.bs.modal', function() {
+        uniqueIdInput.focus();
+    });
+
+    document.getElementById('scanModal').addEventListener('hidden.bs.modal', function() {
+        resetScanForm();
+    });
+});
 </script>
 {% endblock %}

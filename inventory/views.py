@@ -231,7 +231,10 @@ def get_product_price(request):
         product_id = request.GET.get('product_id')
         try:
             product = Product.objects.get(id=product_id, owner=request.user)
-            return JsonResponse({'selling_price': float(product.selling_price)})
+            return JsonResponse({
+                'selling_price': float(product.selling_price),
+                'quantity': product.quantity  # Добавляем количество на складе
+            })
         except Product.DoesNotExist:
             return JsonResponse({'error': 'Товар не найден'}, status=404)
     return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
@@ -579,7 +582,6 @@ def cart_list(request):
     carts = Cart.objects.filter(owner=request.user).prefetch_related('items__product')
     return render(request, 'cart_list.html', {'carts': carts})
 
-
 @login_required
 def cart_create(request):
     if request.method == 'POST':
@@ -592,75 +594,45 @@ def cart_create(request):
         return redirect('cart_add_item', cart_id=cart.id)
     return render(request, 'cart_create.html')
 
-
 @login_required
 def cart_add_item(request, cart_id):
     cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
-    products = Product.objects.filter(owner=request.user)
+    products = Product.objects.filter(owner=request.user, is_archived=False)  # Только неархивированные товары
 
-    # Инициализируем form в начале, чтобы она всегда была определена
     form = CartItemForm()
     form.fields['product'].queryset = products
-    scanned_product = None
-    auto_open_modal = False  # Флаг для автоматического открытия модального окна
 
     if request.method == 'POST':
-        if 'scan_code' in request.POST:
-            unique_id = request.POST.get('unique_id')
-            try:
-                scanned_product = Product.objects.get(unique_id=unique_id, owner=request.user)
-                auto_open_modal = True  # Открываем модальное окно автоматически
-            except Product.DoesNotExist:
-                messages.error(request, 'Товар с таким кодом не найден.')
-                auto_open_modal = True  # Открываем модальное окно даже при ошибке
+        form = CartItemForm(request.POST)
+        if form.is_valid():
+            cart_item = form.save(commit=False)
+            cart_item.cart = cart
+            product = cart_item.product
+            cart_item.base_price_total = cart_item.quantity * product.selling_price
+            actual_price = form.cleaned_data['actual_price'] or product.selling_price
+            cart_item.actual_price_total = cart_item.quantity * actual_price
 
-        elif 'add_scanned_item' in request.POST:
-            form = CartItemForm(request.POST)
-            if form.is_valid():
-                cart_item = form.save(commit=False)
-                cart_item.cart = cart
-                product = cart_item.product
-                cart_item.base_price_total = cart_item.quantity * product.selling_price
-                actual_price = form.cleaned_data['actual_price'] or product.selling_price
-                cart_item.actual_price_total = cart_item.quantity * actual_price
-
-                if cart_item.quantity <= product.quantity:
-                    cart_item.save()
-                    messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
-                    return redirect('cart_add_item', cart_id=cart.id)
-                else:
-                    messages.error(request, 'Недостаточно товара на складе.')
-                    auto_open_modal = True  # Открываем модальное окно при ошибке
-
-        elif 'cancel_scan' in request.POST:
-            # При отмене сканирования сбрасываем scanned_product
-            return redirect('cart_add_item', cart_id=cart.id)
-
+            if cart_item.quantity <= product.quantity:
+                cart_item.save()
+                messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
+                return redirect('cart_add_item', cart_id=cart.id)
+            else:
+                messages.error(request, 'Недостаточно товара на складе.')
+                return redirect('cart_add_item', cart_id=cart.id)
         else:
-            form = CartItemForm(request.POST)
-            if form.is_valid():
-                cart_item = form.save(commit=False)
-                cart_item.cart = cart
-                product = cart_item.product
-                cart_item.base_price_total = cart_item.quantity * product.selling_price
-                actual_price = form.cleaned_data['actual_price'] or product.selling_price
-                cart_item.actual_price_total = cart_item.quantity * actual_price
+            messages.error(request, 'Ошибка при добавлении товара. Проверьте данные.')
 
-                if cart_item.quantity <= product.quantity:
-                    cart_item.save()
-                    messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
-                    return redirect('cart_add_item', cart_id=cart.id)
-                else:
-                    form.add_error('quantity', 'Недостаточно товара на складе.')
+    total_quantity = sum(item.quantity for item in cart.items.all())
+    base_total, actual_total = cart.calculate_totals()
 
     return render(request, 'cart_form.html', {
         'form': form,
         'cart': cart,
         'products': products,
-        'scanned_product': scanned_product,
-        'auto_open_modal': auto_open_modal
+        'total_quantity': total_quantity,
+        'base_total': base_total,
+        'actual_total': actual_total,
     })
-
 
 @login_required
 def cart_remove_item(request, cart_id, item_id):
@@ -670,7 +642,6 @@ def cart_remove_item(request, cart_id, item_id):
     cart_item.delete()
     messages.success(request, f'Товар "{product_name}" удалён из корзины.')
     return redirect('cart_add_item', cart_id=cart.id)
-
 
 @login_required
 def cart_confirm(request, cart_id):
@@ -712,14 +683,12 @@ def cart_confirm(request, cart_id):
     messages.success(request, 'Продажа успешно завершена!')
     return redirect('sales_list')
 
-
 @login_required
 def cart_cancel(request, cart_id):
     cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
     cart.delete()
     messages.success(request, 'Корзина отменена.')
     return redirect('products')
-
 
 @login_required
 def cart_delete(request, cart_id):
@@ -734,6 +703,26 @@ def cart_delete(request, cart_id):
         messages.success(request, 'Корзина удалена.')
         return redirect('cart_list')
     return redirect('cart_list')
+
+@login_required
+def get_product_by_uuid(request):
+    if request.method == 'GET':
+        unique_id = request.GET.get('unique_id')
+        try:
+            product = Product.objects.get(unique_id=unique_id, owner=request.user, is_archived=False)
+            return JsonResponse({
+                'id': product.id,
+                'name': product.name,
+                'category': product.category.name if product.category else '',
+                'subcategory': product.subcategory.name if product.subcategory else '',
+                'warehouse': product.warehouse.name if product.warehouse else '',
+                'quantity': product.quantity,
+                'selling_price': float(product.selling_price),
+                'photo': product.photo.url if product.photo else '',
+            })
+        except Product.DoesNotExist:
+            return JsonResponse({'error': 'Товар не найден'}, status=404)
+    return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
 
 ############
 ### SCAN ###
