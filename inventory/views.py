@@ -625,6 +625,9 @@ def cart_add_item(request, cart_id):
     total_quantity = sum(item.quantity for item in cart.items.all())
     base_total, actual_total = cart.calculate_totals()
 
+    # Группируем товары по продукту и считаем общее количество
+    product_totals = cart.items.values('product__name').annotate(total_quantity=Sum('quantity')).order_by('product__name')
+
     return render(request, 'cart_form.html', {
         'form': form,
         'cart': cart,
@@ -632,6 +635,7 @@ def cart_add_item(request, cart_id):
         'total_quantity': total_quantity,
         'base_total': base_total,
         'actual_total': actual_total,
+        'product_totals': product_totals,  # Передаём агрегированные данные в шаблон
     })
 
 @login_required
@@ -652,25 +656,39 @@ def cart_confirm(request, cart_id):
         messages.error(request, 'Корзина пуста. Добавьте товары перед подтверждением.')
         return redirect('cart_add_item', cart_id=cart.id)
 
+    # Группируем товары по продукту, чтобы посчитать общее количество
+    product_quantities = {}
     for item in cart_items:
         product = item.product
-        if item.quantity > product.quantity:
+        if product.id not in product_quantities:
+            product_quantities[product.id] = {'quantity': 0, 'items': []}
+        product_quantities[product.id]['quantity'] += item.quantity
+        product_quantities[product.id]['items'].append(item)
+
+    # Проверяем общее количество каждого товара
+    for product_id, data in product_quantities.items():
+        product = Product.objects.get(id=product_id)
+        total_quantity = data['quantity']
+        if total_quantity > product.quantity:
             messages.error(request,
-                           f'Недостаточно товара "{product.name}" на складе (осталось {product.quantity} шт.).')
+                           f'Недостаточно товара "{product.name}" на складе. В корзине: {total_quantity} шт., на складе: {product.quantity} шт.')
             return redirect('cart_add_item', cart_id=cart.id)
 
+    # Если проверка прошла, создаём продажу
     sale = Sale.objects.create(owner=request.user)
-    for cart_item in cart_items:
-        product = cart_item.product
-        product.quantity -= cart_item.quantity
+    for product_id, data in product_quantities.items():
+        product = Product.objects.get(id=product_id)
+        total_quantity = data['quantity']
+        product.quantity -= total_quantity  # Списываем общее количество
         product.save()
-        SaleItem.objects.create(
-            sale=sale,
-            product=cart_item.product,
-            quantity=cart_item.quantity,
-            base_price_total=cart_item.base_price_total,
-            actual_price_total=cart_item.actual_price_total
-        )
+        for item in data['items']:
+            SaleItem.objects.create(
+                sale=sale,
+                product=item.product,
+                quantity=item.quantity,
+                base_price_total=item.base_price_total,
+                actual_price_total=item.actual_price_total
+            )
 
     LogEntry.objects.create(
         user=request.user,

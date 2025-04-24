@@ -19,6 +19,18 @@
                     </li>
                     {% endfor %}
                 </ul>
+                <h6>Общее количество по товарам:</h6>
+                <ul class="list-group mb-4">
+                    {% for product in product_totals %}
+                    <li class="list-group-item">
+                        {{ product.product__name }}: {{ product.total_quantity }} шт.
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">
+                        Нет товаров.
+                    </li>
+                    {% endfor %}
+                </ul>
                 <p><strong>Общее количество товаров:</strong> {{ total_quantity }} шт.</p>
                 <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} ₽</p>
                 <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} ₽</p>
