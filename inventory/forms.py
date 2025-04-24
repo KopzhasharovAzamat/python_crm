@@ -4,7 +4,6 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Product, Warehouse, Category, Subcategory, UserSettings, CartItem, SaleItem
 
-
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True, label="Электронная почта")
     first_name = forms.CharField(max_length=100, required=True, label="Имя")
@@ -68,6 +67,19 @@ class ProductForm(forms.ModelForm):
             except (ValueError, TypeError):
                 self.fields['subcategory'].queryset = Subcategory.objects.none()
 
+    def clean_cost_price(self):
+        cost_price = self.cleaned_data.get('cost_price')
+        if cost_price is not None and cost_price < 0:
+            raise forms.ValidationError("Себестоимость не может быть отрицательной.")
+        return cost_price
+
+    def clean_selling_price(self):
+        selling_price = self.cleaned_data['selling_price']
+        if selling_price < 0:
+            raise forms.ValidationError("Цена продажи не может быть отрицательной.")
+        return selling_price
+
+
 class WarehouseForm(forms.ModelForm):
     class Meta:
         model = Warehouse
@@ -91,6 +103,18 @@ class CartItemForm(forms.ModelForm):
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'actual_price': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+
+    def clean_quantity(self):
+        quantity = self.cleaned_data['quantity']
+        if quantity <= 0:
+            raise forms.ValidationError("Количество должно быть больше 0.")
+        return quantity
+
+    def clean_actual_price(self):
+        actual_price = self.cleaned_data.get('actual_price')
+        if actual_price is not None and actual_price < 0:
+            raise forms.ValidationError("Фактическая цена не может быть отрицательной.")
+        return actual_price
 
 class CategoryForm(forms.ModelForm):
     class Meta:

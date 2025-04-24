@@ -16,7 +16,7 @@
                 </h3>
             </div>
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" id="product-form">
                     {% csrf_token %}
                     <div class="row g-3">
                         {% for field in form %}
@@ -64,6 +64,29 @@
     const csrftoken = getCookie('csrftoken');
 
     $(document).ready(function() {
+        // Устанавливаем минимальные значения для полей
+        $('#id_quantity').attr('min', 0);
+        $('#id_cost_price').attr('min', 0);
+        $('#id_selling_price').attr('min', 0);
+
+        // Валидация формы перед отправкой
+        $('#product-form').on('submit', function(event) {
+            var costPrice = parseFloat($('#id_cost_price').val()) || 0;
+            var sellingPrice = parseFloat($('#id_selling_price').val());
+
+            if (costPrice < 0) {
+                event.preventDefault();
+                alert('Себестоимость не может быть отрицательной.');
+                return false;
+            }
+
+            if (sellingPrice < 0) {
+                event.preventDefault();
+                alert('Цена продажи не может быть отрицательной.');
+                return false;
+            }
+        });
+
         // Функция для загрузки подкатегорий
         function loadSubcategories(categoryId) {
             console.log('Loading subcategories for category ID:', categoryId);
