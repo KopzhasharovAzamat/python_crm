@@ -20,9 +20,12 @@
                         {% endif %}
                     </div>
                     <!-- QR-код -->
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-6 mb-3 text-center">
                         {% if product.qr_code %}
-                            <img src="{{ product.qr_code.url }}" alt="QR-код товара" class="img-fluid rounded" style="max-height: 200px;">
+                            <img src="{{ product.qr_code.url }}" alt="QR-код товара" class="img-fluid rounded" id="qr-code-image" style="max-height: 200px;">
+                            <div class="mt-2">
+                                <button onclick="downloadQRCode()" class="btn btn-success btn-sm">Скачать QR-код</button>
+                            </div>
                         {% else %}
                             <p class="text-muted">QR-код отсутствует</p>
                         {% endif %}
@@ -54,4 +57,19 @@
         </div>
     </div>
 </div>
+
+<!-- JavaScript для скачивания QR-кода -->
+<script>
+function downloadQRCode() {
+    const qrImage = document.getElementById('qr-code-image');
+    const qrImageUrl = qrImage.src;
+    const productName = "{{ product.name|slugify }}"; // Используем имя продукта для имени файла
+    const link = document.createElement('a');
+    link.href = qrImageUrl;
+    link.download = `qr-code-${productName}.png`; // Имя файла для скачивания
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
 {% endblock %}
