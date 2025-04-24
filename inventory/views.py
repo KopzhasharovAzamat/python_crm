@@ -1023,11 +1023,6 @@ def admin_panel(request):
 ### LOGS ###
 ############
 
-@user_passes_test(lambda u: u.is_superuser)
-def admin_logs(request):
-    logs = LogEntry.objects.all().order_by('-timestamp')
-    return render(request, 'admin_logs.html', {'logs': logs})
-
 @login_required
 def user_logs(request):
     # Получаем логи только для текущего пользователя
@@ -1064,8 +1059,3 @@ def user_logs(request):
         'date_from': date_from,
         'date_to': date_to,
     })
-
-@user_passes_test(lambda u: u.is_superuser)
-def admin_logs(request):
-    logs = LogEntry.objects.all().order_by('-timestamp')
-    return render(request, 'admin_logs.html', {'logs': logs})

@@ -7,13 +7,30 @@
     <div class="col-md-10">
         <div class="card shadow-sm animate__animated animate__fadeIn">
             <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h3 class="mb-0">История ваших действий</h3>
+                <h3 class="mb-0">
+                    {% if is_admin %}
+                        История действий
+                    {% else %}
+                        История ваших действий
+                    {% endif %}
+                </h3>
             </div>
             <div class="card-body">
                 <!-- Форма фильтрации -->
                 <form method="get" class="mb-4">
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        {% if is_admin %}
+                        <div class="col-md-3 mb-3">
+                            <label for="user" class="form-label">Пользователь</label>
+                            <select name="user" id="user" class="form-control">
+                                <option value="">Все пользователи</option>
+                                {% for user in users %}
+                                <option value="{{ user.username }}" {% if user_filter == user.username %}selected{% endif %}>{{ user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-{% if is_admin %}3{% else %}4{% endif %} mb-3">
                             <label for="action_type" class="form-label">Тип действия</label>
                             <select name="action_type" id="action_type" class="form-control">
                                 <option value="">Все</option>
@@ -22,15 +39,15 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-{% if is_admin %}2{% else %}3{% endif %} mb-3">
                             <label for="date_from" class="form-label">Дата с</label>
                             <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from|default_if_none:'' }}">
                         </div>
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-{% if is_admin %}2{% else %}3{% endif %} mb-3">
                             <label for="date_to" class="form-label">Дата по</label>
                             <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to|default_if_none:'' }}">
                         </div>
-                        <div class="col-md-2 mb-3 d-flex align-items-end">
+                        <div class="col-md-{% if is_admin %}2{% else %}2{% endif %} mb-3 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Фильтровать</button>
                         </div>
                     </div>
@@ -44,6 +61,9 @@
                             <tr>
                                 <th>Дата и время</th>
                                 <th>Действие</th>
+                                {% if is_admin %}
+                                <th>Пользователь</th>
+                                {% endif %}
                                 <th>Сообщение</th>
                             </tr>
                         </thead>
@@ -52,6 +72,9 @@
                             <tr>
                                 <td>{{ log.timestamp }}</td>
                                 <td>{{ log.get_action_type_display }}</td>
+                                {% if is_admin %}
+                                <td>{{ log.user.username|default:"Неизвестный" }}</td>
+                                {% endif %}
                                 <td>{{ log.message }}</td>
                             </tr>
                             {% endfor %}
@@ -59,7 +82,13 @@
                     </table>
                 </div>
                 {% else %}
-                <p class="text-center">Нет записей о ваших действиях.</p>
+                <p class="text-center">
+                    {% if is_admin %}
+                        Нет записей о действиях.
+                    {% else %}
+                        Нет записей о ваших действиях.
+                    {% endif %}
+                </p>
                 {% endif %}
 
                 <div class="mt-4">

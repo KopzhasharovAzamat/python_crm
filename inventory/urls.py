@@ -68,5 +68,4 @@ urlpatterns = [
 
     # Admin panel
     path('admin-panel/', views.admin_panel, name='admin_panel'),
-    path('admin-logs/', views.admin_logs, name='admin_logs'),
 ]
