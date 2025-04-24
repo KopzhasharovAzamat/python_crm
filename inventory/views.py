@@ -225,6 +225,17 @@ def product_delete(request, product_id):
         messages.success(request, f'Товар "{product_name}" удален.')
     return redirect('products')
 
+@login_required
+def get_product_price(request):
+    if request.method == 'GET':
+        product_id = request.GET.get('product_id')
+        try:
+            product = Product.objects.get(id=product_id, owner=request.user)
+            return JsonResponse({'selling_price': float(product.selling_price)})
+        except Product.DoesNotExist:
+            return JsonResponse({'error': 'Товар не найден'}, status=404)
+    return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
+
 ###############
 ### ARCHIVE ###
 ###############
