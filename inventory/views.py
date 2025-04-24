@@ -1,4 +1,6 @@
 # inventory/views.py
+import uuid
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -118,7 +120,13 @@ def product_list(request):
     products = Product.objects.filter(owner=request.user, is_archived=False)
 
     if query:
-        products = products.filter(Q(name__icontains=query) | Q(subcategory__name__icontains=query))
+        # Проверяем, является ли query валидным UUID
+        try:
+            uuid_obj = uuid.UUID(query)
+            products = products.filter(unique_id=query)
+        except ValueError:
+            # Если не UUID, фильтруем по имени или подкатегории
+            products = products.filter(Q(name__icontains=query) | Q(subcategory__name__icontains=query))
     if category:
         products = products.filter(category__name=category)
     if subcategory:
