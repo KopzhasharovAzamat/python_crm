@@ -847,7 +847,7 @@ def stats(request):
         'monthly_profit': monthly_profit,
     })
 
-################
+#############
 ### CATEGORY ###
 ################
 
@@ -866,10 +866,22 @@ def category_manage(request):
                     message=f'Категория "{category.name}" добавлена администратором {request.user.username}'
                 )
                 messages.success(request, 'Категория добавлена.')
-                return redirect('category_manage')
+                return redirect('admin_panel')  # Перенаправляем на admin_panel
             else:
                 messages.error(request, 'Ошибка при добавлении категории.')
-                subcategory_form = SubcategoryForm()
+                # При ошибке возвращаем на admin_panel с контекстом
+                users = User.objects.all()
+                categories = Category.objects.all()
+                total_products = Product.objects.count()
+                total_warehouses = Warehouse.objects.count()
+                return render(request, 'admin.html', {
+                    'users': users,
+                    'categories': categories,
+                    'total_products': total_products,
+                    'total_warehouses': total_warehouses,
+                    'category_form': category_form,
+                    'subcategory_form': SubcategoryForm(),
+                })
         elif 'add_subcategory' in request.POST:
             subcategory_form = SubcategoryForm(request.POST)
             if subcategory_form.is_valid():
@@ -880,22 +892,24 @@ def category_manage(request):
                     message=f'Подкатегория "{subcategory.name}" добавлена администратором {request.user.username}'
                 )
                 messages.success(request, 'Подкатегория добавлена.')
-                return redirect('category_manage')
+                return redirect('admin_panel')  # Перенаправляем на admin_panel
             else:
                 messages.error(request, 'Ошибка при добавлении подкатегории.')
-                category_form = CategoryForm()
-        else:
-            category_form = CategoryForm()
-            subcategory_form = SubcategoryForm()
-    else:
-        category_form = CategoryForm()
-        subcategory_form = SubcategoryForm()
-    categories = Category.objects.all()
-    return render(request, 'category_manage.html', {
-        'category_form': category_form,
-        'subcategory_form': subcategory_form,
-        'categories': categories,
-    })
+                # При ошибке возвращаем на admin_panel с контекстом
+                users = User.objects.all()
+                categories = Category.objects.all()
+                total_products = Product.objects.count()
+                total_warehouses = Warehouse.objects.count()
+                return render(request, 'admin.html', {
+                    'users': users,
+                    'categories': categories,
+                    'total_products': total_products,
+                    'total_warehouses': total_warehouses,
+                    'category_form': CategoryForm(),
+                    'subcategory_form': subcategory_form,
+                })
+    # Если GET-запрос, просто перенаправляем на admin_panel
+    return redirect('admin_panel')
 
 @user_passes_test(lambda u: u.is_superuser)
 def category_edit(request, category_id):
@@ -910,7 +924,7 @@ def category_edit(request, category_id):
                 message=f'Категория "{category.name}" обновлена администратором {request.user.username}'
             )
             messages.success(request, 'Категория обновлена.')
-            return redirect('category_manage')
+            return redirect('admin_panel')  # Перенаправляем на admin_panel
     else:
         form = CategoryForm(instance=category)
     return render(request, 'category_form.html', {'form': form, 'category': category})
@@ -927,7 +941,7 @@ def category_delete(request, category_id):
             message=f'Категория "{category_name}" удалена администратором {request.user.username}'
         )
         messages.success(request, f'Категория "{category_name}" удалена.')
-    return redirect('category_manage')
+    return redirect('admin_panel')  # Перенаправляем на admin_panel
 
 ####################
 ### SUBCATEGORY ###
@@ -952,7 +966,7 @@ def subcategory_edit(request, subcategory_id):
                 message=f'Подкатегория "{subcategory.name}" обновлена администратором {request.user.username}'
             )
             messages.success(request, 'Подкатегория обновлена.')
-            return redirect('category_manage')
+            return redirect('admin_panel')  # Перенаправляем на admin_panel
     else:
         form = SubcategoryForm(instance=subcategory)
     return render(request, 'subcategory_form.html', {'form': form, 'subcategory': subcategory})
@@ -969,7 +983,7 @@ def subcategory_delete(request, subcategory_id):
             message=f'Подкатегория "{subcategory_name}" удалена администратором {request.user.username}'
         )
         messages.success(request, f'Подкатегория "{subcategory_name}" удалена.')
-    return redirect('category_manage')
+    return redirect('admin_panel')  # Перенаправляем на admin_panel
 
 ############################
 ### ADMIN PANEL (manual) ###
@@ -978,45 +992,51 @@ def subcategory_delete(request, subcategory_id):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_panel(request):
     if request.method == 'POST':
-        user_id = request.POST.get('user_id')
-        action = request.POST.get('action')
-        user = User.objects.get(id=user_id)
-        if action == 'block':
-            user.is_active = False
-            user.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='BLOCK',
-                message=f'Пользователь {user.username} заблокирован администратором {request.user.username}'
-            )
-            messages.success(request, f'Пользователь {user.username} заблокирован.')
-        elif action == 'unblock':
-            user.is_active = True
-            user.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='UNBLOCK',
-                message=f'Пользователь {user.username} разблокирован администратором {request.user.username}'
-            )
-            messages.success(request, f'Пользователь {user.username} разблокирован.')
-        elif action == 'delete':
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='DELETE',
-                message=f'Пользователь {user.username} удалён администратором {request.user.username}'
-            )
-            user.delete()
-            messages.success(request, f'Пользователь {user.username} удален.')
-        return redirect('admin_panel')
+        if 'user_id' in request.POST:  # Обработка действий с пользователями
+            user_id = request.POST.get('user_id')
+            action = request.POST.get('action')
+            user = User.objects.get(id=user_id)
+            if action == 'block':
+                user.is_active = False
+                user.save()
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='BLOCK',
+                    message=f'Пользователь {user.username} заблокирован администратором {request.user.username}'
+                )
+                messages.success(request, f'Пользователь {user.username} заблокирован.')
+            elif action == 'unblock':
+                user.is_active = True
+                user.save()
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='UNBLOCK',
+                    message=f'Пользователь {user.username} разблокирован администратором {request.user.username}'
+                )
+                messages.success(request, f'Пользователь {user.username} разблокирован.')
+            elif action == 'delete':
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='DELETE',
+                    message=f'Пользователь {user.username} удалён администратором {request.user.username}'
+                )
+                user.delete()
+                messages.success(request, f'Пользователь {user.username} удален.')
+            return redirect('admin_panel')
+    # Подготавливаем контекст для страницы
     users = User.objects.all()
     categories = Category.objects.all()
     total_products = Product.objects.count()
     total_warehouses = Warehouse.objects.count()
+    category_form = CategoryForm()
+    subcategory_form = SubcategoryForm()
     return render(request, 'admin.html', {
         'users': users,
         'categories': categories,
         'total_products': total_products,
         'total_warehouses': total_warehouses,
+        'category_form': category_form,
+        'subcategory_form': subcategory_form,
     })
 
 ############
