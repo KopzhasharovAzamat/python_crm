@@ -2,10 +2,6 @@
 from django.urls import path
 from . import views
 
-# inventory/urls.py
-from django.urls import path
-from . import views
-
 urlpatterns = [
     # Login / Logout
     path('login/', views.login_view, name='login'),
@@ -37,15 +33,15 @@ urlpatterns = [
     path('warehouses/<int:warehouse_id>/edit/', views.warehouse_edit, name='warehouse_edit'),
     path('warehouses/<int:warehouse_id>/delete/', views.warehouse_delete, name='warehouse_delete'),
 
-    # Category (переносим под админ-панель)
-    path('admin-panel/categories/', views.category_manage, name='category_manage'),
-    path('admin-panel/categories/<int:category_id>/edit/', views.category_edit, name='category_edit'),
-    path('admin-panel/categories/delete/<int:category_id>/', views.category_delete, name='category_delete'),
+    # Category
+    path('categories/', views.category_manage, name='category_manage'),
+    path('categories/<int:category_id>/edit/', views.category_edit, name='category_edit'),
+    path('categories/delete/<int:category_id>/', views.category_delete, name='category_delete'),
 
-    # Subcategory (переносим под админ-панель)
-    path('admin-panel/get-subcategories/', views.get_subcategories, name='get_subcategories'),
-    path('admin-panel/subcategories/<int:subcategory_id>/edit/', views.subcategory_edit, name='subcategory_edit'),
-    path('admin-panel/subcategories/delete/<int:subcategory_id>/', views.subcategory_delete, name='subcategory_delete'),
+    # Subcategory
+    path('get-subcategories/', views.get_subcategories, name='get_subcategories'),
+    path('subcategories/<int:subcategory_id>/edit/', views.subcategory_edit, name='subcategory_edit'),
+    path('subcategories/delete/<int:subcategory_id>/', views.subcategory_delete, name='subcategory_delete'),
 
     # Sale
     path('sales/', views.sales_list, name='sales_list'),

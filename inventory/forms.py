@@ -60,19 +60,20 @@ class ProductForm(forms.ModelForm):
             'warehouse': forms.Select(attrs={'class': 'form-control'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].queryset = Category.objects.all()
-        if self.instance and self.instance.pk and self.instance.category:
-            self.fields['subcategory'].queryset = Subcategory.objects.filter(category=self.instance.category)
-        else:
-            self.fields['subcategory'].queryset = Subcategory.objects.none()
-        if 'category' in self.data:
-            try:
-                category_id = int(self.data.get('category'))
-                self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id)
-            except (ValueError, TypeError):
+        if user:
+            self.fields['category'].queryset = Category.objects.filter(owner=user)
+            if self.instance and self.instance.pk and self.instance.category:
+                self.fields['subcategory'].queryset = Subcategory.objects.filter(category=self.instance.category, owner=user)
+            else:
                 self.fields['subcategory'].queryset = Subcategory.objects.none()
+            if 'category' in self.data:
+                try:
+                    category_id = int(self.data.get('category'))
+                    self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id, owner=user)
+                except (ValueError, TypeError):
+                    self.fields['subcategory'].queryset = Subcategory.objects.none()
 
     def clean_cost_price(self):
         cost_price = self.cleaned_data.get('cost_price')
@@ -85,7 +86,6 @@ class ProductForm(forms.ModelForm):
         if selling_price < 0:
             raise forms.ValidationError("Цена продажи не может быть отрицательной.")
         return selling_price
-
 
 class WarehouseForm(forms.ModelForm):
     class Meta:
@@ -130,6 +130,24 @@ class CategoryForm(forms.ModelForm):
         labels = {
             'name': 'Название',
         }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        if self.user:  # Проверка на уникальность только если пользователь передан
+            existing_category = Category.objects.filter(name=name, owner=self.user)
+            # Если это редактирование, исключаем текущую категорию из проверки
+            if self.instance and self.instance.pk:
+                existing_category = existing_category.exclude(pk=self.instance.pk)
+            if existing_category.exists():
+                raise forms.ValidationError("Категория с таким именем уже существует.")
+        return name
 
 class SubcategoryForm(forms.ModelForm):
     class Meta:
@@ -144,15 +162,23 @@ class SubcategoryForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].queryset = Category.objects.all()
+        self.user = user
+        if user:
+            self.fields['category'].queryset = Category.objects.filter(owner=user)
 
-    def clean_name(self):
-        name = self.cleaned_data['name']
-        if Category.objects.filter(name=name).exists():
-            raise forms.ValidationError("Это имя уже используется для категории.")
-        return name
+    def clean(self):
+        cleaned_data = super().clean()
+        name = cleaned_data.get('name')
+        category = cleaned_data.get('category')
+        if name and category and self.user:
+            existing_subcategory = Subcategory.objects.filter(name=name, category=category, owner=self.user)
+            if self.instance and self.instance.pk:
+                existing_subcategory = existing_subcategory.exclude(pk=self.instance.pk)
+            if existing_subcategory.exists():
+                raise forms.ValidationError("Подкатегория с таким именем уже существует в этой категории.")
+        return cleaned_data
 
 class SaleItemForm(forms.ModelForm):
     actual_price = forms.DecimalField(required=False, decimal_places=2, max_digits=10, label="Фактическая цена за единицу")

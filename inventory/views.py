@@ -45,13 +45,13 @@ def login_view(request):
 
 def logout_view(request):
     user = request.user
-    logout(request)
     if user.is_authenticated:
         LogEntry.objects.create(
             user=user,
             action_type='LOGOUT',
             message=f'Пользователь {user.username} вышел из системы'
         )
+    logout(request)
     messages.success(request, 'Вы вышли из системы.')
     return redirect('login')
 
@@ -126,16 +126,13 @@ def product_list(request):
     min_quantity = request.GET.get('min_quantity', '')
     sort_by = request.GET.get('sort_by', '')
 
-    # Фильтруем только неархивированные товары
     products = Product.objects.filter(owner=request.user, is_archived=False)
 
     if query:
-        # Проверяем, является ли query валидным UUID
         try:
             uuid_obj = uuid.UUID(query)
             products = products.filter(unique_id=query)
         except ValueError:
-            # Если не UUID, фильтруем по имени или подкатегории
             products = products.filter(Q(name__icontains=query) | Q(subcategory__name__icontains=query))
     if category:
         products = products.filter(category__name=category)
@@ -160,9 +157,10 @@ def product_list(request):
         else:
             products = products.order_by('name')
 
-    categories = Category.objects.all()
-    subcategories = Subcategory.objects.all()
-    warehouses = Warehouse.objects.filter(owner=request.user)
+    # Оптимизируем запросы с помощью select_related
+    categories = Category.objects.filter(owner=request.user).select_related('owner')
+    subcategories = Subcategory.objects.filter(owner=request.user).select_related('category', 'owner')
+    warehouses = Warehouse.objects.filter(owner=request.user).select_related('owner')
     low_stock_message = request.session.pop('low_stock', None)
 
     return render(request, 'products.html', {
@@ -186,7 +184,7 @@ def product_detail(request, product_id):
 @login_required
 def product_add(request):
     if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES)
+        form = ProductForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             product = form.save(commit=False)
             product.owner = request.user
@@ -199,7 +197,7 @@ def product_add(request):
             )
             return redirect('products')
     else:
-        form = ProductForm()
+        form = ProductForm(user=request.user)
         form.fields['warehouse'].queryset = Warehouse.objects.filter(owner=request.user)
     return render(request, 'product_form.html', {'form': form})
 
@@ -207,7 +205,7 @@ def product_add(request):
 def product_edit(request, product_id):
     product = get_object_or_404(Product, id=product_id, owner=request.user)
     if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES, instance=product)
+        form = ProductForm(request.POST, request.FILES, instance=product, user=request.user)
         if form.is_valid():
             form.save()
             LogEntry.objects.create(
@@ -217,7 +215,7 @@ def product_edit(request, product_id):
             )
             return redirect('products')
     else:
-        form = ProductForm(instance=product)
+        form = ProductForm(instance=product, user=request.user)
         form.fields['warehouse'].queryset = Warehouse.objects.filter(owner=request.user)
     return render(request, 'product_form.html', {'form': form})
 
@@ -864,101 +862,112 @@ def stats(request):
         'monthly_profit': monthly_profit,
     })
 
-#############
+
+################
 ### CATEGORY ###
 ################
 
-@user_passes_test(lambda u: u.is_superuser)
+@login_required
 def category_manage(request):
-    if not request.user.is_superuser:
-        return HttpResponseForbidden("You do not have permission to access this page.")
+    query = request.GET.get('q', '')
+    sort_by = request.GET.get('sort_by', '')
+
+    categories = Category.objects.filter(owner=request.user)
+
+    if query:
+        categories = categories.filter(name__icontains=query)
+
+    if sort_by:
+        allowed_sort_fields = ['name', '-name']
+        if sort_by in allowed_sort_fields:
+            categories = categories.order_by(sort_by)
+        else:
+            categories = categories.order_by('name')
+
+    # Инициализируем формы вне условий
+    category_form = CategoryForm(user=request.user)
+    subcategory_form = SubcategoryForm(user=request.user)
+
     if request.method == 'POST':
         if 'add_category' in request.POST:
-            category_form = CategoryForm(request.POST)
+            category_form = CategoryForm(request.POST, user=request.user)
             if category_form.is_valid():
-                category = category_form.save()
+                category = category_form.save(commit=False)
+                category.owner = request.user
+                category.save()
                 LogEntry.objects.create(
                     user=request.user,
                     action_type='ADD',
-                    message=f'Категория "{category.name}" добавлена администратором {request.user.username}'
+                    message=f'Категория "{category.name}" добавлена пользователем {request.user.username}'
                 )
                 messages.success(request, 'Категория добавлена.')
-                return redirect('admin_panel')  # Перенаправляем на admin_panel
+                return redirect('category_manage')
             else:
                 messages.error(request, 'Ошибка при добавлении категории.')
-                # При ошибке возвращаем на admin_panel с контекстом
-                users = User.objects.all()
-                categories = Category.objects.all()
-                total_products = Product.objects.count()
-                total_warehouses = Warehouse.objects.count()
-                return render(request, 'admin.html', {
-                    'users': users,
-                    'categories': categories,
-                    'total_products': total_products,
-                    'total_warehouses': total_warehouses,
-                    'category_form': category_form,
-                    'subcategory_form': SubcategoryForm(),
-                })
         elif 'add_subcategory' in request.POST:
-            subcategory_form = SubcategoryForm(request.POST)
+            subcategory_form = SubcategoryForm(request.POST, user=request.user)
             if subcategory_form.is_valid():
-                subcategory = subcategory_form.save()
+                subcategory = subcategory_form.save(commit=False)
+                subcategory.owner = request.user
+                subcategory.save()
                 LogEntry.objects.create(
                     user=request.user,
                     action_type='ADD',
-                    message=f'Подкатегория "{subcategory.name}" добавлена администратором {request.user.username}'
+                    message=f'Подкатегория "{subcategory.name}" добавлена пользователем {request.user.username}'
                 )
                 messages.success(request, 'Подкатегория добавлена.')
-                return redirect('admin_panel')  # Перенаправляем на admin_panel
+                return redirect('category_manage')
             else:
                 messages.error(request, 'Ошибка при добавлении подкатегории.')
-                # При ошибке возвращаем на admin_panel с контекстом
-                users = User.objects.all()
-                categories = Category.objects.all()
-                total_products = Product.objects.count()
-                total_warehouses = Warehouse.objects.count()
-                return render(request, 'admin.html', {
-                    'users': users,
-                    'categories': categories,
-                    'total_products': total_products,
-                    'total_warehouses': total_warehouses,
-                    'category_form': CategoryForm(),
-                    'subcategory_form': subcategory_form,
-                })
-    # Если GET-запрос, просто перенаправляем на admin_panel
-    return redirect('admin_panel')
 
-@user_passes_test(lambda u: u.is_superuser)
+    return render(request, 'categories.html', {
+        'categories': categories,
+        'category_form': category_form,
+        'subcategory_form': subcategory_form,
+        'query': query,
+        'sort_by': sort_by,
+    })
+
+@login_required
 def category_edit(request, category_id):
-    category = get_object_or_404(Category, id=category_id)
+    category = get_object_or_404(Category, id=category_id, owner=request.user)
     if request.method == 'POST':
-        form = CategoryForm(request.POST, instance=category)
+        form = CategoryForm(request.POST, instance=category, user=request.user)
         if form.is_valid():
-            form.save()
+            old_name = category.name
+            category = form.save()
             LogEntry.objects.create(
                 user=request.user,
                 action_type='UPDATE',
-                message=f'Категория "{category.name}" обновлена администратором {request.user.username}'
+                message=f'Категория "{old_name}" обновлена на "{category.name}" пользователем {request.user.username}'
             )
             messages.success(request, 'Категория обновлена.')
-            return redirect('admin_panel')  # Перенаправляем на admin_panel
+            return redirect('category_manage')
+        else:
+            messages.error(request, 'Ошибка при обновлении категории.')
     else:
-        form = CategoryForm(instance=category)
+        form = CategoryForm(instance=category, user=request.user)
     return render(request, 'category_form.html', {'form': form, 'category': category})
 
-@user_passes_test(lambda u: u.is_superuser)
+@login_required
 def category_delete(request, category_id):
-    category = get_object_or_404(Category, id=category_id)
+    category = get_object_or_404(Category, id=category_id, owner=request.user)
     if request.method == 'POST':
+        # Проверяем, есть ли товары, связанные с этой категорией
+        related_products = Product.objects.filter(category=category, owner=request.user)
+        if related_products.exists():
+            messages.error(request, f'Нельзя удалить категорию "{category.name}", так как с ней связаны товары.')
+            return redirect('category_manage')
+
         category_name = category.name
         category.delete()
         LogEntry.objects.create(
             user=request.user,
             action_type='DELETE',
-            message=f'Категория "{category_name}" удалена администратором {request.user.username}'
+            message=f'Категория "{category_name}" удалена пользователем {request.user.username}'
         )
         messages.success(request, f'Категория "{category_name}" удалена.')
-    return redirect('admin_panel')  # Перенаправляем на admin_panel
+    return redirect('category_manage')
 
 ####################
 ### SUBCATEGORY ###
@@ -967,40 +976,46 @@ def category_delete(request, category_id):
 @login_required
 def get_subcategories(request):
     category_id = request.GET.get('category_id')
-    subcategories = Subcategory.objects.filter(category_id=category_id).values('id', 'name')
+    subcategories = Subcategory.objects.filter(category_id=category_id, owner=request.user).values('id', 'name')
     return JsonResponse({'subcategories': list(subcategories)})
 
-@user_passes_test(lambda u: u.is_superuser)
+@login_required
 def subcategory_edit(request, subcategory_id):
-    subcategory = get_object_or_404(Subcategory, id=subcategory_id)
+    subcategory = get_object_or_404(Subcategory, id=subcategory_id, owner=request.user)
     if request.method == 'POST':
-        form = SubcategoryForm(request.POST, instance=subcategory)
+        form = SubcategoryForm(request.POST, instance=subcategory, user=request.user)
         if form.is_valid():
             form.save()
             LogEntry.objects.create(
                 user=request.user,
                 action_type='UPDATE',
-                message=f'Подкатегория "{subcategory.name}" обновлена администратором {request.user.username}'
+                message=f'Подкатегория "{subcategory.name}" обновлена пользователем {request.user.username}'
             )
             messages.success(request, 'Подкатегория обновлена.')
-            return redirect('admin_panel')  # Перенаправляем на admin_panel
+            return redirect('category_manage')
     else:
-        form = SubcategoryForm(instance=subcategory)
+        form = SubcategoryForm(instance=subcategory, user=request.user)
     return render(request, 'subcategory_form.html', {'form': form, 'subcategory': subcategory})
 
-@user_passes_test(lambda u: u.is_superuser)
+@login_required
 def subcategory_delete(request, subcategory_id):
-    subcategory = get_object_or_404(Subcategory, id=subcategory_id)
+    subcategory = get_object_or_404(Subcategory, id=subcategory_id, owner=request.user)
     if request.method == 'POST':
+        # Проверяем, есть ли товары, связанные с этой подкатегорией
+        related_products = Product.objects.filter(subcategory=subcategory, owner=request.user)
+        if related_products.exists():
+            messages.error(request, f'Нельзя удалить подкатегорию "{subcategory.name}", так как с ней связаны товары.')
+            return redirect('category_manage')
+
         subcategory_name = subcategory.name
         subcategory.delete()
         LogEntry.objects.create(
             user=request.user,
             action_type='DELETE',
-            message=f'Подкатегория "{subcategory_name}" удалена администратором {request.user.username}'
+            message=f'Подкатегория "{subcategory_name}" удалена пользователем {request.user.username}'
         )
         messages.success(request, f'Подкатегория "{subcategory_name}" удалена.')
-    return redirect('admin_panel')  # Перенаправляем на admin_panel
+    return redirect('category_manage')
 
 ############################
 ### ADMIN PANEL (manual) ###
@@ -1062,15 +1077,15 @@ def admin_panel(request):
                 messages.success(request, f'Пользователь {user.username} удален.')
             return redirect('admin_panel')
 
-    # Разделяем пользователей на ожидающих подтверждения и активных
     pending_users = User.objects.filter(usersettings__is_pending=True)
-    active_users = User.objects.filter(usersettings__is_pending=False).exclude(is_superuser=True)  # Исключаем админов
+    active_users = User.objects.filter(usersettings__is_pending=False).exclude(is_superuser=True)
 
     categories = Category.objects.all()
     total_products = Product.objects.count()
     total_warehouses = Warehouse.objects.count()
-    category_form = CategoryForm()
-    subcategory_form = SubcategoryForm()
+    category_form = CategoryForm(user=request.user)  # Передаём user для админа
+    subcategory_form = SubcategoryForm(user=request.user)  # Передаём user для админа
+
     return render(request, 'admin.html', {
         'pending_users': pending_users,
         'active_users': active_users,

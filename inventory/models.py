@@ -7,26 +7,56 @@ from django.core.files import File
 from io import BytesIO
 from django.utils import timezone
 
+################
+### CATEGORY ###
+################
+
 class Category(models.Model):
-    name = models.CharField(max_length=100, unique=True, verbose_name="Название")
+    name = models.CharField(max_length=100)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+
+    class Meta:
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'owner'], name='unique_category_per_owner')
+        ]
+
     def __str__(self):
         return self.name
 
+###################
+### SUBCATEGORY ###
+###################
+
 class Subcategory(models.Model):
-    name = models.CharField(max_length=100, verbose_name="Название")
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories', verbose_name="Категория")
+    name = models.CharField(max_length=100)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+
     class Meta:
-        unique_together = ['name', 'category']
         verbose_name = "Подкатегория"
         verbose_name_plural = "Подкатегории"
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'category', 'owner'], name='unique_subcategory_per_category_owner')
+        ]
+
     def __str__(self):
-        return f"{self.category.name} - {self.name}"
+        return f"{self.name} ({self.category.name})"
+
+#################
+### WAREHOUSE ###
+#################
 
 class Warehouse(models.Model):
     name = models.CharField(max_length=100, verbose_name="Название")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
     def __str__(self):
         return self.name
+
+################
+### PRODUCTS ###
+################
 
 class Product(models.Model):
     name = models.CharField(max_length=200, verbose_name="Название")
@@ -64,6 +94,10 @@ class Product(models.Model):
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
 
+############
+### CART ###
+############
+
 class Cart(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
@@ -81,6 +115,10 @@ class Cart(models.Model):
         verbose_name = "Корзина"
         verbose_name_plural = "Корзины"
 
+#################
+### CART ITEM ###
+#################
+
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items', verbose_name="Корзина")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
@@ -94,6 +132,10 @@ class CartItem(models.Model):
     class Meta:
         verbose_name = "Элемент корзины"
         verbose_name_plural = "Элементы корзины"
+
+############
+### SALE ###
+############
 
 class Sale(models.Model):
     date = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
@@ -112,6 +154,10 @@ class Sale(models.Model):
         verbose_name = "Продажа"
         verbose_name_plural = "Продажи"
 
+#################
+### SALE ITEM ###
+#################
+
 class SaleItem(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='items', verbose_name="Продажа")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
@@ -125,6 +171,10 @@ class SaleItem(models.Model):
     class Meta:
         verbose_name = "Элемент продажи"
         verbose_name_plural = "Элементы продажи"
+
+##############
+### RETURN ###
+##############
 
 class Return(models.Model):
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='returns', verbose_name="Продажа")
@@ -140,6 +190,10 @@ class Return(models.Model):
         verbose_name = "Возврат"
         verbose_name_plural = "Возвраты"
 
+#####################
+### USER SETTINGS ###
+#####################
+
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     hide_cost_price = models.BooleanField(default=False, verbose_name="Скрыть себестоимость")
@@ -148,6 +202,10 @@ class UserSettings(models.Model):
     class Meta:
         verbose_name = "Настройки пользователя"
         verbose_name_plural = "Настройки пользователей"
+
+#################
+### LOG ENTRY ###
+#################
 
 class LogEntry(models.Model):
     ACTION_TYPES = (
