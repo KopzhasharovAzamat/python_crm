@@ -243,8 +243,14 @@ def get_product_price(request):
         try:
             product = Product.objects.get(id=product_id, owner=request.user)
             return JsonResponse({
+                'id': product.id,
+                'name': product.name,
+                'category': product.category.name if product.category else '',
+                'subcategory': product.subcategory.name if product.subcategory else '',
+                'warehouse': product.warehouse.name if product.warehouse else '',
+                'quantity': product.quantity,
                 'selling_price': float(product.selling_price),
-                'quantity': product.quantity  # Добавляем количество на складе
+                'photo': product.photo.url if product.photo else '',
             })
         except Product.DoesNotExist:
             return JsonResponse({'error': 'Товар не найден'}, status=404)
@@ -825,6 +831,28 @@ def get_product_by_uuid(request):
             return JsonResponse({'error': 'Товар не найден'}, status=404)
     return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
 
+@login_required
+def get_product_by_id(request):
+    if request.method == 'GET':
+        product_id = request.GET.get('product_id')
+        try:
+            product = Product.objects.get(id=product_id, owner=request.user, is_archived=False)
+            return JsonResponse({
+                'id': product.id,
+                'name': product.name,
+                'category': product.category.name if product.category else '',
+                'subcategory': product.subcategory.name if product.subcategory else '',
+                'warehouse': product.warehouse.name if product.warehouse else '',
+                'quantity': product.quantity,
+                'selling_price': float(product.selling_price),
+                'photo': product.photo.url if product.photo else '',
+            })
+        except Product.DoesNotExist:
+            return JsonResponse({'error': 'Товар не найден'}, status=404)
+        except ValueError:
+            return JsonResponse({'error': 'Неверный ID товара'}, status=400)
+    return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
+
 ############
 ### SCAN ###
 ############
@@ -833,16 +861,64 @@ def get_product_by_uuid(request):
 def scan_product(request):
     unique_id = request.GET.get('code')
     try:
-        product = Product.objects.get(unique_id=unique_id, owner=request.user)
+        product = Product.objects.get(unique_id=unique_id, owner=request.user, is_archived=False)
+        return render(request, 'scan_product.html', {'product': product})
+    except Product.DoesNotExist:
+        return render(request, 'error.html', {'message': 'Товар не найден'})
+
+@login_required
+def scan_product_confirm(request):
+    if request.method == 'POST':
+        product_id = request.POST.get('product_id')
+        quantity = int(request.POST.get('quantity', 1))
+        actual_price = float(request.POST.get('actual_price', 0))
+
+        try:
+            product = Product.objects.get(id=product_id, owner=request.user, is_archived=False)
+        except Product.DoesNotExist:
+            messages.error(request, 'Товар не найден.')
+            return redirect('products')
+
+        if quantity <= 0:
+            messages.error(request, 'Количество должно быть больше 0.')
+            return redirect('products')
+
+        if quantity > product.quantity:
+            messages.error(request, f'Недостаточно товара на складе. В наличии: {product.quantity} шт.')
+            return redirect('products')
+
+        if actual_price < 0:
+            messages.error(request, 'Фактическая цена не может быть отрицательной.')
+            return redirect('products')
+
+        # Создаём корзину, если её нет
         cart = Cart.objects.create(owner=request.user)
         LogEntry.objects.create(
             user=request.user,
             action_type='ADD',
             message=f'Новая корзина {cart.id} создана пользователем {request.user.username} через сканирование'
         )
+
+        # Добавляем товар в корзину
+        cart_item = CartItem(
+            cart=cart,
+            product=product,
+            quantity=quantity,
+            base_price_total=quantity * product.selling_price,
+            actual_price_total=quantity * (actual_price or product.selling_price)
+        )
+        cart_item.save()
+
+        LogEntry.objects.create(
+            user=request.user,
+            action_type='ADD',
+            message=f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину {cart.id} пользователем {request.user.username} через сканирование UUID'
+        )
+
+        messages.success(request, f'Товар "{product.name}" добавлен в корзину №{cart.id}.')
         return redirect('cart_add_item', cart_id=cart.id)
-    except Product.DoesNotExist:
-        return render(request, 'error.html', {'message': 'Товар не найден'})
+
+    return redirect('products')
 
 ##################
 ### STATISTICS ###

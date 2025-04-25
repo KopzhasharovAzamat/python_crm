@@ -60,32 +60,44 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form method="post" action="{% url 'cart_add_item' cart.id %}" id="manualAddForm">
-                    {% csrf_token %}
-                    {% for field in form %}
+                <div id="manualSelectForm">
                     <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.errors %}
-                        <div class="text-danger">{{ field.errors }}</div>
-                        {% endif %}
-                        {% if field.name == "product" %}
-                        <div class="mt-2">
-                            <label class="form-label">Цена продажи:</label>
-                            <p id="manualSellingPriceDisplay" class="form-text">0.00 ₽</p>
-                            <label class="form-label">Количество на складе:</label>
-                            <p id="manualStockQuantity" class="form-text">0 шт.</p>
-                        </div>
-                        {% endif %}
+                        <label for="manualProductSelect" class="form-label">Выберите товар:</label>
+                        <select id="manualProductSelect" class="form-select" required>
+                            <option value="">-- Выберите товар --</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}">{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    {% endfor %}
+                    <p id="manualSelectError" class="text-danger d-none">Товар не найден.</p>
+                </div>
+                <div id="manualProductDetails" class="d-none">
+                    <h5 id="manualProductName"></h5>
+                    <p><strong>Категория:</strong> <span id="manualCategory"></span></p>
+                    <p><strong>Подкатегория:</strong> <span id="manualSubcategory"></span></p>
+                    <p><strong>Склад:</strong> <span id="manualWarehouse"></span></p>
+                    <p><strong>Количество на складе:</strong> <span id="manualStockQuantity"></span> шт.</p>
+                    <p><strong>Цена продажи:</strong> <span id="manualSellingPrice"></span> ₽</p>
+                    <img id="manualProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
+                    <div class="mb-3">
+                        <label for="manualQuantity" class="form-label">Количество:</label>
+                        <input type="number" id="manualQuantity" class="form-control" min="1" value="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="manualActualPrice" class="form-label">Фактическая цена за единицу:</label>
+                        <input type="number" step="0.01" id="manualActualPrice" class="form-control">
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Итоговая цена:</label>
                         <p id="manualTotalPrice" class="form-text">0.00 ₽</p>
                     </div>
                     <p id="manualValidationError" class="text-danger d-none"></p>
-                    <button type="submit" id="manualAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
-                </form>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="manualAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                        <button type="button" id="cancelManualBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -145,20 +157,108 @@
     </div>
 </div>
 
+<!-- Modal for Errors -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="errorModalLabel">Ошибка</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+    const errorMessage = document.getElementById('errorMessage');
+    const cartId = {{ cart.id }};
+    const csrfToken = getCsrfToken(); // Предполагается, что эта функция определена в base.html
+
     // --- Логика для модального окна ручного добавления ---
-    const manualModal = document.getElementById('manualAddModal');
-    const productSelect = document.querySelector('#id_product');
-    const manualQuantityInput = document.querySelector('#id_quantity');
-    const manualActualPriceInput = document.querySelector('#id_actual_price');
-    const manualTotalPriceDisplay = document.querySelector('#manualTotalPrice');
-    const manualSellingPriceDisplay = document.querySelector('#manualSellingPriceDisplay');
-    const manualStockQuantity = document.querySelector('#manualStockQuantity');
-    const manualAddButton = document.querySelector('#manualAddButton');
-    const manualValidationError = document.querySelector('#manualValidationError');
+    const manualModal = new bootstrap.Modal(document.getElementById('manualAddModal'), {
+        backdrop: 'static',
+        keyboard: false
+    });
+    const manualSelectForm = document.getElementById('manualSelectForm');
+    const manualProductSelect = document.getElementById('manualProductSelect');
+    const manualSelectError = document.getElementById('manualSelectError');
+    const manualProductDetails = document.getElementById('manualProductDetails');
+    const manualProductName = document.getElementById('manualProductName');
+    const manualCategory = document.getElementById('manualCategory');
+    const manualSubcategory = document.getElementById('manualSubcategory');
+    const manualWarehouse = document.getElementById('manualWarehouse');
+    const manualStockQuantity = document.getElementById('manualStockQuantity');
+    const manualSellingPrice = document.getElementById('manualSellingPrice');
+    const manualProductPhoto = document.getElementById('manualProductPhoto');
+    const manualQuantityInput = document.getElementById('manualQuantity');
+    const manualActualPriceInput = document.getElementById('manualActualPrice');
+    const manualTotalPriceDisplay = document.getElementById('manualTotalPrice');
+    const manualAddButton = document.getElementById('manualAddButton');
+    const manualValidationError = document.getElementById('manualValidationError');
+    const cancelManualBtn = document.getElementById('cancelManualBtn');
 
     let manualStock = 0; // Для хранения количества на складе
+    let selectedProductId = null;
+
+    function resetManualForm() {
+        manualProductSelect.value = '';
+        manualSelectError.classList.add('d-none');
+        manualSelectForm.classList.remove('d-none');
+        manualProductDetails.classList.add('d-none');
+        manualProductPhoto.classList.add('d-none');
+        manualStock = 0;
+        manualValidationError.classList.add('d-none');
+        manualAddButton.disabled = false;
+        selectedProductId = null;
+    }
+
+    async function showManualProductDetails() {
+        const productId = manualProductSelect.value;
+        if (!productId) return;
+
+        try {
+            const response = await fetch(`/get-product-price/?product_id=${productId}`);
+            const data = await response.json();
+
+            if (response.ok && !data.error) {
+                manualSelectForm.classList.add('d-none');
+                manualProductDetails.classList.remove('d-none');
+                manualSelectError.classList.add('d-none');
+
+                manualProductName.textContent = data.name;
+                manualCategory.textContent = data.category || 'Не указана';
+                manualSubcategory.textContent = data.subcategory || 'Не указана';
+                manualWarehouse.textContent = data.warehouse || 'Не указан';
+                manualStock = data.quantity; // Сохраняем количество на складе
+                manualStockQuantity.textContent = manualStock;
+                manualSellingPrice.textContent = data.selling_price.toFixed(2);
+                selectedProductId = data.id;
+                manualQuantityInput.value = 1;
+                manualActualPriceInput.value = data.selling_price.toFixed(2);
+
+                if (data.photo) {
+                    manualProductPhoto.src = data.photo;
+                    manualProductPhoto.classList.remove('d-none');
+                }
+
+                updateManualTotalPrice();
+            } else {
+                manualSelectError.textContent = 'Товар не найден.';
+                manualSelectError.classList.remove('d-none');
+            }
+        } catch (error) {
+            manualSelectError.textContent = 'Ошибка при поиске товара.';
+            manualSelectError.classList.remove('d-none');
+        }
+    }
 
     function updateManualTotalPrice() {
         const quantity = parseInt(manualQuantityInput.value) || 0;
@@ -185,57 +285,54 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function updateManualProductDetails() {
-        const productId = productSelect.value;
-        if (!productId) {
-            manualSellingPriceDisplay.textContent = '0.00 ₽';
-            manualStockQuantity.textContent = '0 шт.';
-            manualQuantityInput.value = 1;
-            manualActualPriceInput.value = '0.00';
-            manualStock = 0;
-            updateManualTotalPrice();
-            return;
-        }
+    manualProductSelect.addEventListener('change', showManualProductDetails);
+    manualQuantityInput.addEventListener('input', updateManualTotalPrice);
+    manualActualPriceInput.addEventListener('input', updateManualTotalPrice);
+
+    manualAddButton.addEventListener('click', async function() {
+        const quantity = parseInt(manualQuantityInput.value);
+        const actualPrice = parseFloat(manualActualPriceInput.value);
 
         try {
-            const response = await fetch(`/get-product-price/?product_id=${productId}`);
+            const response = await fetch(`/cart/${cartId}/add_item/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    product: selectedProductId,
+                    quantity: quantity,
+                    actual_price: actualPrice,
+                }),
+                credentials: 'include',
+            });
+
             const data = await response.json();
 
-            if (response.ok && !data.error) {
-                const sellingPrice = parseFloat(data.selling_price);
-                manualStock = data.quantity; // Сохраняем количество на складе
-                manualSellingPriceDisplay.textContent = sellingPrice.toFixed(2) + ' ₽';
-                manualStockQuantity.textContent = manualStock + ' шт.';
-                manualQuantityInput.value = 1;
-                manualActualPriceInput.value = sellingPrice.toFixed(2);
-                updateManualTotalPrice();
+            if (response.ok && data.success) {
+                window.location.reload();
             } else {
-                manualSellingPriceDisplay.textContent = 'Ошибка';
-                manualStockQuantity.textContent = 'Ошибка';
-                manualStock = 0;
-                manualQuantityInput.value = 1;
-                manualActualPriceInput.value = '0.00';
-                updateManualTotalPrice();
+                throw new Error(data.error || 'Не удалось добавить товар.');
             }
         } catch (error) {
-            manualSellingPriceDisplay.textContent = 'Ошибка';
-            manualStockQuantity.textContent = 'Ошибка';
-            manualStock = 0;
-            manualQuantityInput.value = 1;
-            manualActualPriceInput.value = '0.00';
-            updateManualTotalPrice();
+            console.error('Ошибка:', error);
+            errorMessage.textContent = error.message;
+            errorModal.show();
         }
-    }
+    });
 
-    if (productSelect && manualQuantityInput && manualActualPriceInput) {
-        productSelect.addEventListener('change', updateManualProductDetails);
-        manualQuantityInput.addEventListener('input', updateManualTotalPrice);
-        manualActualPriceInput.addEventListener('input', updateManualTotalPrice);
-        updateManualProductDetails();
-    }
+    cancelManualBtn.addEventListener('click', function() {
+        resetManualForm();
+    });
 
-    manualModal.addEventListener('shown.bs.modal', function() {
-        updateManualProductDetails();
+    document.getElementById('manualAddModal').addEventListener('shown.bs.modal', function() {
+        manualProductSelect.focus();
+    });
+
+    document.getElementById('manualAddModal').addEventListener('hidden.bs.modal', function() {
+        resetManualForm();
     });
 
     // --- Логика для модального окна сканирования ---
@@ -359,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resetScanForm();
     });
 
-    document.getElementById('scanModal').addEventListener('shown.bs.modal', function() {
+    document.getElementByIdinvertory('scanModal').addEventListener('shown.bs.modal', function() {
         uniqueIdInput.focus();
     });
 

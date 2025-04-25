@@ -21,6 +21,7 @@ urlpatterns = [
     path('products/<int:product_id>/detail/', views.product_detail, name='product_detail'),
     path('get-product-price/', views.get_product_price, name='get_product_price'),
     path('get-product-by-uuid/', views.get_product_by_uuid, name='get_product_by_uuid'),
+    path('get-product-by-id/', views.get_product_by_id, name='get_product_by_id'),
 
     # Archive
     path('products/<int:product_id>/archive/', views.product_archive, name='product_archive'),
@@ -60,6 +61,8 @@ urlpatterns = [
 
     # Scan
     path('scan/', views.scan_product, name='scan_product'),
+    path('scan-product/', views.scan_product, name='scan_product'),
+    path('scan-product-confirm/', views.scan_product_confirm, name='scan_product_confirm'),
 
     # Statistics
     path('stats/', views.stats, name='stats'),

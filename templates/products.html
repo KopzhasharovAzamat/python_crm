@@ -6,7 +6,6 @@
 <h2 class="mb-4 animate__animated animate__fadeIn">Товары</h2>
 <div class="mb-4">
     <a href="{% url 'product_add' %}" class="btn btn-success"><i class="fas fa-plus"></i> Добавить товар</a>
-    <a href="{% url 'cart_create' %}" class="btn btn-primary"><i class="fas fa-shopping-cart"></i> Новая корзина</a>
     <a href="{% url 'archived_products' %}" class="btn btn-secondary"><i class="fas fa-archive"></i> Архивированные товары</a>
 </div>
 
@@ -99,7 +98,7 @@
                 </p>
             </div>
             <div class="card-footer d-flex gap-2 justify-content-center flex-wrap">
-                <a href="{% url 'cart_create' %}" class="btn btn-primary shadow-sm" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-shopping-cart me-1"></i> Продать</a>
+                <button class="btn btn-primary shadow-sm sell-btn" data-product-id="{{ product.id }}" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-shopping-cart me-1"></i> Продать</button>
                 <a href="{% url 'product_edit' product.id %}" class="btn btn-warning shadow-sm" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-edit me-1"></i> Редактировать</a>
                 <button class="btn btn-secondary shadow-sm delete-btn" data-action="{% url 'product_archive' product.id %}" data-message="Вы уверены, что хотите архивировать товар {{ product.name }}?" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-archive me-1"></i> Архивировать</button>
                 <button class="btn btn-danger shadow-sm delete-btn" data-action="{% url 'product_delete' product.id %}" data-message="Вы уверены, что хотите удалить товар {{ product.name }}?" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-trash me-1"></i> Удалить</button>
@@ -109,6 +108,71 @@
     {% empty %}
     <p>Нет товаров для отображения.</p>
     {% endfor %}
+</div>
+
+<!-- Модальное окно для отображения информации о товаре -->
+<div class="modal" id="productInfoModal" tabindex="-1" aria-labelledby="productInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="productInfoModalLabel">Информация о товаре</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h5 id="infoProductName"></h5>
+                <p><strong>Категория:</strong> <span id="infoCategory"></span></p>
+                <p><strong>Подкатегория:</strong> <span id="infoSubcategory"></span></p>
+                <p><strong>Склад:</strong> <span id="infoWarehouse"></span></p>
+                <p><strong>Количество на складе:</strong> <span id="infoStockQuantity"></span> шт.</p>
+                <p><strong>Цена продажи:</strong> <span id="infoSellingPrice"></span> ₽</p>
+                <img id="infoProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
+                <div class="d-flex gap-2">
+                    <button type="button" id="proceedToAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                    <button type="button" id="closeInfoBtn" class="btn btn-secondary w-100" data-bs-dismiss="modal"><i class="fas fa-times"></i> Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для настройки количества и цены -->
+<div class="modal" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="scanModalLabel">Добавить товар в корзину</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="scanProductDetails">
+                    <h5 id="scanProductName"></h5>
+                    <p><strong>Категория:</strong> <span id="scanCategory"></span></p>
+                    <p><strong>Подкатегория:</strong> <span id="scanSubcategory"></span></p>
+                    <p><strong>Склад:</strong> <span id="scanWarehouse"></span></p>
+                    <p><strong>Количество на складе:</strong> <span id="scanStockQuantity"></span> шт.</p>
+                    <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> ₽</p>
+                    <img id="scanProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
+                    <div class="mb-3">
+                        <label for="scanQuantity" class="form-label">Количество:</label>
+                        <input type="number" id="scanQuantity" class="form-control" min="1" value="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="scanActualPrice" class="form-label">Фактическая цена за единицу:</label>
+                        <input type="number" step="0.01" id="scanActualPrice" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Итоговая цена:</label>
+                        <p id="scanTotalPrice" class="form-text">0.00 ₽</p>
+                    </div>
+                    <p id="scanValidationError" class="text-danger d-none"></p>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="scanAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                        <button type="button" id="cancelScanBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Модальное окно для ошибок -->
@@ -129,15 +193,166 @@
     </div>
 </div>
 
-<!-- Убираем модальное окно успеха, так как перенаправление будет автоматическим -->
-
-<!-- JavaScript для обработки вставки UUID -->
+<!-- JavaScript для обработки вставки UUID и кнопки "Продать" -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
     const errorMessage = document.getElementById('errorMessage');
-    const csrfToken = getCsrfToken(); // Используем функцию из base.html
+    const csrfToken = getCsrfToken();
 
+    // --- Логика для модального окна информации о товаре ---
+    const productInfoModal = new bootstrap.Modal(document.getElementById('productInfoModal'), {
+        backdrop: 'static',
+        keyboard: false
+    });
+    const infoProductName = document.getElementById('infoProductName');
+    const infoCategory = document.getElementById('infoCategory');
+    const infoSubcategory = document.getElementById('infoSubcategory');
+    const infoWarehouse = document.getElementById('infoWarehouse');
+    const infoStockQuantity = document.getElementById('infoStockQuantity');
+    const infoSellingPrice = document.getElementById('infoSellingPrice');
+    const infoProductPhoto = document.getElementById('infoProductPhoto');
+    const proceedToAddButton = document.getElementById('proceedToAddButton');
+
+    // --- Логика для модального окна сканирования ---
+    const scanModal = new bootstrap.Modal(document.getElementById('scanModal'), {
+        backdrop: 'static',
+        keyboard: false
+    });
+    const scanProductName = document.getElementById('scanProductName');
+    const scanCategory = document.getElementById('scanCategory');
+    const scanSubcategory = document.getElementById('scanSubcategory');
+    const scanWarehouse = document.getElementById('scanWarehouse');
+    const scanStockQuantity = document.getElementById('scanStockQuantity');
+    const scanSellingPrice = document.getElementById('scanSellingPrice');
+    const scanProductPhoto = document.getElementById('scanProductPhoto');
+    const scanQuantityInput = document.getElementById('scanQuantity');
+    const scanActualPriceInput = document.getElementById('scanActualPrice');
+    const scanTotalPriceDisplay = document.getElementById('scanTotalPrice');
+    const scanAddButton = document.getElementById('scanAddButton');
+    const scanValidationError = document.getElementById('scanValidationError');
+    const cancelScanBtn = document.getElementById('cancelScanBtn');
+
+    let scanStock = 0;
+    let selectedProductId = null;
+    let productData = null;
+
+    function resetScanForm() {
+        scanProductName.textContent = '';
+        scanCategory.textContent = '';
+        scanSubcategory.textContent = '';
+        scanWarehouse.textContent = '';
+        scanStockQuantity.textContent = '';
+        scanSellingPrice.textContent = '';
+        scanProductPhoto.src = '';
+        scanProductPhoto.classList.add('d-none');
+        scanQuantityInput.value = 1;
+        scanActualPriceInput.value = '';
+        scanTotalPriceDisplay.textContent = '0.00 ₽';
+        scanValidationError.classList.add('d-none');
+        scanAddButton.disabled = false;
+        scanStock = 0;
+        selectedProductId = null;
+    }
+
+    function updateScanTotalPrice() {
+        const quantity = parseInt(scanQuantityInput.value) || 0;
+        const actualPrice = parseFloat(scanActualPriceInput.value) || 0;
+        const totalPrice = quantity * actualPrice;
+        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+
+        scanValidationError.classList.add('d-none');
+        scanAddButton.disabled = false;
+
+        if (quantity <= 0) {
+            scanValidationError.textContent = 'Количество должно быть больше 0.';
+            scanValidationError.classList.remove('d-none');
+            scanAddButton.disabled = true;
+        } else if (quantity > scanStock) {
+            scanValidationError.textContent = `Количество не может быть больше, чем на складе (${scanStock} шт.).`;
+            scanValidationError.classList.remove('d-none');
+            scanAddButton.disabled = true;
+        } else if (actualPrice < 0) {
+            scanValidationError.textContent = 'Цена за единицу не может быть меньше 0.';
+            scanValidationError.classList.remove('d-none');
+            scanAddButton.disabled = true;
+        }
+    }
+
+    async function showProductInfo(data) {
+        infoProductName.textContent = data.name;
+        infoCategory.textContent = data.category || 'Не указана';
+        infoSubcategory.textContent = data.subcategory || 'Не указана';
+        infoWarehouse.textContent = data.warehouse || 'Не указан';
+        infoStockQuantity.textContent = data.quantity;
+        infoSellingPrice.textContent = data.selling_price.toFixed(2);
+        if (data.photo) {
+            infoProductPhoto.src = data.photo;
+            infoProductPhoto.classList.remove('d-none');
+        } else {
+            infoProductPhoto.classList.add('d-none');
+        }
+        productInfoModal.show();
+    }
+
+    async function showScanModal(data) {
+        scanProductName.textContent = data.name;
+        scanCategory.textContent = data.category || 'Не указана';
+        scanSubcategory.textContent = data.subcategory || 'Не указана';
+        scanWarehouse.textContent = data.warehouse || 'Не указан';
+        scanStock = data.quantity;
+        scanStockQuantity.textContent = scanStock;
+        scanSellingPrice.textContent = data.selling_price.toFixed(2);
+        selectedProductId = data.id;
+        scanQuantityInput.value = 1;
+        scanActualPriceInput.value = data.selling_price.toFixed(2);
+        if (data.photo) {
+            scanProductPhoto.src = data.photo;
+            scanProductPhoto.classList.remove('d-none');
+        } else {
+            scanProductPhoto.classList.add('d-none');
+        }
+        updateScanTotalPrice();
+        productInfoModal.hide();
+        scanModal.show();
+    }
+
+    // Обработчик для кнопки "Продать"
+    document.querySelectorAll('.sell-btn').forEach(button => {
+        button.addEventListener('click', async function() {
+            const productId = this.getAttribute('data-product-id');
+
+            try {
+                const productResponse = await fetch(`/get-product-by-id/?product_id=${productId}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'include',
+                });
+
+                if (!productResponse.ok) {
+                    const errorData = await productResponse.json();
+                    throw new Error(errorData.error || 'Не удалось получить товар.');
+                }
+
+                productData = await productResponse.json();
+                if (productData.error) {
+                    errorMessage.textContent = productData.error || 'Товар не найден.';
+                    errorModal.show();
+                    return;
+                }
+
+                showProductInfo(productData);
+            } catch (error) {
+                console.error('Ошибка:', error);
+                errorMessage.textContent = error.message || 'Произошла ошибка при обработке запроса.';
+                errorModal.show();
+            }
+        });
+    });
+
+    // Обработчик для вставки UUID
     document.addEventListener('paste', async function(e) {
         const pastedText = (e.clipboardData || window.clipboardData).getData('text').trim();
         const uuidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -148,39 +363,6 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
 
         try {
-            // 1. Создаём новую корзину через AJAX
-            const createCartResponse = await fetch('{% url "cart_create" %}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest', // Явно указываем, что это AJAX-запрос
-                },
-                credentials: 'include',
-            });
-
-            if (createCartResponse.status === 403 || createCartResponse.status === 401) {
-                errorMessage.textContent = 'Пожалуйста, войдите в систему.';
-                errorModal.show();
-                setTimeout(() => {
-                    window.location.href = '{% url "login" %}';
-                }, 2000);
-                return;
-            }
-
-            if (!createCartResponse.ok) {
-                const errorData = await createCartResponse.json();
-                throw new Error(errorData.error || 'Не удалось создать корзину.');
-            }
-
-            const cartData = await createCartResponse.json();
-            if (!cartData.cart_id) {
-                throw new Error('Не удалось получить ID корзины.');
-            }
-
-            const cartId = cartData.cart_id;
-
-            // 2. Получаем информацию о товаре по UUID
             const productResponse = await fetch(`/get-product-by-uuid/?unique_id=${pastedText}`, {
                 method: 'GET',
                 headers: {
@@ -194,37 +376,71 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(errorData.error || 'Не удалось получить товар.');
             }
 
-            const productData = await productResponse.json();
+            productData = await productResponse.json();
             if (productData.error) {
                 errorMessage.textContent = productData.error || 'Товар не найден.';
                 errorModal.show();
                 return;
             }
 
-            // 3. Добавляем товар в корзину через AJAX
+            showProductInfo(productData);
+        } catch (error) {
+            console.error('Ошибка:', error);
+            errorMessage.textContent = error.message || 'Произошла ошибка при обработке запроса.';
+            errorModal.show();
+        }
+    });
+
+    proceedToAddButton.addEventListener('click', function() {
+        if (productData) {
+            showScanModal(productData);
+        }
+    });
+
+    scanQuantityInput.addEventListener('input', updateScanTotalPrice);
+    scanActualPriceInput.addEventListener('input', updateScanTotalPrice);
+
+    scanAddButton.addEventListener('click', async function() {
+        const quantity = parseInt(scanQuantityInput.value);
+        const actualPrice = parseFloat(scanActualPriceInput.value);
+
+        try {
+            const createCartResponse = await fetch('{% url "cart_create" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'include',
+            });
+
+            if (!createCartResponse.ok) {
+                const errorData = await createCartResponse.json();
+                throw new Error(errorData.error || 'Не удалось создать корзину.');
+            }
+
+            const cartData = await createCartResponse.json();
+            if (!cartData.cart_id) {
+                throw new Error('Не удалось получить ID корзины.');
+            }
+
+            const cartId = cartData.cart_id;
+
             const addItemResponse = await fetch(`/cart/${cartId}/add_item/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest', // Явно указываем, что это AJAX-запрос
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                    product: productData.id,
-                    quantity: 1,
-                    actual_price: productData.selling_price,
+                    product: selectedProductId,
+                    quantity: quantity,
+                    actual_price: actualPrice,
                 }),
             });
-
-            if (addItemResponse.status === 403 || addItemResponse.status === 401) {
-                errorMessage.textContent = 'Пожалуйста, войдите в систему.';
-                errorModal.show();
-                setTimeout(() => {
-                    window.location.href = '{% url "login" %}';
-                }, 2000);
-                return;
-            }
 
             if (!addItemResponse.ok) {
                 const errorData = await addItemResponse.json();
@@ -232,23 +448,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const addItemData = await addItemResponse.json();
-            if (addItemData.error) {
-                errorMessage.textContent = addItemData.error || 'Не удалось добавить товар в корзину.';
-                errorModal.show();
-                return;
-            }
-
             if (!addItemData.success) {
                 throw new Error('Не удалось подтвердить добавление товара.');
             }
 
-            // 4. Перенаправляем пользователя на страницу редактирования корзины
+            scanModal.hide();
             window.location.href = `/cart/${cartId}/add_item/`;
         } catch (error) {
             console.error('Ошибка:', error);
-            errorMessage.textContent = error.message || 'Произошла ошибка при обработке запроса.';
+            errorMessage.textContent = error.message || 'Произошла ошибка при добавлении товара.';
             errorModal.show();
         }
+    });
+
+    cancelScanBtn.addEventListener('click', function() {
+        resetScanForm();
+        scanModal.hide();
+    });
+
+    document.getElementById('scanModal').addEventListener('hidden.bs.modal', function() {
+        resetScanForm();
     });
 });
 </script>
