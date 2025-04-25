@@ -1,6 +1,7 @@
 # inventory/views.py
 import uuid
 import json
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
@@ -13,6 +14,10 @@ from .forms import RegisterForm, ProductForm, WarehouseForm, UserChangeForm, Use
     SubcategoryForm, CartItemForm, ReturnForm, SaleItemForm, LoginForm
 from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, Return, LogEntry
 from django.http import JsonResponse
+
+# Helper function to log actions (unchanged)
+def create_log_entry(user, action_type, message):
+    LogEntry.objects.create(user=user, action_type=action_type, message=message)
 
 ######################
 ### LOGIN / LOGOUT ###
@@ -27,18 +32,10 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
-                LogEntry.objects.create(
-                    user=user,
-                    action_type='LOGIN',
-                    message=f'Пользователь {user.username} вошёл в систему'
-                )
+                create_log_entry(user, 'LOGIN', f'Пользователь {user.username} вошёл в систему')
                 return redirect('products')
             else:
-                LogEntry.objects.create(
-                    user=None,
-                    action_type='FAILED_LOGIN',
-                    message=f'Неудачная попытка входа для пользователя {username}'
-                )
+                create_log_entry(None, 'FAILED_LOGIN', f'Неудачная попытка входа для пользователя {username}')
                 messages.error(request, 'Неверный логин или пароль.')
         else:
             messages.error(request, 'Пожалуйста, исправьте ошибки в форме.')
@@ -49,11 +46,7 @@ def login_view(request):
 def logout_view(request):
     user = request.user
     if user.is_authenticated:
-        LogEntry.objects.create(
-            user=user,
-            action_type='LOGOUT',
-            message=f'Пользователь {user.username} вышел из системы'
-        )
+        create_log_entry(user, 'LOGOUT', f'Пользователь {user.username} вышел из системы')
     logout(request)
     messages.success(request, 'Вы вышли из системы.')
     return redirect('login')
@@ -75,11 +68,7 @@ def register(request):
             user.set_password(form.cleaned_data['password'])
             user.save()
             UserSettings.objects.create(user=user, is_pending=True)
-            LogEntry.objects.create(
-                user=user,
-                action_type='REGISTER',
-                message=f'Новый пользователь {user.username} зарегистрирован и ожидает подтверждения'
-            )
+            create_log_entry(user, 'REGISTER', f'Новый пользователь {user.username} зарегистрирован и ожидает подтверждения')
             messages.success(request, 'Регистрация успешна! Ожидайте подтверждения администратором.')
             return redirect('login')
         else:
@@ -101,11 +90,7 @@ def profile(request):
         if user_form.is_valid() and settings_form.is_valid():
             user_form.save()
             settings_form.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='UPDATE',
-                message=f'Пользователь {request.user.username} обновил свой профиль'
-            )
+            create_log_entry(request.user, 'UPDATE', f'Пользователь {request.user.username} обновил свой профиль')
             messages.success(request, 'Профиль обновлен.')
             return redirect('profile')
     else:
@@ -143,6 +128,7 @@ def product_list(request):
     if min_quantity:
         products = products.filter(quantity__gte=min_quantity)
 
+    # Ensure consistent ordering to avoid UnorderedObjectListWarning
     if sort_by:
         allowed_sort_fields = [
             'name', '-name',
@@ -156,6 +142,18 @@ def product_list(request):
             products = products.order_by(sort_by)
         else:
             products = products.order_by('name')
+    else:
+        products = products.order_by('name')  # Default ordering
+
+    # Пагинация
+    paginator = Paginator(products, 10)  # 10 товаров на страницу
+    page_number = request.GET.get('page', 1)
+    try:
+        products_paginated = paginator.page(page_number)
+    except PageNotAnInteger:
+        products_paginated = paginator.page(1)
+    except EmptyPage:
+        products_paginated = paginator.page(paginator.num_pages)
 
     categories = Category.objects.filter(owner=request.user).select_related('owner')
     subcategories = Subcategory.objects.filter(owner=request.user).select_related('category', 'owner')
@@ -163,7 +161,7 @@ def product_list(request):
     low_stock_message = request.session.pop('low_stock', None)
 
     return render(request, 'products.html', {
-        'products': products,
+        'products': products_paginated,
         'categories': categories,
         'subcategories': subcategories,
         'warehouses': warehouses,
@@ -189,11 +187,7 @@ def product_add(request):
             product.owner = request.user
             product.request = request
             product.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='ADD',
-                message=f'Товар "{product.name}" добавлен пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'ADD', f'Товар "{product.name}" добавлен пользователем {request.user.username}')
             return redirect('products')
     else:
         form = ProductForm(user=request.user)
@@ -207,11 +201,7 @@ def product_edit(request, product_id):
         form = ProductForm(request.POST, request.FILES, instance=product, user=request.user)
         if form.is_valid():
             form.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='UPDATE',
-                message=f'Товар "{product.name}" обновлён пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'UPDATE', f'Товар "{product.name}" обновлён пользователем {request.user.username}')
             return redirect('products')
     else:
         form = ProductForm(instance=product, user=request.user)
@@ -224,11 +214,7 @@ def product_delete(request, product_id):
     if request.method == 'POST':
         product_name = product.name
         product.delete()
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='DELETE',
-            message=f'Товар "{product_name}" удалён пользователем {request.user.username}'
-        )
+        create_log_entry(request.user, 'DELETE', f'Товар "{product_name}" удалён пользователем {request.user.username}')
         messages.success(request, f'Товар "{product_name}" удален.')
     return redirect('products')
 
@@ -258,8 +244,22 @@ def get_product_price(request):
 
 @login_required
 def archived_products(request):
+    # Ensure consistent ordering
     products = Product.objects.filter(owner=request.user, is_archived=True).order_by('name')
-    return render(request, 'archived_products.html', {'products': products})
+
+    # Пагинация
+    paginator = Paginator(products, 10)  # 10 товаров на страницу
+    page_number = request.GET.get('page', 1)
+    try:
+        products_paginated = paginator.page(page_number)
+    except PageNotAnInteger:
+        products_paginated = paginator.page(1)
+    except EmptyPage:
+        products_paginated = paginator.page(paginator.num_pages)
+
+    return render(request, 'archived_products.html', {
+        'products': products_paginated,
+    })
 
 @login_required
 def product_archive(request, product_id):
@@ -267,11 +267,7 @@ def product_archive(request, product_id):
     if request.method == 'POST':
         product.is_archived = True
         product.save()
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='UPDATE',
-            message=f'Товар "{product.name}" архивирован пользователем {request.user.username}'
-        )
+        create_log_entry(request.user, 'UPDATE', f'Товар "{product.name}" архивирован пользователем {request.user.username}')
         messages.success(request, f'Товар "{product.name}" архивирован.')
     return redirect('products')
 
@@ -281,11 +277,7 @@ def product_unarchive(request, product_id):
     if request.method == 'POST':
         product.is_archived = False
         product.save()
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='UPDATE',
-            message=f'Товар "{product.name}" разархивирован пользователем {request.user.username}'
-        )
+        create_log_entry(request.user, 'UPDATE', f'Товар "{product.name}" разархивирован пользователем {request.user.username}')
         messages.success(request, f'Товар "{product.name}" разархивирован.')
     return redirect('archived_products')
 
@@ -302,25 +294,17 @@ def warehouse_list(request):
                 warehouse = form.save(commit=False)
                 warehouse.owner = request.user
                 warehouse.save()
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='ADD',
-                    message=f'Склад "{warehouse.name}" добавлен пользователем {request.user.username}'
-                )
+                create_log_entry(request.user, 'ADD', f'Склад "{warehouse.name}" добавлен пользователем {request.user.username}')
                 messages.success(request, 'Склад добавлен.')
                 return redirect('warehouses')
         elif 'warehouse_id' in request.POST and request.POST.get('action') == 'delete':
             warehouse = get_object_or_404(Warehouse, id=request.POST['warehouse_id'], owner=request.user)
             warehouse_name = warehouse.name
             warehouse.delete()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='DELETE',
-                message=f'Склад "{warehouse_name}" удалён пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'DELETE', f'Склад "{warehouse_name}" удалён пользователем {request.user.username}')
             messages.success(request, 'Склад удален.')
             return redirect('warehouses')
-    warehouses = Warehouse.objects.filter(owner=request.user)
+    warehouses = Warehouse.objects.filter(owner=request.user).order_by('name')  # Ensure ordering
     form = WarehouseForm()
     return render(request, 'warehouses.html', {'warehouses': warehouses, 'form': form})
 
@@ -332,11 +316,7 @@ def warehouse_add(request):
             warehouse = form.save(commit=False)
             warehouse.owner = request.user
             warehouse.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='ADD',
-                message=f'Склад "{warehouse.name}" добавлен пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'ADD', f'Склад "{warehouse.name}" добавлен пользователем {request.user.username}')
             return redirect('warehouses')
     else:
         form = WarehouseForm()
@@ -349,11 +329,7 @@ def warehouse_edit(request, warehouse_id):
         form = WarehouseForm(request.POST, instance=warehouse)
         if form.is_valid():
             form.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='UPDATE',
-                message=f'Склад "{warehouse.name}" обновлён пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'UPDATE', f'Склад "{warehouse.name}" обновлён пользователем {request.user.username}')
             messages.success(request, 'Название склада обновлено.')
             return redirect('warehouses')
     else:
@@ -366,11 +342,7 @@ def warehouse_delete(request, warehouse_id):
     if request.method == 'POST':
         warehouse_name = warehouse.name
         warehouse.delete()
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='DELETE',
-            message=f'Склад "{warehouse_name}" удалён пользователем {request.user.username}'
-        )
+        create_log_entry(request.user, 'DELETE', f'Склад "{warehouse_name}" удалён пользователем {request.user.username}')
         messages.success(request, f'Склад "{warehouse_name}" удален.')
         return redirect('warehouses')
     return redirect('warehouses')
@@ -439,6 +411,7 @@ def sales_list(request):
             except ValueError:
                 messages.error(request, 'Максимальное количество должно быть целым числом.')
 
+    # Ensure consistent ordering
     allowed_sort_fields = [
         'date', '-date',
         'items__product__name', '-items__product__name',
@@ -449,12 +422,22 @@ def sales_list(request):
     if sort_by in allowed_sort_fields:
         sales = sales.order_by(sort_by)
     else:
-        sales = sales.order_by('-date')
+        sales = sales.order_by('-date')  # Default ordering
 
-    warehouses = Warehouse.objects.filter(owner=request.user)
+    # Пагинация
+    paginator = Paginator(sales, 10)  # 10 продаж на страницу
+    page_number = request.GET.get('page', 1)
+    try:
+        sales_paginated = paginator.page(page_number)
+    except PageNotAnInteger:
+        sales_paginated = paginator.page(1)
+    except EmptyPage:
+        sales_paginated = paginator.page(paginator.num_pages)
+
+    warehouses = Warehouse.objects.filter(owner=request.user).order_by('name')
 
     return render(request, 'sales_list.html', {
-        'sales': sales,
+        'sales': sales_paginated,
         'warehouses': warehouses,
         'product_name': product_name,
         'warehouse': warehouse,
@@ -482,7 +465,7 @@ def sale_detail(request, sale_id):
 @login_required
 def sale_edit(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
-    products = Product.objects.filter(owner=request.user)
+    products = Product.objects.filter(owner=request.user).order_by('name')
 
     form = SaleItemForm()
     form.fields['product'].queryset = products
@@ -502,11 +485,7 @@ def sale_edit(request, sale_id):
                     product.quantity -= sale_item.quantity
                     product.save()
                     sale_item.save()
-                    LogEntry.objects.create(
-                        user=request.user,
-                        action_type='UPDATE',
-                        message=f'Товар "{product.name}" (кол-во: {sale_item.quantity}) добавлен в продажу №{sale.number} пользователем {request.user.username}'
-                    )
+                    create_log_entry(request.user, 'UPDATE', f'Товар "{product.name}" (кол-во: {sale_item.quantity}) добавлен в продажу №{sale.number} пользователем {request.user.username}')
                     messages.success(request, f'Товар "{product.name}" добавлен в продажу.')
                     return redirect('sale_edit', sale_id=sale.id)
                 else:
@@ -518,11 +497,7 @@ def sale_edit(request, sale_id):
             product.quantity += sale_item.quantity
             product.save()
             sale_item.delete()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='UPDATE',
-                message=f'Товар "{product.name}" (кол-во: {sale_item.quantity}) удалён из продажи №{sale.number} пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'UPDATE', f'Товар "{product.name}" (кол-во: {sale_item.quantity}) удалён из продажи №{sale.number} пользователем {request.user.username}')
             messages.success(request, f'Товар "{product.name}" удалён из продажи.')
             return redirect('sale_edit', sale_id=sale.id)
 
@@ -564,11 +539,7 @@ def return_item(request, sale_id, item_id):
             product.quantity += return_quantity
             product.save()
 
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='RETURN',
-                message=f'Возврат {return_quantity} x "{product.name}" из продажи №{sale.number} пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'RETURN', f'Возврат {return_quantity} x "{product.name}" из продажи №{sale.number} пользователем {request.user.username}')
             messages.success(request, f'Возвращено {return_quantity} шт. товара "{product.name}".')
             return redirect('sale_detail', sale_id=sale.id)
     else:
@@ -588,15 +559,12 @@ def return_item(request, sale_id, item_id):
 def cart_list(request):
     carts = Cart.objects.filter(owner=request.user).prefetch_related('items__product')
 
-    # Получаем параметры фильтрации и сортировки
     hide_empty = request.GET.get('hide_empty', 'off') == 'on'
     sort_by = request.GET.get('sort_by', '')
 
-    # Фильтрация пустых корзин
     if hide_empty:
         carts = carts.filter(items__isnull=False).distinct()
 
-    # Аннотируем корзины общей стоимостью для сортировки
     carts = carts.annotate(
         total_cost=Coalesce(
             Sum('items__actual_price_total'),
@@ -605,19 +573,29 @@ def cart_list(request):
         )
     )
 
-    # Сортировка
+    # Ensure consistent ordering
     allowed_sort_fields = [
-        'number', '-number',           # По номеру корзины
-        'created_at', '-created_at',   # По дате создания
-        'total_cost', '-total_cost'    # По общей стоимости
+        'number', '-number',
+        'created_at', '-created_at',
+        'total_cost', '-total_cost'
     ]
     if sort_by in allowed_sort_fields:
         carts = carts.order_by(sort_by)
     else:
-        carts = carts.order_by('-created_at')  # По умолчанию сортировка по дате (убывание)
+        carts = carts.order_by('-created_at')  # Default ordering
+
+    # Пагинация
+    paginator = Paginator(carts, 10)  # 10 корзин на страницу
+    page_number = request.GET.get('page', 1)
+    try:
+        carts_paginated = paginator.page(page_number)
+    except PageNotAnInteger:
+        carts_paginated = paginator.page(1)
+    except EmptyPage:
+        carts_paginated = paginator.page(paginator.num_pages)
 
     return render(request, 'cart_list.html', {
-        'carts': carts,
+        'carts': carts_paginated,
         'hide_empty': hide_empty,
         'sort_by': sort_by,
     })
@@ -627,11 +605,7 @@ def cart_create(request):
     if request.method == 'POST':
         try:
             cart = Cart.objects.create(owner=request.user)
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='ADD',
-                message=f'Новая корзина №{cart.number} создана пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'ADD', f'Новая корзина №{cart.number} создана пользователем {request.user.username}')
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'cart_id': cart.id}, status=200)
             else:
@@ -652,7 +626,7 @@ def cart_create(request):
 @login_required
 def cart_add_item(request, cart_id):
     cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
-    products = Product.objects.filter(owner=request.user, is_archived=False)
+    products = Product.objects.filter(owner=request.user, is_archived=False).order_by('name')
 
     form = CartItemForm()
     form.fields['product'].queryset = products
@@ -679,17 +653,14 @@ def cart_add_item(request, cart_id):
                 if actual_price < 0:
                     return JsonResponse({'error': 'Фактическая цена не может быть отрицательной.'}, status=400)
 
-                # Проверяем, есть ли уже этот товар в корзине
                 cart_item = CartItem.objects.filter(cart=cart, product=product).first()
                 if cart_item:
-                    # Если товар уже есть, обновляем количество и цены
                     cart_item.quantity += quantity
                     cart_item.base_price_total = cart_item.quantity * product.selling_price
                     cart_item.actual_price_total = cart_item.quantity * (actual_price or product.selling_price)
                     cart_item.save()
                     action_message = f'Количество товара "{product.name}" в корзине №{cart.number} увеличено на {quantity} (итого: {cart_item.quantity}) пользователем {request.user.username} через сканирование UUID'
                 else:
-                    # Если товара нет, создаём новую запись
                     cart_item = CartItem(
                         cart=cart,
                         product=product,
@@ -700,12 +671,7 @@ def cart_add_item(request, cart_id):
                     cart_item.save()
                     action_message = f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username} через сканирование UUID'
 
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='ADD',
-                    message=action_message
-                )
-
+                create_log_entry(request.user, 'ADD', action_message)
                 return JsonResponse({'success': True, 'cart_id': cart.id})
             except json.JSONDecodeError:
                 return JsonResponse({'error': 'Неверный формат данных.'}, status=400)
@@ -716,20 +682,16 @@ def cart_add_item(request, cart_id):
         if form.is_valid():
             cart_item = form.save(commit=False)
             product = cart_item.product
-
-            # Проверяем, есть ли уже этот товар в корзине
             existing_item = CartItem.objects.filter(cart=cart, product=product).first()
             actual_price = form.cleaned_data['actual_price'] or product.selling_price
 
             if existing_item:
-                # Если товар уже есть, обновляем количество и цены
                 existing_item.quantity += cart_item.quantity
                 existing_item.base_price_total = existing_item.quantity * product.selling_price
                 existing_item.actual_price_total = existing_item.quantity * actual_price
                 existing_item.save()
                 action_message = f'Количество товара "{product.name}" в корзине №{cart.number} увеличено на {cart_item.quantity} (итого: {existing_item.quantity}) пользователем {request.user.username}'
             else:
-                # Если товара нет, создаём новую запись
                 cart_item.cart = cart
                 cart_item.base_price_total = cart_item.quantity * product.selling_price
                 cart_item.actual_price_total = cart_item.quantity * actual_price
@@ -740,11 +702,7 @@ def cart_add_item(request, cart_id):
                     messages.error(request, 'Недостаточно товара на складе.')
                     return redirect('cart_add_item', cart_id=cart.id)
 
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='ADD',
-                message=action_message
-            )
+            create_log_entry(request.user, 'ADD', action_message)
             messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
             return redirect('cart_add_item', cart_id=cart.id)
         else:
@@ -753,7 +711,6 @@ def cart_add_item(request, cart_id):
 
     total_quantity = sum(item.quantity for item in cart.items.all())
     base_total, actual_total = cart.calculate_totals()
-
     product_totals = cart.items.values('product__name').annotate(total_quantity=Sum('quantity')).order_by('product__name')
 
     return render(request, 'cart_form.html', {
@@ -815,14 +772,8 @@ def cart_confirm(request, cart_id):
                 actual_price_total=item.actual_price_total
             )
 
-    LogEntry.objects.create(
-        user=request.user,
-        action_type='SALE',
-        message=f'Продажа №{sale.number} на основе корзины №{cart.number} завершена пользователем {request.user.username}'
-    )
-
+    create_log_entry(request.user, 'SALE', f'Продажа №{sale.number} на основе корзины №{cart.number} завершена пользователем {request.user.username}')
     cart.delete()
-
     messages.success(request, 'Продажа успешно завершена!')
     return redirect('sales_list')
 
@@ -838,11 +789,7 @@ def cart_delete(request, cart_id):
     cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
     if request.method == 'POST':
         cart.delete()
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='DELETE',
-            message=f'Корзина №{cart.number} удалена пользователем {request.user.username}'
-        )
+        create_log_entry(request.user, 'DELETE', f'Корзина №{cart.number} удалена пользователем {request.user.username}')
         messages.success(request, 'Корзина удалена.')
         return redirect('cart_list')
     return redirect('cart_list')
@@ -928,11 +875,7 @@ def scan_product_confirm(request):
             return redirect('products')
 
         cart = Cart.objects.create(owner=request.user)
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='ADD',
-            message=f'Новая корзина №{cart.number} создана пользователем {request.user.username} через сканирование'
-        )
+        create_log_entry(request.user, 'ADD', f'Новая корзина №{cart.number} создана пользователем {request.user.username} через сканирование')
 
         cart_item = CartItem(
             cart=cart,
@@ -943,12 +886,7 @@ def scan_product_confirm(request):
         )
         cart_item.save()
 
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='ADD',
-            message=f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username} через сканирование UUID'
-        )
-
+        create_log_entry(request.user, 'ADD', f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username} через сканирование UUID')
         messages.success(request, f'Товар "{product.name}" добавлен в корзину №{cart.number}.')
         return redirect('cart_add_item', cart_id=cart.id)
 
@@ -960,7 +898,7 @@ def scan_product_confirm(request):
 
 @login_required
 def stats(request):
-    sales = Sale.objects.filter(owner=request.user).prefetch_related('items__product')
+    sales = Sale.objects.filter(owner=request.user).prefetch_related('items__product').order_by('-date')
     today = timezone.now()
 
     daily_sales = sales.filter(date__date=today)
@@ -973,7 +911,6 @@ def stats(request):
     total_revenue = sum(item.actual_price_total for sale in sales for item in sale.items.all())
 
     total_sales_count = sales.count()
-
     total_amounts = [sum(item.actual_price_total for item in sale.items.all()) for sale in sales]
     average_check = sum(total_amounts) / len(total_amounts) if total_amounts else 0
 
@@ -1009,10 +946,7 @@ def stats(request):
 
     user_settings, created = UserSettings.objects.get_or_create(user=request.user)
     show_cost_price = not user_settings.hide_cost_price
-    total_profit = None
-    daily_profit = None
-    weekly_profit = None
-    monthly_profit = None
+    total_profit = daily_profit = weekly_profit = monthly_profit = None
 
     if show_cost_price:
         total_cost = sum(item.quantity * (item.product.cost_price or 0) for sale in sales for item in sale.items.all())
@@ -1048,7 +982,7 @@ def stats(request):
     })
 
 ################
-### CATEGORY ###
+### Category ###
 ################
 
 @login_required
@@ -1061,12 +995,12 @@ def category_manage(request):
     if query:
         categories = categories.filter(name__icontains=query)
 
-    if sort_by:
-        allowed_sort_fields = ['name', '-name']
-        if sort_by in allowed_sort_fields:
-            categories = categories.order_by(sort_by)
-        else:
-            categories = categories.order_by('name')
+    # Ensure consistent ordering
+    allowed_sort_fields = ['name', '-name']
+    if sort_by in allowed_sort_fields:
+        categories = categories.order_by(sort_by)
+    else:
+        categories = categories.order_by('name')  # Default ordering
 
     category_form = CategoryForm(user=request.user)
     subcategory_form = SubcategoryForm(user=request.user)
@@ -1078,11 +1012,7 @@ def category_manage(request):
                 category = category_form.save(commit=False)
                 category.owner = request.user
                 category.save()
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='ADD',
-                    message=f'Категория "{category.name}" добавлена пользователем {request.user.username}'
-                )
+                create_log_entry(request.user, 'ADD', f'Категория "{category.name}" добавлена пользователем {request.user.username}')
                 messages.success(request, 'Категория добавлена.')
                 return redirect('category_manage')
             else:
@@ -1093,11 +1023,7 @@ def category_manage(request):
                 subcategory = subcategory_form.save(commit=False)
                 subcategory.owner = request.user
                 subcategory.save()
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='ADD',
-                    message=f'Подкатегория "{subcategory.name}" добавлена пользователем {request.user.username}'
-                )
+                create_log_entry(request.user, 'ADD', f'Подкатегория "{subcategory.name}" добавлена пользователем {request.user.username}')
                 messages.success(request, 'Подкатегория добавлена.')
                 return redirect('category_manage')
             else:
@@ -1119,11 +1045,7 @@ def category_edit(request, category_id):
         if form.is_valid():
             old_name = category.name
             category = form.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='UPDATE',
-                message=f'Категория "{old_name}" обновлена на "{category.name}" пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'UPDATE', f'Категория "{old_name}" обновлена на "{category.name}" пользователем {request.user.username}')
             messages.success(request, 'Категория обновлена.')
             return redirect('category_manage')
         else:
@@ -1143,11 +1065,7 @@ def category_delete(request, category_id):
 
         category_name = category.name
         category.delete()
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='DELETE',
-            message=f'Категория "{category_name}" удалена пользователем {request.user.username}'
-        )
+        create_log_entry(request.user, 'DELETE', f'Категория "{category_name}" удалена пользователем {request.user.username}')
         messages.success(request, f'Категория "{category_name}" удалена.')
     return redirect('category_manage')
 
@@ -1158,7 +1076,7 @@ def category_delete(request, category_id):
 @login_required
 def get_subcategories(request):
     category_id = request.GET.get('category_id')
-    subcategories = Subcategory.objects.filter(category_id=category_id, owner=request.user).values('id', 'name')
+    subcategories = Subcategory.objects.filter(category_id=category_id, owner=request.user).order_by('name').values('id', 'name')
     return JsonResponse({'subcategories': list(subcategories)})
 
 @login_required
@@ -1168,11 +1086,7 @@ def subcategory_edit(request, subcategory_id):
         form = SubcategoryForm(request.POST, instance=subcategory, user=request.user)
         if form.is_valid():
             form.save()
-            LogEntry.objects.create(
-                user=request.user,
-                action_type='UPDATE',
-                message=f'Подкатегория "{subcategory.name}" обновлена пользователем {request.user.username}'
-            )
+            create_log_entry(request.user, 'UPDATE', f'Подкатегория "{subcategory.name}" обновлена пользователем {request.user.username}')
             messages.success(request, 'Подкатегория обновлена.')
             return redirect('category_manage')
     else:
@@ -1190,11 +1104,7 @@ def subcategory_delete(request, subcategory_id):
 
         subcategory_name = subcategory.name
         subcategory.delete()
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='DELETE',
-            message=f'Подкатегория "{subcategory_name}" удалена пользователем {request.user.username}'
-        )
+        create_log_entry(request.user, 'DELETE', f'Подкатегория "{subcategory_name}" удалена пользователем {request.user.username}')
         messages.success(request, f'Подкатегория "{subcategory_name}" удалена.')
     return redirect('category_manage')
 
@@ -1216,44 +1126,24 @@ def admin_panel(request):
                 user_settings.is_pending = False
                 user_settings.save()
                 user.save()
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='APPROVE',
-                    message=f'Регистрация пользователя {user.username} подтверждена администратором {request.user.username}'
-                )
+                create_log_entry(request.user, 'APPROVE', f'Регистрация пользователя {user.username} подтверждена администратором {request.user.username}')
                 messages.success(request, f'Регистрация пользователя {user.username} подтверждена.')
             elif action == 'reject' and user_settings.is_pending:
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='REJECT',
-                    message=f'Регистрация пользователя {user.username} отклонена администратором {request.user.username}'
-                )
+                create_log_entry(request.user, 'REJECT', f'Регистрация пользователя {user.username} отклонена администратором {request.user.username}')
                 user.delete()
                 messages.success(request, f'Запрос на регистрацию пользователя {user.username} отклонён.')
             elif action == 'block' and not user_settings.is_pending:
                 user.is_active = False
                 user.save()
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='BLOCK',
-                    message=f'Пользователь {user.username} заблокирован администратором {request.user.username}'
-                )
+                create_log_entry(request.user, 'BLOCK', f'Пользователь {user.username} заблокирован администратором {request.user.username}')
                 messages.success(request, f'Пользователь {user.username} заблокирован.')
             elif action == 'unblock' and not user_settings.is_pending:
                 user.is_active = True
                 user.save()
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='UNBLOCK',
-                    message=f'Пользователь {user.username} разблокирован администратором {request.user.username}'
-                )
+                create_log_entry(request.user, 'UNBLOCK', f'Пользователь {user.username} разблокирован администратором {request.user.username}')
                 messages.success(request, f'Пользователь {user.username} разблокирован.')
             elif action == 'delete' and not user_settings.is_pending:
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='DELETE',
-                    message=f'Пользователь {user.username} удалён администратором {request.user.username}'
-                )
+                create_log_entry(request.user, 'DELETE', f'Пользователь {user.username} удалён администратором {request.user.username}')
                 user.delete()
                 messages.success(request, f'Пользователь {user.username} удален.')
             return redirect('admin_panel')
@@ -1261,19 +1151,16 @@ def admin_panel(request):
     # Запросы на регистрацию (pending_users)
     pending_users = User.objects.filter(usersettings__is_pending=True)
 
-    # Фильтры и поиск для pending_users
-    q_pending = request.GET.get('q_pending', '')  # Поиск
-    pending_date_from = request.GET.get('pending_date_from', '')  # Фильтр по дате "с"
-    pending_date_to = request.GET.get('pending_date_to', '')  # Фильтр по дате "по"
-    pending_sort_by = request.GET.get('pending_sort_by', '')  # Сортировка
+    q_pending = request.GET.get('q_pending', '')
+    pending_date_from = request.GET.get('pending_date_from', '')
+    pending_date_to = request.GET.get('pending_date_to', '')
+    pending_sort_by = request.GET.get('pending_sort_by', '')
 
-    # Поиск по email и имени
     if q_pending:
         pending_users = pending_users.filter(
             Q(email__icontains=q_pending) | Q(first_name__icontains=q_pending)
         )
 
-    # Фильтр по дате регистрации
     if pending_date_from:
         try:
             pending_date_from = timezone.datetime.strptime(pending_date_from, '%Y-%m-%d')
@@ -1288,7 +1175,7 @@ def admin_panel(request):
         except ValueError:
             messages.error(request, 'Неверный формат даты "по" для запросов. Используйте YYYY-MM-DD.')
 
-    # Сортировка
+    # Ensure consistent ordering
     pending_allowed_sort_fields = [
         'email', '-email',
         'first_name', '-first_name',
@@ -1297,25 +1184,32 @@ def admin_panel(request):
     if pending_sort_by in pending_allowed_sort_fields:
         pending_users = pending_users.order_by(pending_sort_by)
     else:
-        pending_users = pending_users.order_by('date_joined')  # По умолчанию
+        pending_users = pending_users.order_by('date_joined')  # Default ordering
+
+    # Пагинация для pending_users
+    paginator_pending = Paginator(pending_users, 10)  # 10 запросов на страницу
+    page_number_pending = request.GET.get('page_pending', 1)
+    try:
+        pending_users_paginated = paginator_pending.page(page_number_pending)
+    except PageNotAnInteger:
+        pending_users_paginated = paginator_pending.page(1)
+    except EmptyPage:
+        pending_users_paginated = paginator_pending.page(paginator_pending.num_pages)
 
     # Активные пользователи (active_users)
     active_users = User.objects.filter(usersettings__is_pending=False).exclude(is_superuser=True)
 
-    # Фильтры и поиск для active_users
-    q_active = request.GET.get('q_active', '')  # Поиск
-    date_from = request.GET.get('date_from', '')  # Фильтр по дате "с"
-    date_to = request.GET.get('date_to', '')  # Фильтр по дате "по"
-    status = request.GET.get('status', '')  # Фильтр по статусу
-    sort_by = request.GET.get('sort_by', '')  # Сортировка
+    q_active = request.GET.get('q_active', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    status = request.GET.get('status', '')
+    sort_by = request.GET.get('sort_by', '')
 
-    # Поиск по email и имени
     if q_active:
         active_users = active_users.filter(
             Q(email__icontains=q_active) | Q(first_name__icontains=q_active)
         )
 
-    # Фильтр по дате регистрации
     if date_from:
         try:
             date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
@@ -1330,14 +1224,13 @@ def admin_panel(request):
         except ValueError:
             messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
 
-    # Фильтр по статусу
     if status:
         if status == 'active':
             active_users = active_users.filter(is_active=True)
         elif status == 'blocked':
             active_users = active_users.filter(is_active=False)
 
-    # Сортировка
+    # Ensure consistent ordering
     allowed_sort_fields = [
         'email', '-email',
         'first_name', '-first_name',
@@ -1347,18 +1240,27 @@ def admin_panel(request):
     if sort_by in allowed_sort_fields:
         active_users = active_users.order_by(sort_by)
     else:
-        active_users = active_users.order_by('date_joined')  # По умолчанию
+        active_users = active_users.order_by('date_joined')  # Default ordering
 
-    # Остальные данные для шаблона
-    categories = Category.objects.all()
+    # Пагинация для active_users
+    paginator_active = Paginator(active_users, 10)  # 10 пользователей на страницу
+    page_number_active = request.GET.get('page_active', 1)
+    try:
+        active_users_paginated = paginator_active.page(page_number_active)
+    except PageNotAnInteger:
+        active_users_paginated = paginator_active.page(1)
+    except EmptyPage:
+        active_users_paginated = paginator_active.page(paginator_active.num_pages)
+
+    categories = Category.objects.all().order_by('name')
     total_products = Product.objects.count()
     total_warehouses = Warehouse.objects.count()
     category_form = CategoryForm(user=request.user)
     subcategory_form = SubcategoryForm(user=request.user)
 
     return render(request, 'admin.html', {
-        'pending_users': pending_users,
-        'active_users': active_users,
+        'pending_users': pending_users_paginated,
+        'active_users': active_users_paginated,
         'categories': categories,
         'total_products': total_products,
         'total_warehouses': total_warehouses,
@@ -1385,7 +1287,7 @@ def user_logs(request):
 
     if is_admin:
         logs = LogEntry.objects.all()
-        users = User.objects.all()
+        users = User.objects.all().order_by('username')
     else:
         logs = LogEntry.objects.filter(user=request.user)
         users = None
@@ -1413,12 +1315,23 @@ def user_logs(request):
         except ValueError:
             messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
 
+    # Ensure consistent ordering
     logs = logs.order_by('-timestamp')
+
+    # Пагинация
+    paginator = Paginator(logs, 10)  # 10 логов на страницу
+    page_number = request.GET.get('page', 1)
+    try:
+        logs_paginated = paginator.page(page_number)
+    except PageNotAnInteger:
+        logs_paginated = paginator.page(1)
+    except EmptyPage:
+        logs_paginated = paginator.page(paginator.num_pages)
 
     action_types = LogEntry.ACTION_TYPES
 
     return render(request, 'user_logs.html', {
-        'logs': logs,
+        'logs': logs_paginated,
         'action_types': action_types,
         'action_type': action_type,
         'date_from': date_from,
