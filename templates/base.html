@@ -25,6 +25,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
+                {% if user.is_authenticated %}
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'products' %}">Товары</a>
@@ -61,6 +62,16 @@
                         <a class="nav-link" href="{% url 'logout' %}">Выйти</a>
                     </li>
                 </ul>
+                {% else %}
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Войти</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">Регистрация</a>
+                    </li>
+                </ul>
+                {% endif %}
             </div>
         </div>
     </nav>
@@ -76,6 +87,24 @@
         {% endfor %}
         {% endif %}
     </div>
+
+    <script>
+        function getCsrfToken() {
+            const name = 'csrftoken';
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    let cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
 
     <!-- Confirmation Modal -->
     <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
@@ -131,11 +160,9 @@
                     const userId = this.getAttribute('data-user-id');
                     const cartId = this.getAttribute('data-cart-id');
 
-                    // Устанавливаем сообщение и action формы
                     confirmMessage.textContent = message;
                     confirmForm.setAttribute('action', actionUrl);
 
-                    // Устанавливаем дополнительные параметры, если они есть
                     if (actionType) {
                         confirmActionInput.value = actionType;
                     } else {
@@ -152,7 +179,6 @@
                         confirmCartIdInput.value = '';
                     }
 
-                    // Показываем модальное окно
                     confirmModal.show();
                 });
             });

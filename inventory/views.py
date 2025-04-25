@@ -1,18 +1,16 @@
 # inventory/views.py
 import uuid
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login, logout
+import json
+from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Sum, Q, Count, Avg
-from django.http import HttpResponseForbidden
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.db.models import Sum, Q
 from django.utils import timezone
 from datetime import timedelta
-from django.contrib import messages
-from .forms import RegisterForm, LoginForm, ProductForm, WarehouseForm, UserChangeForm, UserSettingsForm, CategoryForm, \
-    SubcategoryForm, CartItemForm, ReturnForm, SaleItemForm
-from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, \
-    LogEntry, Return
+from .forms import RegisterForm, ProductForm, WarehouseForm, UserChangeForm, UserSettingsForm, CategoryForm, \
+    SubcategoryForm, CartItemForm, ReturnForm, SaleItemForm, LoginForm
+from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, Return, LogEntry
 from django.http import JsonResponse
 
 ######################
@@ -26,19 +24,24 @@ def login_view(request):
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
             user = authenticate(request, username=username, password=password)
-            if user:
+            if user is not None:
                 login(request, user)
                 LogEntry.objects.create(
                     user=user,
                     action_type='LOGIN',
                     message=f'Пользователь {user.username} вошёл в систему'
                 )
-                messages.success(request, 'Вход выполнен успешно!')
-                return redirect('products')
+                return redirect('products')  # Убираем сообщение, так как пользователь сразу перенаправляется
             else:
+                # Логируем неудачную попытку входа
+                LogEntry.objects.create(
+                    user=None,  # Пользователь не аутентифицирован, поэтому user=None
+                    action_type='FAILED_LOGIN',
+                    message=f'Неудачная попытка входа для пользователя {username}'
+                )
                 messages.error(request, 'Неверный логин или пароль.')
         else:
-            messages.error(request, 'Ошибка в форме. Проверьте данные.')
+            messages.error(request, 'Пожалуйста, исправьте ошибки в форме.')
     else:
         form = LoginForm()
     return render(request, 'login.html', {'form': form})
@@ -593,24 +596,89 @@ def cart_list(request):
 @login_required
 def cart_create(request):
     if request.method == 'POST':
-        cart = Cart.objects.create(owner=request.user)
-        LogEntry.objects.create(
-            user=request.user,
-            action_type='ADD',
-            message=f'Новая корзина {cart.id} создана пользователем {request.user.username}'
-        )
-        return redirect('cart_add_item', cart_id=cart.id)
-    return render(request, 'cart_create.html')
+        try:
+            cart = Cart.objects.create(owner=request.user)
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='ADD',
+                message=f'Новая корзина {cart.id} создана пользователем {request.user.username}'
+            )
+            # Проверяем, является ли запрос AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'cart_id': cart.id}, status=200)
+            else:
+                # Для обычного POST-запроса (например, из формы) делаем перенаправление
+                messages.success(request, f'Корзина №{cart.id} создана.')
+                return redirect('cart_add_item', cart_id=cart.id)
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'error': f'Ошибка при создании корзины: {str(e)}'}, status=500)
+            else:
+                messages.error(request, f'Ошибка при создании корзины: {str(e)}')
+                return redirect('cart_list')
+    # Для GET-запросов или других методов
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
+    else:
+        # Если это не AJAX-запрос, можно перенаправить на список корзин
+        messages.error(request, 'Неверный метод запроса.')
+        return redirect('cart_list')
 
 @login_required
 def cart_add_item(request, cart_id):
     cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
-    products = Product.objects.filter(owner=request.user, is_archived=False)  # Только неархивированные товары
+    products = Product.objects.filter(owner=request.user, is_archived=False)
 
     form = CartItemForm()
     form.fields['product'].queryset = products
 
     if request.method == 'POST':
+        # Проверяем, является ли запрос AJAX
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                data = json.loads(request.body)
+                product_id = data.get('product')
+                quantity = int(data.get('quantity', 1))
+                actual_price = float(data.get('actual_price', 0))
+
+                try:
+                    product = Product.objects.get(id=product_id, owner=request.user, is_archived=False)
+                except Product.DoesNotExist:
+                    return JsonResponse({'error': 'Товар не найден.'}, status=404)
+
+                if quantity <= 0:
+                    return JsonResponse({'error': 'Количество должно быть больше 0.'}, status=400)
+
+                if quantity > product.quantity:
+                    return JsonResponse({'error': f'Недостаточно товара на складе. В наличии: {product.quantity} шт.'}, status=400)
+
+                if actual_price < 0:
+                    return JsonResponse({'error': 'Фактическая цена не может быть отрицательной.'}, status=400)
+
+                cart_item = CartItem(
+                    cart=cart,
+                    product=product,
+                    quantity=quantity,
+                    base_price_total=quantity * product.selling_price,
+                    actual_price_total=quantity * (actual_price or product.selling_price)
+                )
+                cart_item.save()
+
+                # Логирование
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='ADD',
+                    message=f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину {cart.id} пользователем {request.user.username} через сканирование UUID'
+                )
+
+                # Возвращаем JSON-ответ и завершаем выполнение
+                return JsonResponse({'success': True, 'cart_id': cart.id})
+            except json.JSONDecodeError:
+                return JsonResponse({'error': 'Неверный формат данных.'}, status=400)
+            except Exception as e:
+                return JsonResponse({'error': str(e)}, status=500)
+
+        # Обычная обработка формы (не AJAX)
         form = CartItemForm(request.POST)
         if form.is_valid():
             cart_item = form.save(commit=False)
@@ -622,6 +690,12 @@ def cart_add_item(request, cart_id):
 
             if cart_item.quantity <= product.quantity:
                 cart_item.save()
+                # Логирование для обычного добавления
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='ADD',
+                    message=f'Товар "{product.name}" (кол-во: {cart_item.quantity}) добавлен в корзину {cart.id} пользователем {request.user.username}'
+                )
                 messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
                 return redirect('cart_add_item', cart_id=cart.id)
             else:
@@ -629,11 +703,12 @@ def cart_add_item(request, cart_id):
                 return redirect('cart_add_item', cart_id=cart.id)
         else:
             messages.error(request, 'Ошибка при добавлении товара. Проверьте данные.')
+            return redirect('cart_add_item', cart_id=cart.id)
 
+    # Обработка GET-запроса (рендеринг формы)
     total_quantity = sum(item.quantity for item in cart.items.all())
     base_total, actual_total = cart.calculate_totals()
 
-    # Группируем товары по продукту и считаем общее количество
     product_totals = cart.items.values('product__name').annotate(total_quantity=Sum('quantity')).order_by('product__name')
 
     return render(request, 'cart_form.html', {
@@ -643,7 +718,7 @@ def cart_add_item(request, cart_id):
         'total_quantity': total_quantity,
         'base_total': base_total,
         'actual_total': actual_total,
-        'product_totals': product_totals,  # Передаём агрегированные данные в шаблон
+        'product_totals': product_totals,
     })
 
 @login_required

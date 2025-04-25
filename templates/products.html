@@ -111,23 +111,145 @@
     {% endfor %}
 </div>
 
-<!-- JavaScript для обработки вставки из буфера обмена -->
+<!-- Модальное окно для ошибок -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="errorModalLabel">Ошибка</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Убираем модальное окно успеха, так как перенаправление будет автоматическим -->
+
+<!-- JavaScript для обработки вставки UUID -->
 <script>
-document.addEventListener('paste', function(e) {
-    // Получаем текст из буфера обмена
-    const pastedText = (e.clipboardData || window.clipboardData).getData('text').trim();
+document.addEventListener('DOMContentLoaded', function() {
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+    const errorMessage = document.getElementById('errorMessage');
+    const csrfToken = getCsrfToken(); // Используем функцию из base.html
 
-    // Проверяем, является ли текст валидным UUID (36 символов: 8-4-4-4-12)
-    const uuidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-    if (uuidPattern.test(pastedText)) {
-        // Если это UUID, вставляем его в поле поиска
-        const searchInput = document.getElementById('search-input');
-        searchInput.value = pastedText;
+    document.addEventListener('paste', async function(e) {
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text').trim();
+        const uuidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+        if (!uuidPattern.test(pastedText)) {
+            return;
+        }
 
-        // Автоматически отправляем форму
-        const filterForm = document.getElementById('filter-form');
-        filterForm.submit();
-    }
+        e.preventDefault();
+
+        try {
+            // 1. Создаём новую корзину через AJAX
+            const createCartResponse = await fetch('{% url "cart_create" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest', // Явно указываем, что это AJAX-запрос
+                },
+                credentials: 'include',
+            });
+
+            if (createCartResponse.status === 403 || createCartResponse.status === 401) {
+                errorMessage.textContent = 'Пожалуйста, войдите в систему.';
+                errorModal.show();
+                setTimeout(() => {
+                    window.location.href = '{% url "login" %}';
+                }, 2000);
+                return;
+            }
+
+            if (!createCartResponse.ok) {
+                const errorData = await createCartResponse.json();
+                throw new Error(errorData.error || 'Не удалось создать корзину.');
+            }
+
+            const cartData = await createCartResponse.json();
+            if (!cartData.cart_id) {
+                throw new Error('Не удалось получить ID корзины.');
+            }
+
+            const cartId = cartData.cart_id;
+
+            // 2. Получаем информацию о товаре по UUID
+            const productResponse = await fetch(`/get-product-by-uuid/?unique_id=${pastedText}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'include',
+            });
+
+            if (!productResponse.ok) {
+                const errorData = await productResponse.json();
+                throw new Error(errorData.error || 'Не удалось получить товар.');
+            }
+
+            const productData = await productResponse.json();
+            if (productData.error) {
+                errorMessage.textContent = productData.error || 'Товар не найден.';
+                errorModal.show();
+                return;
+            }
+
+            // 3. Добавляем товар в корзину через AJAX
+            const addItemResponse = await fetch(`/cart/${cartId}/add_item/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest', // Явно указываем, что это AJAX-запрос
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    product: productData.id,
+                    quantity: 1,
+                    actual_price: productData.selling_price,
+                }),
+            });
+
+            if (addItemResponse.status === 403 || addItemResponse.status === 401) {
+                errorMessage.textContent = 'Пожалуйста, войдите в систему.';
+                errorModal.show();
+                setTimeout(() => {
+                    window.location.href = '{% url "login" %}';
+                }, 2000);
+                return;
+            }
+
+            if (!addItemResponse.ok) {
+                const errorData = await addItemResponse.json();
+                throw new Error(errorData.error || 'Не удалось добавить товар в корзину.');
+            }
+
+            const addItemData = await addItemResponse.json();
+            if (addItemData.error) {
+                errorMessage.textContent = addItemData.error || 'Не удалось добавить товар в корзину.';
+                errorModal.show();
+                return;
+            }
+
+            if (!addItemData.success) {
+                throw new Error('Не удалось подтвердить добавление товара.');
+            }
+
+            // 4. Перенаправляем пользователя на страницу редактирования корзины
+            window.location.href = `/cart/${cartId}/add_item/`;
+        } catch (error) {
+            console.error('Ошибка:', error);
+            errorMessage.textContent = error.message || 'Произошла ошибка при обработке запроса.';
+            errorModal.show();
+        }
+    });
 });
 </script>
 {% endblock %}

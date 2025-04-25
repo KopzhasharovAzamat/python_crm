@@ -219,6 +219,7 @@ class LogEntry(models.Model):
         ('BLOCK', 'Блокировка'),
         ('UNBLOCK', 'Разблокировка'),
         ('RETURN', 'Возврат'),
+        ('FAILED_LOGIN', 'Неудачная попытка входа'),
     )
 
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Время")
