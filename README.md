@@ -3,11 +3,12 @@
 
 ## Установка
 1. Клонируйте репозиторий.
-2. Создайте виртуальное окружение 'python -m venv venv'.
-3. Перейдите в виртульное окружение venv 'venv\Scripts\activate'.
+2. Создайте виртуальное окружение `python -m venv venv`.
+3. Перейдите в виртульное окружение `venv venv\Scripts\activate`.
 4. Установите зависимости: `pip install -r requirements.txt`.
-5. Выполните миграции: `python manage.py migrate`.
-6. Запустите сервер: `python manage.py runserver`.
+5. Создание миграций: `python manage.py makemigrations`
+6. Выполните миграции: `python manage.py migrate`.
+7. Запустите сервер: `python manage.py runserver`.
 
 ## Функционал
 - Регистрация и авторизация.
