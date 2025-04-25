@@ -1,5 +1,4 @@
 <!--templates/cart_list.html-->
-<!-- templates/cart_list.html -->
 {% extends 'base.html' %}
 {% load i18n %}
 
@@ -24,7 +23,7 @@
     <tbody>
         {% for cart in carts %}
         <tr>
-            <td>{{ cart.id }}</td>
+            <td>{{ cart.number }}</td>
             <td>{{ cart.created_at|date:"Y-m-d H:i" }}</td>
             <td>
                 {% for item in cart.items.all %}
@@ -36,8 +35,8 @@
             <td>{{ cart.calculate_totals.1|floatformat:2 }} ₽</td>
             <td>
                 <a href="{% url 'cart_add_item' cart.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
-                <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success btn-sm delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.id }}?"><i class="fas fa-check"></i> Продать</a>
-                <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'cart_delete' cart.id %}" data-message="Вы уверены, что хотите удалить корзину №{{ cart.id }}?"><i class="fas fa-trash"></i> Удалить</button>
+                <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success btn-sm delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?"><i class="fas fa-check"></i> Продать</a>
+                <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'cart_delete' cart.id %}" data-message="Вы уверены, что хотите удалить корзину №{{ cart.number }}?"><i class="fas fa-trash"></i> Удалить</button>
             </td>
         </tr>
         {% endfor %}
@@ -49,7 +48,6 @@
 </div>
 {% endif %}
 
-<!-- Модальное окно для подтверждения (оставляем на случай, если оно не в base.html) -->
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

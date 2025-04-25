@@ -6,7 +6,7 @@
     <div class="col-md-8">
         <div class="card shadow-sm animate__animated animate__fadeIn">
             <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h3 class="mb-0">Корзина №{{ cart.id }}</h3>
+                <h3 class="mb-0">Корзина №{{ cart.number }}</h3>
             </div>
             <div class="card-body">
                 {% if cart.items.exists %}
@@ -35,8 +35,8 @@
                 <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} ₽</p>
                 <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} ₽</p>
                 <div class="d-flex gap-2 mb-4">
-                    <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success flex-fill"><i class="fas fa-check"></i> Совершить продажу</a>
-                    <a href="{% url 'cart_cancel' cart.id %}" class="btn btn-secondary flex-fill"><i class="fas fa-times"></i> Отменить</a>
+                    <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success flex-fill delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-check"></i> Совершить продажу</a>
+                    <a href="{% url 'cart_cancel' cart.id %}" class="btn btn-secondary flex-fill delete-btn" data-action="{% url 'cart_cancel' cart.id %}" data-message="Вы уверены, что хотите отменить корзину №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-times"></i> Отменить</a>
                 </div>
                 {% else %}
                 <p class="text-muted">Корзина пуста. Добавьте товары, чтобы продолжить.</p>
@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resetScanForm();
     });
 
-    document.getElementByIdinvertory('scanModal').addEventListener('shown.bs.modal', function() {
+    document.getElementById('scanModal').addEventListener('shown.bs.modal', function() {
         uniqueIdInput.focus();
     });
 

@@ -31,11 +31,10 @@ def login_view(request):
                     action_type='LOGIN',
                     message=f'Пользователь {user.username} вошёл в систему'
                 )
-                return redirect('products')  # Убираем сообщение, так как пользователь сразу перенаправляется
+                return redirect('products')
             else:
-                # Логируем неудачную попытку входа
                 LogEntry.objects.create(
-                    user=None,  # Пользователь не аутентифицирован, поэтому user=None
+                    user=None,
                     action_type='FAILED_LOGIN',
                     message=f'Неудачная попытка входа для пользователя {username}'
                 )
@@ -66,18 +65,15 @@ def register(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
-            # Создаём пользователя вручную
             user = User(
                 username=form.cleaned_data['username'],
-                email=form.cleaned_data['email'],  # Сохраняем email
+                email=form.cleaned_data['email'],
                 first_name=form.cleaned_data['first_name'],
-                is_active=False  # Пользователь неактивен до подтверждения
+                is_active=False
             )
             user.set_password(form.cleaned_data['password'])
             user.save()
-            # Создаём настройки пользователя с флагом is_pending=True
             UserSettings.objects.create(user=user, is_pending=True)
-            # Логируем регистрацию
             LogEntry.objects.create(
                 user=user,
                 action_type='REGISTER',
@@ -160,7 +156,6 @@ def product_list(request):
         else:
             products = products.order_by('name')
 
-    # Оптимизируем запросы с помощью select_related
     categories = Category.objects.filter(owner=request.user).select_related('owner')
     subcategories = Subcategory.objects.filter(owner=request.user).select_related('category', 'owner')
     warehouses = Warehouse.objects.filter(owner=request.user).select_related('owner')
@@ -262,7 +257,6 @@ def get_product_price(request):
 
 @login_required
 def archived_products(request):
-    # Отображаем только архивированные товары
     products = Product.objects.filter(owner=request.user, is_archived=True).order_by('name')
     return render(request, 'archived_products.html', {'products': products})
 
@@ -489,7 +483,6 @@ def sale_edit(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
     products = Product.objects.filter(owner=request.user)
 
-    # Инициализируем форму для добавления нового товара в продажу
     form = SaleItemForm()
     form.fields['product'].queryset = products
 
@@ -499,19 +492,19 @@ def sale_edit(request, sale_id):
             if form.is_valid():
                 sale_item = form.save(commit=False)
                 product = sale_item.product
-                sale_item.sale = sale  # Привязываем к продаже, а не к корзине
+                sale_item.sale = sale
                 sale_item.base_price_total = sale_item.quantity * product.selling_price
                 actual_price = form.cleaned_data['actual_price'] or product.selling_price
                 sale_item.actual_price_total = sale_item.quantity * actual_price
 
                 if sale_item.quantity <= product.quantity:
-                    product.quantity -= sale_item.quantity  # Уменьшаем остаток
+                    product.quantity -= sale_item.quantity
                     product.save()
                     sale_item.save()
                     LogEntry.objects.create(
                         user=request.user,
                         action_type='UPDATE',
-                        message=f'Товар "{product.name}" (кол-во: {sale_item.quantity}) добавлен в продажу {sale.id} пользователем {request.user.username}'
+                        message=f'Товар "{product.name}" (кол-во: {sale_item.quantity}) добавлен в продажу №{sale.number} пользователем {request.user.username}'
                     )
                     messages.success(request, f'Товар "{product.name}" добавлен в продажу.')
                     return redirect('sale_edit', sale_id=sale.id)
@@ -521,13 +514,13 @@ def sale_edit(request, sale_id):
             item_id = request.POST.get('item_id')
             sale_item = get_object_or_404(SaleItem, id=item_id, sale=sale)
             product = sale_item.product
-            product.quantity += sale_item.quantity  # Возвращаем остаток на склад
+            product.quantity += sale_item.quantity
             product.save()
             sale_item.delete()
             LogEntry.objects.create(
                 user=request.user,
                 action_type='UPDATE',
-                message=f'Товар "{product.name}" (кол-во: {sale_item.quantity}) удалён из продажи {sale.id} пользователем {request.user.username}'
+                message=f'Товар "{product.name}" (кол-во: {sale_item.quantity}) удалён из продажи №{sale.number} пользователем {request.user.username}'
             )
             messages.success(request, f'Товар "{product.name}" удалён из продажи.')
             return redirect('sale_edit', sale_id=sale.id)
@@ -551,7 +544,6 @@ def return_item(request, sale_id, item_id):
                 messages.error(request, 'Нельзя вернуть больше, чем было продано.')
                 return redirect('sale_detail', sale_id=sale.id)
 
-            # Создаём запись о возврате
             return_record = Return.objects.create(
                 sale=sale,
                 sale_item=sale_item,
@@ -559,7 +551,6 @@ def return_item(request, sale_id, item_id):
                 owner=request.user
             )
 
-            # Уменьшаем количество в SaleItem
             sale_item.quantity -= return_quantity
             if sale_item.quantity == 0:
                 sale_item.delete()
@@ -568,16 +559,14 @@ def return_item(request, sale_id, item_id):
                 sale_item.actual_price_total = sale_item.quantity * (sale_item.actual_price_total / (sale_item.quantity + return_quantity))
                 sale_item.save()
 
-            # Увеличиваем остаток на складе
             product = sale_item.product
             product.quantity += return_quantity
             product.save()
 
-            # Логируем возврат
             LogEntry.objects.create(
                 user=request.user,
                 action_type='RETURN',
-                message=f'Возврат {return_quantity} x "{product.name}" из продажи {sale.id} пользователем {request.user.username}'
+                message=f'Возврат {return_quantity} x "{product.name}" из продажи №{sale.number} пользователем {request.user.username}'
             )
             messages.success(request, f'Возвращено {return_quantity} шт. товара "{product.name}".')
             return redirect('sale_detail', sale_id=sale.id)
@@ -607,14 +596,12 @@ def cart_create(request):
             LogEntry.objects.create(
                 user=request.user,
                 action_type='ADD',
-                message=f'Новая корзина {cart.id} создана пользователем {request.user.username}'
+                message=f'Новая корзина №{cart.number} создана пользователем {request.user.username}'
             )
-            # Проверяем, является ли запрос AJAX
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'cart_id': cart.id}, status=200)
             else:
-                # Для обычного POST-запроса (например, из формы) делаем перенаправление
-                messages.success(request, f'Корзина №{cart.id} создана.')
+                messages.success(request, f'Корзина №{cart.number} создана.')
                 return redirect('cart_add_item', cart_id=cart.id)
         except Exception as e:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -622,11 +609,9 @@ def cart_create(request):
             else:
                 messages.error(request, f'Ошибка при создании корзины: {str(e)}')
                 return redirect('cart_list')
-    # Для GET-запросов или других методов
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
     else:
-        # Если это не AJAX-запрос, можно перенаправить на список корзин
         messages.error(request, 'Неверный метод запроса.')
         return redirect('cart_list')
 
@@ -639,7 +624,6 @@ def cart_add_item(request, cart_id):
     form.fields['product'].queryset = products
 
     if request.method == 'POST':
-        # Проверяем, является ли запрос AJAX
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
@@ -661,57 +645,78 @@ def cart_add_item(request, cart_id):
                 if actual_price < 0:
                     return JsonResponse({'error': 'Фактическая цена не может быть отрицательной.'}, status=400)
 
-                cart_item = CartItem(
-                    cart=cart,
-                    product=product,
-                    quantity=quantity,
-                    base_price_total=quantity * product.selling_price,
-                    actual_price_total=quantity * (actual_price or product.selling_price)
-                )
-                cart_item.save()
+                # Проверяем, есть ли уже этот товар в корзине
+                cart_item = CartItem.objects.filter(cart=cart, product=product).first()
+                if cart_item:
+                    # Если товар уже есть, обновляем количество и цены
+                    cart_item.quantity += quantity
+                    cart_item.base_price_total = cart_item.quantity * product.selling_price
+                    cart_item.actual_price_total = cart_item.quantity * (actual_price or product.selling_price)
+                    cart_item.save()
+                    action_message = f'Количество товара "{product.name}" в корзине №{cart.number} увеличено на {quantity} (итого: {cart_item.quantity}) пользователем {request.user.username} через сканирование UUID'
+                else:
+                    # Если товара нет, создаём новую запись
+                    cart_item = CartItem(
+                        cart=cart,
+                        product=product,
+                        quantity=quantity,
+                        base_price_total=quantity * product.selling_price,
+                        actual_price_total=quantity * (actual_price or product.selling_price)
+                    )
+                    cart_item.save()
+                    action_message = f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username} через сканирование UUID'
 
-                # Логирование
                 LogEntry.objects.create(
                     user=request.user,
                     action_type='ADD',
-                    message=f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину {cart.id} пользователем {request.user.username} через сканирование UUID'
+                    message=action_message
                 )
 
-                # Возвращаем JSON-ответ и завершаем выполнение
                 return JsonResponse({'success': True, 'cart_id': cart.id})
             except json.JSONDecodeError:
                 return JsonResponse({'error': 'Неверный формат данных.'}, status=400)
             except Exception as e:
                 return JsonResponse({'error': str(e)}, status=500)
 
-        # Обычная обработка формы (не AJAX)
         form = CartItemForm(request.POST)
         if form.is_valid():
             cart_item = form.save(commit=False)
-            cart_item.cart = cart
             product = cart_item.product
-            cart_item.base_price_total = cart_item.quantity * product.selling_price
-            actual_price = form.cleaned_data['actual_price'] or product.selling_price
-            cart_item.actual_price_total = cart_item.quantity * actual_price
 
-            if cart_item.quantity <= product.quantity:
-                cart_item.save()
-                # Логирование для обычного добавления
-                LogEntry.objects.create(
-                    user=request.user,
-                    action_type='ADD',
-                    message=f'Товар "{product.name}" (кол-во: {cart_item.quantity}) добавлен в корзину {cart.id} пользователем {request.user.username}'
-                )
-                messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
-                return redirect('cart_add_item', cart_id=cart.id)
+            # Проверяем, есть ли уже этот товар в корзине
+            existing_item = CartItem.objects.filter(cart=cart, product=product).first()
+            actual_price = form.cleaned_data['actual_price'] or product.selling_price
+
+            if existing_item:
+                # Если товар уже есть, обновляем количество и цены
+                existing_item.quantity += cart_item.quantity
+                existing_item.base_price_total = existing_item.quantity * product.selling_price
+                existing_item.actual_price_total = existing_item.quantity * actual_price
+                existing_item.save()
+                action_message = f'Количество товара "{product.name}" в корзине №{cart.number} увеличено на {cart_item.quantity} (итого: {existing_item.quantity}) пользователем {request.user.username}'
             else:
-                messages.error(request, 'Недостаточно товара на складе.')
-                return redirect('cart_add_item', cart_id=cart.id)
+                # Если товара нет, создаём новую запись
+                cart_item.cart = cart
+                cart_item.base_price_total = cart_item.quantity * product.selling_price
+                cart_item.actual_price_total = cart_item.quantity * actual_price
+                if cart_item.quantity <= product.quantity:
+                    cart_item.save()
+                    action_message = f'Товар "{product.name}" (кол-во: {cart_item.quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username}'
+                else:
+                    messages.error(request, 'Недостаточно товара на складе.')
+                    return redirect('cart_add_item', cart_id=cart.id)
+
+            LogEntry.objects.create(
+                user=request.user,
+                action_type='ADD',
+                message=action_message
+            )
+            messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
+            return redirect('cart_add_item', cart_id=cart.id)
         else:
             messages.error(request, 'Ошибка при добавлении товара. Проверьте данные.')
             return redirect('cart_add_item', cart_id=cart.id)
 
-    # Обработка GET-запроса (рендеринг формы)
     total_quantity = sum(item.quantity for item in cart.items.all())
     base_total, actual_total = cart.calculate_totals()
 
@@ -745,7 +750,6 @@ def cart_confirm(request, cart_id):
         messages.error(request, 'Корзина пуста. Добавьте товары перед подтверждением.')
         return redirect('cart_add_item', cart_id=cart.id)
 
-    # Группируем товары по продукту, чтобы посчитать общее количество
     product_quantities = {}
     for item in cart_items:
         product = item.product
@@ -754,7 +758,6 @@ def cart_confirm(request, cart_id):
         product_quantities[product.id]['quantity'] += item.quantity
         product_quantities[product.id]['items'].append(item)
 
-    # Проверяем общее количество каждого товара
     for product_id, data in product_quantities.items():
         product = Product.objects.get(id=product_id)
         total_quantity = data['quantity']
@@ -763,12 +766,11 @@ def cart_confirm(request, cart_id):
                            f'Недостаточно товара "{product.name}" на складе. В корзине: {total_quantity} шт., на складе: {product.quantity} шт.')
             return redirect('cart_add_item', cart_id=cart.id)
 
-    # Если проверка прошла, создаём продажу
     sale = Sale.objects.create(owner=request.user)
     for product_id, data in product_quantities.items():
         product = Product.objects.get(id=product_id)
         total_quantity = data['quantity']
-        product.quantity -= total_quantity  # Списываем общее количество
+        product.quantity -= total_quantity
         product.save()
         for item in data['items']:
             SaleItem.objects.create(
@@ -782,7 +784,7 @@ def cart_confirm(request, cart_id):
     LogEntry.objects.create(
         user=request.user,
         action_type='SALE',
-        message=f'Продажа {sale.id} на основе корзины {cart.id} завершена пользователем {request.user.username}'
+        message=f'Продажа №{sale.number} на основе корзины №{cart.number} завершена пользователем {request.user.username}'
     )
 
     cart.delete()
@@ -805,7 +807,7 @@ def cart_delete(request, cart_id):
         LogEntry.objects.create(
             user=request.user,
             action_type='DELETE',
-            message=f'Корзина {cart.id} удалена пользователем {request.user.username}'
+            message=f'Корзина №{cart.number} удалена пользователем {request.user.username}'
         )
         messages.success(request, 'Корзина удалена.')
         return redirect('cart_list')
@@ -891,15 +893,13 @@ def scan_product_confirm(request):
             messages.error(request, 'Фактическая цена не может быть отрицательной.')
             return redirect('products')
 
-        # Создаём корзину, если её нет
         cart = Cart.objects.create(owner=request.user)
         LogEntry.objects.create(
             user=request.user,
             action_type='ADD',
-            message=f'Новая корзина {cart.id} создана пользователем {request.user.username} через сканирование'
+            message=f'Новая корзина №{cart.number} создана пользователем {request.user.username} через сканирование'
         )
 
-        # Добавляем товар в корзину
         cart_item = CartItem(
             cart=cart,
             product=product,
@@ -912,10 +912,10 @@ def scan_product_confirm(request):
         LogEntry.objects.create(
             user=request.user,
             action_type='ADD',
-            message=f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину {cart.id} пользователем {request.user.username} через сканирование UUID'
+            message=f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username} через сканирование UUID'
         )
 
-        messages.success(request, f'Товар "{product.name}" добавлен в корзину №{cart.id}.')
+        messages.success(request, f'Товар "{product.name}" добавлен в корзину №{cart.number}.')
         return redirect('cart_add_item', cart_id=cart.id)
 
     return redirect('products')
@@ -1013,7 +1013,6 @@ def stats(request):
         'monthly_profit': monthly_profit,
     })
 
-
 ################
 ### CATEGORY ###
 ################
@@ -1035,7 +1034,6 @@ def category_manage(request):
         else:
             categories = categories.order_by('name')
 
-    # Инициализируем формы вне условий
     category_form = CategoryForm(user=request.user)
     subcategory_form = SubcategoryForm(user=request.user)
 
@@ -1104,7 +1102,6 @@ def category_edit(request, category_id):
 def category_delete(request, category_id):
     category = get_object_or_404(Category, id=category_id, owner=request.user)
     if request.method == 'POST':
-        # Проверяем, есть ли товары, связанные с этой категорией
         related_products = Product.objects.filter(category=category, owner=request.user)
         if related_products.exists():
             messages.error(request, f'Нельзя удалить категорию "{category.name}", так как с ней связаны товары.')
@@ -1152,7 +1149,6 @@ def subcategory_edit(request, subcategory_id):
 def subcategory_delete(request, subcategory_id):
     subcategory = get_object_or_404(Subcategory, id=subcategory_id, owner=request.user)
     if request.method == 'POST':
-        # Проверяем, есть ли товары, связанные с этой подкатегорией
         related_products = Product.objects.filter(subcategory=subcategory, owner=request.user)
         if related_products.exists():
             messages.error(request, f'Нельзя удалить подкатегорию "{subcategory.name}", так как с ней связаны товары.')
@@ -1234,8 +1230,8 @@ def admin_panel(request):
     categories = Category.objects.all()
     total_products = Product.objects.count()
     total_warehouses = Warehouse.objects.count()
-    category_form = CategoryForm(user=request.user)  # Передаём user для админа
-    subcategory_form = SubcategoryForm(user=request.user)  # Передаём user для админа
+    category_form = CategoryForm(user=request.user)
+    subcategory_form = SubcategoryForm(user=request.user)
 
     return render(request, 'admin.html', {
         'pending_users': pending_users,
@@ -1253,26 +1249,20 @@ def admin_panel(request):
 
 @login_required
 def user_logs(request):
-    # Определяем, является ли пользователь администратором
     is_admin = request.user.is_superuser
 
-    # Базовый запрос для логов
     if is_admin:
-        # Админ видит все логи
         logs = LogEntry.objects.all()
-        users = User.objects.all()  # Для фильтра по пользователям
+        users = User.objects.all()
     else:
-        # Обычный пользователь видит только свои логи
         logs = LogEntry.objects.filter(user=request.user)
-        users = None  # Обычному пользователю фильтр по пользователям не нужен
+        users = None
 
-    # Фильтры
     action_type = request.GET.get('action_type', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
-    user_filter = request.GET.get('user', '')  # Фильтр по имени пользователя
+    user_filter = request.GET.get('user', '')
 
-    # Применяем фильтры
     if is_admin and user_filter:
         logs = logs.filter(user__username=user_filter)
     if action_type:
@@ -1291,10 +1281,8 @@ def user_logs(request):
         except ValueError:
             messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
 
-    # Сортируем логи по времени (от новых к старым)
     logs = logs.order_by('-timestamp')
 
-    # Получаем список типов действий для фильтра
     action_types = LogEntry.ACTION_TYPES
 
     return render(request, 'user_logs.html', {
@@ -1303,7 +1291,7 @@ def user_logs(request):
         'action_type': action_type,
         'date_from': date_from,
         'date_to': date_to,
-        'is_admin': is_admin,  # Передаём флаг для шаблона
-        'users': users,  # Передаём список пользователей для фильтра
-        'user_filter': user_filter,  # Передаём текущий фильтр по пользователю
+        'is_admin': is_admin,
+        'users': users,
+        'user_filter': user_filter,
     })

@@ -51,6 +51,7 @@ class Subcategory(models.Model):
 class Warehouse(models.Model):
     name = models.CharField(max_length=100, verbose_name="Название")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
+
     def __str__(self):
         return self.name
 
@@ -70,7 +71,7 @@ class Product(models.Model):
     qr_code = models.ImageField(upload_to='products/qr_codes/', blank=True, null=True, verbose_name="QR-код")
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, verbose_name="Склад")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
-    is_archived = models.BooleanField(default=False, verbose_name="Архивировано")  # Поле для архивации
+    is_archived = models.BooleanField(default=False, verbose_name="Архивировано")
 
     def save(self, *args, **kwargs):
         if not self.unique_id:
@@ -100,7 +101,21 @@ class Product(models.Model):
 
 class Cart(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
+    number = models.PositiveIntegerField(verbose_name="Номер корзины", editable=False)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+
+    class Meta:
+        verbose_name = "Корзина"
+        verbose_name_plural = "Корзины"
+        constraints = [
+            models.UniqueConstraint(fields=['owner', 'number'], name='unique_cart_number_per_owner')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.number:
+            max_number = Cart.objects.filter(owner=self.owner).aggregate(models.Max('number'))['number__max']
+            self.number = (max_number or 0) + 1
+        super().save(*args, **kwargs)
 
     def calculate_totals(self):
         items = self.items.all()
@@ -109,11 +124,7 @@ class Cart(models.Model):
         return base_total, actual_total
 
     def __str__(self):
-        return f"Корзина пользователя {self.owner.username} от {self.created_at}"
-
-    class Meta:
-        verbose_name = "Корзина"
-        verbose_name_plural = "Корзины"
+        return f"Корзина №{self.number} пользователя {self.owner.username} от {self.created_at}"
 
 #################
 ### CART ITEM ###
@@ -126,20 +137,37 @@ class CartItem(models.Model):
     base_price_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Базовая стоимость")
     actual_price_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Фактическая стоимость")
 
-    def __str__(self):
-        return f"{self.quantity} x {self.product.name} в корзине {self.cart.id}"
-
     class Meta:
         verbose_name = "Элемент корзины"
         verbose_name_plural = "Элементы корзины"
+        constraints = [
+            models.UniqueConstraint(fields=['cart', 'product'], name='unique_cart_product')
+        ]
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} в корзине №{self.cart.number}"
 
 ############
 ### SALE ###
 ############
 
 class Sale(models.Model):
-    date = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
+    number = models.PositiveIntegerField(verbose_name="Номер продажи", editable=False)
+    date = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
+
+    class Meta:
+        verbose_name = "Продажа"
+        verbose_name_plural = "Продажи"
+        constraints = [
+            models.UniqueConstraint(fields=['owner', 'number'], name='unique_sale_number_per_owner')
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.number:
+            max_number = Sale.objects.filter(owner=self.owner).aggregate(models.Max('number'))['number__max']
+            self.number = (max_number or 0) + 1
+        super().save(*args, **kwargs)
 
     def calculate_totals(self):
         items = self.items.all()
@@ -148,11 +176,7 @@ class Sale(models.Model):
         return base_total, actual_total
 
     def __str__(self):
-        return f"Продажа {self.id} от {self.date}"
-
-    class Meta:
-        verbose_name = "Продажа"
-        verbose_name_plural = "Продажи"
+        return f"Продажа №{self.number} от {self.date}"
 
 #################
 ### SALE ITEM ###
@@ -165,12 +189,12 @@ class SaleItem(models.Model):
     base_price_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Базовая стоимость")
     actual_price_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Фактическая стоимость")
 
-    def __str__(self):
-        return f"{self.quantity} x {self.product.name} в продаже {self.sale.id}"
-
     class Meta:
         verbose_name = "Элемент продажи"
         verbose_name_plural = "Элементы продажи"
+
+    def __str__(self):
+        return f"{self.quantity} x {self.product.name} в продаже №{self.sale.number}"
 
 ##############
 ### RETURN ###
@@ -183,12 +207,12 @@ class Return(models.Model):
     returned_at = models.DateTimeField(default=timezone.now, verbose_name="Дата возврата")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='returns', verbose_name="Владелец")
 
-    def __str__(self):
-        return f"Возврат {self.quantity} x {self.sale_item.product.name} из продажи {self.sale.id}"
-
     class Meta:
         verbose_name = "Возврат"
         verbose_name_plural = "Возвраты"
+
+    def __str__(self):
+        return f"Возврат {self.quantity} x {self.sale_item.product.name} из продажи №{self.sale.number}"
 
 #####################
 ### USER SETTINGS ###
@@ -197,7 +221,7 @@ class Return(models.Model):
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     hide_cost_price = models.BooleanField(default=False, verbose_name="Скрыть себестоимость")
-    is_pending = models.BooleanField(default=True, verbose_name="Ожидает подтверждения")  # Новое поле
+    is_pending = models.BooleanField(default=True, verbose_name="Ожидает подтверждения")
 
     class Meta:
         verbose_name = "Настройки пользователя"

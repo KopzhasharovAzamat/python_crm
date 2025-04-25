@@ -193,11 +193,33 @@
     </div>
 </div>
 
+<!-- Модальное окно для подтверждения -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="confirmModalLabel">Подтверждение действия</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-primary" id="confirmActionBtn">Подтвердить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- JavaScript для обработки вставки UUID и кнопки "Продать" -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
     const errorMessage = document.getElementById('errorMessage');
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmActionBtn = document.getElementById('confirmActionBtn');
     const csrfToken = getCsrfToken();
 
     // --- Логика для модального окна информации о товаре ---
@@ -468,6 +490,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('scanModal').addEventListener('hidden.bs.modal', function() {
         resetScanForm();
+    });
+
+    // Логика для подтверждения архивирования и удаления
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const actionUrl = this.getAttribute('data-action');
+            const message = this.getAttribute('data-message');
+            confirmMessage.textContent = message;
+            confirmModal.show();
+
+            confirmActionBtn.onclick = function() {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = actionUrl;
+
+                const csrfTokenInput = document.createElement('input');
+                csrfTokenInput.type = 'hidden';
+                csrfTokenInput.name = 'csrfmiddlewaretoken';
+                csrfTokenInput.value = getCsrfToken();
+                form.appendChild(csrfTokenInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            };
+        });
     });
 });
 </script>
