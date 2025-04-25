@@ -63,14 +63,24 @@ def register(request):
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            UserSettings.objects.create(user=user)
+            # Создаём пользователя вручную
+            user = User(
+                username=form.cleaned_data['username'],
+                email=form.cleaned_data['email'],  # Сохраняем email
+                first_name=form.cleaned_data['first_name'],
+                is_active=False  # Пользователь неактивен до подтверждения
+            )
+            user.set_password(form.cleaned_data['password'])
+            user.save()
+            # Создаём настройки пользователя с флагом is_pending=True
+            UserSettings.objects.create(user=user, is_pending=True)
+            # Логируем регистрацию
             LogEntry.objects.create(
                 user=user,
                 action_type='REGISTER',
-                message=f'Новый пользователь {user.username} зарегистрирован'
+                message=f'Новый пользователь {user.username} зарегистрирован и ожидает подтверждения'
             )
-            messages.success(request, 'Регистрация успешна! Пожалуйста, войдите.')
+            messages.success(request, 'Регистрация успешна! Ожидайте подтверждения администратором.')
             return redirect('login')
         else:
             messages.error(request, 'Ошибка при регистрации. Проверьте данные.')
@@ -999,11 +1009,32 @@ def subcategory_delete(request, subcategory_id):
 @user_passes_test(lambda u: u.is_superuser)
 def admin_panel(request):
     if request.method == 'POST':
-        if 'user_id' in request.POST:  # Обработка действий с пользователями
+        if 'user_id' in request.POST:
             user_id = request.POST.get('user_id')
             action = request.POST.get('action')
-            user = User.objects.get(id=user_id)
-            if action == 'block':
+            user = get_object_or_404(User, id=user_id)
+            user_settings = get_object_or_404(UserSettings, user=user)
+
+            if action == 'approve' and user_settings.is_pending:
+                user.is_active = True
+                user_settings.is_pending = False
+                user_settings.save()
+                user.save()
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='APPROVE',
+                    message=f'Регистрация пользователя {user.username} подтверждена администратором {request.user.username}'
+                )
+                messages.success(request, f'Регистрация пользователя {user.username} подтверждена.')
+            elif action == 'reject' and user_settings.is_pending:
+                LogEntry.objects.create(
+                    user=request.user,
+                    action_type='REJECT',
+                    message=f'Регистрация пользователя {user.username} отклонена администратором {request.user.username}'
+                )
+                user.delete()
+                messages.success(request, f'Запрос на регистрацию пользователя {user.username} отклонён.')
+            elif action == 'block' and not user_settings.is_pending:
                 user.is_active = False
                 user.save()
                 LogEntry.objects.create(
@@ -1012,7 +1043,7 @@ def admin_panel(request):
                     message=f'Пользователь {user.username} заблокирован администратором {request.user.username}'
                 )
                 messages.success(request, f'Пользователь {user.username} заблокирован.')
-            elif action == 'unblock':
+            elif action == 'unblock' and not user_settings.is_pending:
                 user.is_active = True
                 user.save()
                 LogEntry.objects.create(
@@ -1021,7 +1052,7 @@ def admin_panel(request):
                     message=f'Пользователь {user.username} разблокирован администратором {request.user.username}'
                 )
                 messages.success(request, f'Пользователь {user.username} разблокирован.')
-            elif action == 'delete':
+            elif action == 'delete' and not user_settings.is_pending:
                 LogEntry.objects.create(
                     user=request.user,
                     action_type='DELETE',
@@ -1030,15 +1061,19 @@ def admin_panel(request):
                 user.delete()
                 messages.success(request, f'Пользователь {user.username} удален.')
             return redirect('admin_panel')
-    # Подготавливаем контекст для страницы
-    users = User.objects.all()
+
+    # Разделяем пользователей на ожидающих подтверждения и активных
+    pending_users = User.objects.filter(usersettings__is_pending=True)
+    active_users = User.objects.filter(usersettings__is_pending=False).exclude(is_superuser=True)  # Исключаем админов
+
     categories = Category.objects.all()
     total_products = Product.objects.count()
     total_warehouses = Warehouse.objects.count()
     category_form = CategoryForm()
     subcategory_form = SubcategoryForm()
     return render(request, 'admin.html', {
-        'users': users,
+        'pending_users': pending_users,
+        'active_users': active_users,
         'categories': categories,
         'total_products': total_products,
         'total_warehouses': total_warehouses,

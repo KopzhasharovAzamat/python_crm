@@ -143,6 +143,7 @@ class Return(models.Model):
 class UserSettings(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     hide_cost_price = models.BooleanField(default=False, verbose_name="Скрыть себестоимость")
+    is_pending = models.BooleanField(default=True, verbose_name="Ожидает подтверждения")  # Новое поле
 
     class Meta:
         verbose_name = "Настройки пользователя"

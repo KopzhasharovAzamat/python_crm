@@ -1,5 +1,4 @@
 <!-- templates/admin.html -->
-<!-- templates/admin.html -->
 {% extends 'base.html' %}
 {% load i18n %}
 
@@ -17,9 +16,9 @@
     </div>
 </div>
 
-<!-- Пользователи -->
-<h3 class="mb-3 animate__animated animate__fadeIn">Пользователи</h3>
-<div class="card shadow-sm animate__animated animate__fadeInUp">
+<!-- Запросы на регистрацию -->
+<h3 class="mb-3 animate__animated animate__fadeIn">Запросы на регистрацию</h3>
+<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-hover">
@@ -33,10 +32,48 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for user in users %}
+                    {% for user in pending_users %}
                     <tr>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.first_name }}</td>
+                        <td>{{ user.email|default:"—" }}</td>
+                        <td>{{ user.first_name|default:user.username }}</td>
+                        <td>{{ user.date_joined }}</td>
+                        <td>Ожидает подтверждения</td>
+                        <td>
+                            <button class="btn btn-success btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="approve" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите подтвердить регистрацию пользователя {{ user.username }}?"><i class="fas fa-check"></i> Подтвердить</button>
+                            <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="reject" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите отклонить регистрацию пользователя {{ user.username }}?"><i class="fas fa-times"></i> Отклонить</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">Нет запросов на регистрацию.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Активные пользователи -->
+<h3 class="mb-3 animate__animated animate__fadeIn">Активные пользователи</h3>
+<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Электронная почта</th>
+                        <th>Имя</th>
+                        <th>Дата регистрации</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in active_users %}
+                    <tr>
+                        <td>{{ user.email|default:"—" }}</td>
+                        <td>{{ user.first_name|default:user.username }}</td>
                         <td>{{ user.date_joined }}</td>
                         <td>{{ user.is_active|yesno:"Активен,Заблокирован" }}</td>
                         <td>
@@ -47,6 +84,10 @@
                             {% endif %}
                             <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="delete" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите удалить пользователя {{ user.username }}?"><i class="fas fa-trash"></i> Удалить</button>
                         </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center">Нет активных пользователей.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

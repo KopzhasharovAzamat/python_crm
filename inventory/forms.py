@@ -4,18 +4,25 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Product, Warehouse, Category, Subcategory, UserSettings, CartItem, SaleItem
 
-class RegisterForm(UserCreationForm):
-    email = forms.EmailField(required=True, label="Электронная почта")
-    first_name = forms.CharField(max_length=100, required=True, label="Имя")
+class RegisterForm(forms.ModelForm):
+    password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
+    email = forms.EmailField(label="Электронная почта", required=True)  # Новое поле для email
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'password1', 'password2']
+        fields = ['username', 'email', 'first_name', 'password']
         labels = {
             'username': 'Имя пользователя',
-            'password1': 'Пароль',
-            'password2': 'Подтверждение пароля',
+            'email': 'Электронная почта',
+            'first_name': 'Имя',
+            'password': 'Пароль',
         }
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Этот email уже используется.")
+        return email
 
 class LoginForm(forms.Form):
     username = forms.CharField(label="Имя пользователя")
