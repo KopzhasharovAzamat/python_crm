@@ -4,9 +4,38 @@
 
 {% block content %}
 <h2 class="mb-4 animate__animated animate__fadeIn">Список корзин</h2>
-<form method="post" action="{% url 'cart_create' %}" style="display: inline;">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-primary mb-4"><i class="fas fa-plus"></i> Создать новую корзину</button>
+<div class="mb-4">
+    <form method="post" action="{% url 'cart_create' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Создать новую корзину</button>
+    </form>
+</div>
+
+<!-- Форма фильтров и сортировки -->
+<form method="get" class="mb-4">
+    <div class="row g-3 align-items-center">
+        <div class="col-auto">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="hide_empty" id="hideEmpty" {% if hide_empty %}checked{% endif %}>
+                <label class="form-check-label" for="hideEmpty">Скрыть пустые корзины</label>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select name="sort_by" class="form-control">
+                <option value="">Сортировать...</option>
+                <option value="number" {% if sort_by == 'number' %}selected{% endif %}>По номеру (возр.)</option>
+                <option value="-number" {% if sort_by == '-number' %}selected{% endif %}>По номеру (убыв.)</option>
+                <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>По дате (возр.)</option>
+                <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>По дате (убыв.)</option>
+                <option value="total_cost" {% if sort_by == 'total_cost' %}selected{% endif %}>По стоимости (возр.)</option>
+                <option value="-total_cost" {% if sort_by == '-total_cost' %}selected{% endif %}>По стоимости (убыв.)</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
+            <a href="{% url 'cart_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
+        </div>
+    </div>
 </form>
 
 {% if carts %}

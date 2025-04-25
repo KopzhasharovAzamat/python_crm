@@ -5,7 +5,8 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, F, Value, FloatField
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from datetime import timedelta
 from .forms import RegisterForm, ProductForm, WarehouseForm, UserChangeForm, UserSettingsForm, CategoryForm, \
@@ -586,7 +587,40 @@ def return_item(request, sale_id, item_id):
 @login_required
 def cart_list(request):
     carts = Cart.objects.filter(owner=request.user).prefetch_related('items__product')
-    return render(request, 'cart_list.html', {'carts': carts})
+
+    # Получаем параметры фильтрации и сортировки
+    hide_empty = request.GET.get('hide_empty', 'off') == 'on'
+    sort_by = request.GET.get('sort_by', '')
+
+    # Фильтрация пустых корзин
+    if hide_empty:
+        carts = carts.filter(items__isnull=False).distinct()
+
+    # Аннотируем корзины общей стоимостью для сортировки
+    carts = carts.annotate(
+        total_cost=Coalesce(
+            Sum('items__actual_price_total'),
+            Value(0.0),
+            output_field=FloatField()
+        )
+    )
+
+    # Сортировка
+    allowed_sort_fields = [
+        'number', '-number',           # По номеру корзины
+        'created_at', '-created_at',   # По дате создания
+        'total_cost', '-total_cost'    # По общей стоимости
+    ]
+    if sort_by in allowed_sort_fields:
+        carts = carts.order_by(sort_by)
+    else:
+        carts = carts.order_by('-created_at')  # По умолчанию сортировка по дате (убывание)
+
+    return render(request, 'cart_list.html', {
+        'carts': carts,
+        'hide_empty': hide_empty,
+        'sort_by': sort_by,
+    })
 
 @login_required
 def cart_create(request):
