@@ -1258,9 +1258,98 @@ def admin_panel(request):
                 messages.success(request, f'Пользователь {user.username} удален.')
             return redirect('admin_panel')
 
+    # Запросы на регистрацию (pending_users)
     pending_users = User.objects.filter(usersettings__is_pending=True)
+
+    # Фильтры и поиск для pending_users
+    q_pending = request.GET.get('q_pending', '')  # Поиск
+    pending_date_from = request.GET.get('pending_date_from', '')  # Фильтр по дате "с"
+    pending_date_to = request.GET.get('pending_date_to', '')  # Фильтр по дате "по"
+    pending_sort_by = request.GET.get('pending_sort_by', '')  # Сортировка
+
+    # Поиск по email и имени
+    if q_pending:
+        pending_users = pending_users.filter(
+            Q(email__icontains=q_pending) | Q(first_name__icontains=q_pending)
+        )
+
+    # Фильтр по дате регистрации
+    if pending_date_from:
+        try:
+            pending_date_from = timezone.datetime.strptime(pending_date_from, '%Y-%m-%d')
+            pending_users = pending_users.filter(date_joined__gte=pending_date_from)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "с" для запросов. Используйте YYYY-MM-DD.')
+    if pending_date_to:
+        try:
+            pending_date_to = timezone.datetime.strptime(pending_date_to, '%Y-%m-%d')
+            pending_date_to = pending_date_to + timedelta(days=1)
+            pending_users = pending_users.filter(date_joined__lt=pending_date_to)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "по" для запросов. Используйте YYYY-MM-DD.')
+
+    # Сортировка
+    pending_allowed_sort_fields = [
+        'email', '-email',
+        'first_name', '-first_name',
+        'date_joined', '-date_joined',
+    ]
+    if pending_sort_by in pending_allowed_sort_fields:
+        pending_users = pending_users.order_by(pending_sort_by)
+    else:
+        pending_users = pending_users.order_by('date_joined')  # По умолчанию
+
+    # Активные пользователи (active_users)
     active_users = User.objects.filter(usersettings__is_pending=False).exclude(is_superuser=True)
 
+    # Фильтры и поиск для active_users
+    q_active = request.GET.get('q_active', '')  # Поиск
+    date_from = request.GET.get('date_from', '')  # Фильтр по дате "с"
+    date_to = request.GET.get('date_to', '')  # Фильтр по дате "по"
+    status = request.GET.get('status', '')  # Фильтр по статусу
+    sort_by = request.GET.get('sort_by', '')  # Сортировка
+
+    # Поиск по email и имени
+    if q_active:
+        active_users = active_users.filter(
+            Q(email__icontains=q_active) | Q(first_name__icontains=q_active)
+        )
+
+    # Фильтр по дате регистрации
+    if date_from:
+        try:
+            date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
+            active_users = active_users.filter(date_joined__gte=date_from)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
+    if date_to:
+        try:
+            date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d')
+            date_to = date_to + timedelta(days=1)
+            active_users = active_users.filter(date_joined__lt=date_to)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
+
+    # Фильтр по статусу
+    if status:
+        if status == 'active':
+            active_users = active_users.filter(is_active=True)
+        elif status == 'blocked':
+            active_users = active_users.filter(is_active=False)
+
+    # Сортировка
+    allowed_sort_fields = [
+        'email', '-email',
+        'first_name', '-first_name',
+        'date_joined', '-date_joined',
+        'is_active', '-is_active',
+    ]
+    if sort_by in allowed_sort_fields:
+        active_users = active_users.order_by(sort_by)
+    else:
+        active_users = active_users.order_by('date_joined')  # По умолчанию
+
+    # Остальные данные для шаблона
     categories = Category.objects.all()
     total_products = Product.objects.count()
     total_warehouses = Warehouse.objects.count()
@@ -1275,6 +1364,15 @@ def admin_panel(request):
         'total_warehouses': total_warehouses,
         'category_form': category_form,
         'subcategory_form': subcategory_form,
+        'q_active': q_active,
+        'date_from': date_from,
+        'date_to': date_to,
+        'status': status,
+        'sort_by': sort_by,
+        'q_pending': q_pending,
+        'pending_date_from': pending_date_from,
+        'pending_date_to': pending_date_to,
+        'pending_sort_by': pending_sort_by,
     })
 
 ############

@@ -18,6 +18,39 @@
 
 <!-- Запросы на регистрацию -->
 <h3 class="mb-3 animate__animated animate__fadeIn">Запросы на регистрацию</h3>
+<div class="mb-4">
+    <form method="get" id="pendingFilterForm">
+        <div class="row g-3 align-items-center">
+            <!-- Поиск -->
+            <div class="col-md-3">
+                <input type="text" name="q_pending" class="form-control" placeholder="Поиск по email или имени" value="{{ q_pending }}">
+            </div>
+            <!-- Фильтр по дате -->
+            <div class="col-md-2">
+                <input type="date" name="pending_date_from" class="form-control" value="{{ pending_date_from }}" placeholder="Дата с">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="pending_date_to" class="form-control" value="{{ pending_date_to }}" placeholder="Дата по">
+            </div>
+            <!-- Сортировка -->
+            <div class="col-md-3">
+                <select name="pending_sort_by" class="form-control">
+                    <option value="">Сортировать...</option>
+                    <option value="email" {% if pending_sort_by == 'email' %}selected{% endif %}>По email (возр.)</option>
+                    <option value="-email" {% if pending_sort_by == '-email' %}selected{% endif %}>По email (убыв.)</option>
+                    <option value="first_name" {% if pending_sort_by == 'first_name' %}selected{% endif %}>По имени (возр.)</option>
+                    <option value="-first_name" {% if pending_sort_by == '-first_name' %}selected{% endif %}>По имени (убыв.)</option>
+                    <option value="date_joined" {% if pending_sort_by == 'date_joined' %}selected{% endif %}>По дате (возр.)</option>
+                    <option value="-date_joined" {% if pending_sort_by == '-date_joined' %}selected{% endif %}>По дате (убыв.)</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
+                <a href="{% url 'admin_panel' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
+            </div>
+        </div>
+    </form>
+</div>
 <div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
     <div class="card-body">
         <div class="table-responsive">
@@ -36,7 +69,7 @@
                     <tr>
                         <td>{{ user.email|default:"—" }}</td>
                         <td>{{ user.first_name|default:user.username }}</td>
-                        <td>{{ user.date_joined }}</td>
+                        <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
                         <td>Ожидает подтверждения</td>
                         <td>
                             <button class="btn btn-success btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="approve" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите подтвердить регистрацию пользователя {{ user.username }}?"><i class="fas fa-check"></i> Подтвердить</button>
@@ -56,6 +89,49 @@
 
 <!-- Активные пользователи -->
 <h3 class="mb-3 animate__animated animate__fadeIn">Активные пользователи</h3>
+<div class="mb-4">
+    <form method="get" id="activeFilterForm">
+        <div class="row g-3 align-items-center">
+            <!-- Поиск -->
+            <div class="col-md-3">
+                <input type="text" name="q_active" class="form-control" placeholder="Поиск по email или имени" value="{{ q_active }}">
+            </div>
+            <!-- Фильтр по дате -->
+            <div class="col-md-2">
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}" placeholder="Дата с">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}" placeholder="Дата по">
+            </div>
+            <!-- Фильтр по статусу -->
+            <div class="col-md-2">
+                <select name="status" class="form-control">
+                    <option value="">Все статусы</option>
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>Активен</option>
+                    <option value="blocked" {% if status == 'blocked' %}selected{% endif %}>Заблокирован</option>
+                </select>
+            </div>
+            <!-- Сортировка -->
+            <div class="col-md-3">
+                <select name="sort_by" class="form-control">
+                    <option value="">Сортировать...</option>
+                    <option value="email" {% if sort_by == 'email' %}selected{% endif %}>По email (возр.)</option>
+                    <option value="-email" {% if sort_by == '-email' %}selected{% endif %}>По email (убыв.)</option>
+                    <option value="first_name" {% if sort_by == 'first_name' %}selected{% endif %}>По имени (возр.)</option>
+                    <option value="-first_name" {% if sort_by == '-first_name' %}selected{% endif %}>По имени (убыв.)</option>
+                    <option value="date_joined" {% if sort_by == 'date_joined' %}selected{% endif %}>По дате (возр.)</option>
+                    <option value="-date_joined" {% if sort_by == '-date_joined' %}selected{% endif %}>По дате (убыв.)</option>
+                    <option value="is_active" {% if sort_by == 'is_active' %}selected{% endif %}>По статусу (возр.)</option>
+                    <option value="-is_active" {% if sort_by == '-is_active' %}selected{% endif %}>По статусу (убыв.)</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
+                <a href="{% url 'admin_panel' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
+            </div>
+        </div>
+    </form>
+</div>
 <div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
     <div class="card-body">
         <div class="table-responsive">
@@ -74,7 +150,7 @@
                     <tr>
                         <td>{{ user.email|default:"—" }}</td>
                         <td>{{ user.first_name|default:user.username }}</td>
-                        <td>{{ user.date_joined }}</td>
+                        <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
                         <td>{{ user.is_active|yesno:"Активен,Заблокирован" }}</td>
                         <td>
                             {% if user.is_active %}
@@ -95,4 +171,25 @@
         </div>
     </div>
 </div>
+
+<!-- JavaScript для автоматической отправки формы -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Для формы фильтров pending_users
+    const pendingForm = document.getElementById('pendingFilterForm');
+    pendingForm.querySelectorAll('input, select').forEach(element => {
+        element.addEventListener('change', function() {
+            pendingForm.submit();
+        });
+    });
+
+    // Для формы фильтров active_users
+    const activeForm = document.getElementById('activeFilterForm');
+    activeForm.querySelectorAll('input, select').forEach(element => {
+        element.addEventListener('change', function() {
+            activeForm.submit();
+        });
+    });
+});
+</script>
 {% endblock %}
