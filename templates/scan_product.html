@@ -14,7 +14,7 @@
                 <p><strong>Подкатегория:</strong> {{ product.subcategory.name|default:"Не указана" }}</p>
                 <p><strong>Склад:</strong> {{ product.warehouse.name|default:"Не указан" }}</p>
                 <p><strong>Количество на складе:</strong> <span id="scanStockQuantity">{{ product.quantity }}</span> шт.</p>
-                <p><strong>Цена продажи:</strong> <span id="scanSellingPrice">{{ product.selling_price|floatformat:2 }}</span> ₽</p>
+                <p><strong>Цена продажи:</strong> <span id="scanSellingPrice">{{ product.selling_price|floatformat:2 }}</span> сом</p>
                 {% if product.photo %}
                 <img id="scanProductPhoto" src="{{ product.photo.url }}" class="img-fluid mb-2" style="max-height: 200px;">
                 {% endif %}
@@ -31,7 +31,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Итоговая цена:</label>
-                        <p id="scanTotalPrice" class="form-text">{{ product.selling_price|floatformat:2 }} ₽</p>
+                        <p id="scanTotalPrice" class="form-text">{{ product.selling_price|floatformat:2 }} сом</p>
                     </div>
                     <p id="scanValidationError" class="text-danger d-none"></p>
                     <div class="d-flex gap-2">
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseInt(scanQuantityInput.value) || 0;
         const actualPrice = parseFloat(scanActualPriceInput.value) || 0;
         const totalPrice = quantity * actualPrice;
-        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
 
         // Валидация
         scanValidationError.classList.add('d-none');

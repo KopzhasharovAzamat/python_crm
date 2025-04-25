@@ -40,9 +40,9 @@
                             <li class="list-group-item"><strong>Подкатегория:</strong> {{ product.subcategory|default:"Не указана" }}</li>
                             <li class="list-group-item"><strong>Количество:</strong> {{ product.quantity }} шт.</li>
                             {% if show_cost_price %}
-                                <li class="list-group-item"><strong>Себестоимость:</strong> {{ product.cost_price|default:"Не указана" }} ₽</li>
+                                <li class="list-group-item"><strong>Себестоимость:</strong> {{ product.cost_price|default:"Не указана" }} сом</li>
                             {% endif %}
-                            <li class="list-group-item"><strong>Цена продажи:</strong> {{ product.selling_price }} ₽</li>
+                            <li class="list-group-item"><strong>Цена продажи:</strong> {{ product.selling_price }} сом</li>
                             <li class="list-group-item"><strong>Склад:</strong> {{ product.warehouse.name }}</li>
                             <li class="list-group-item"><strong>Владелец:</strong> {{ product.owner.username }}</li>
                             <li class="list-group-item"><strong>Архивировано:</strong> {% if product.is_archived %}Да{% else %}Нет{% endif %}</li>

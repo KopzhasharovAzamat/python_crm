@@ -14,7 +14,7 @@
                 <ul class="list-group mb-4">
                     {% for item in cart.items.all %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ item.product.name }} - {{ item.quantity }} шт. по {{ item.actual_price_total|floatformat:2 }} ₽ (базовая: {{ item.base_price_total|floatformat:2 }} ₽)
+                        {{ item.product.name }} - {{ item.quantity }} шт. по {{ item.actual_price_total|floatformat:2 }} сом (базовая: {{ item.base_price_total|floatformat:2 }} сом)
                         <a href="{% url 'cart_remove_item' cart.id item.id %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</a>
                     </li>
                     {% endfor %}
@@ -32,8 +32,8 @@
                     {% endfor %}
                 </ul>
                 <p><strong>Общее количество товаров:</strong> {{ total_quantity }} шт.</p>
-                <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} ₽</p>
-                <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} ₽</p>
+                <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} сом</p>
+                <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} сом</p>
                 <div class="d-flex gap-2 mb-4">
                     <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success flex-fill delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-check"></i> Совершить продажу</a>
                     <a href="{% url 'cart_cancel' cart.id %}" class="btn btn-secondary flex-fill delete-btn" data-action="{% url 'cart_cancel' cart.id %}" data-message="Вы уверены, что хотите отменить корзину №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-times"></i> Отменить</a>
@@ -78,7 +78,7 @@
                     <p><strong>Подкатегория:</strong> <span id="manualSubcategory"></span></p>
                     <p><strong>Склад:</strong> <span id="manualWarehouse"></span></p>
                     <p><strong>Количество на складе:</strong> <span id="manualStockQuantity"></span> шт.</p>
-                    <p><strong>Цена продажи:</strong> <span id="manualSellingPrice"></span> ₽</p>
+                    <p><strong>Цена продажи:</strong> <span id="manualSellingPrice"></span> сом</p>
                     <img id="manualProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
                     <div class="mb-3">
                         <label for="manualQuantity" class="form-label">Количество:</label>
@@ -90,7 +90,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Итоговая цена:</label>
-                        <p id="manualTotalPrice" class="form-text">0.00 ₽</p>
+                        <p id="manualTotalPrice" class="form-text">0.00 сом</p>
                     </div>
                     <p id="manualValidationError" class="text-danger d-none"></p>
                     <div class="d-flex gap-2">
@@ -128,7 +128,7 @@
                     <p><strong>Подкатегория:</strong> <span id="scanSubcategory"></span></p>
                     <p><strong>Склад:</strong> <span id="scanWarehouse"></span></p>
                     <p><strong>Количество на складе:</strong> <span id="scanStockQuantity"></span> шт.</p>
-                    <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> ₽</p>
+                    <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> сом</p>
                     <img id="scanProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
                     <form method="post" action="{% url 'cart_add_item' cart.id %}" id="scanAddForm">
                         {% csrf_token %}
@@ -143,7 +143,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Итоговая цена:</label>
-                            <p id="scanTotalPrice" class="form-text">0.00 ₽</p>
+                            <p id="scanTotalPrice" class="form-text">0.00 сом</p>
                         </div>
                         <p id="scanValidationError" class="text-danger d-none"></p>
                         <div class="d-flex gap-2">
@@ -264,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseInt(manualQuantityInput.value) || 0;
         const actualPrice = parseFloat(manualActualPriceInput.value) || 0;
         const totalPrice = quantity * actualPrice;
-        manualTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+        manualTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
 
         // Валидация
         manualValidationError.classList.add('d-none');
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseInt(scanQuantityInput.value) || 0;
         const actualPrice = parseFloat(scanActualPriceInput.value) || 0;
         const totalPrice = quantity * actualPrice;
-        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
 
         // Валидация
         scanValidationError.classList.add('d-none');

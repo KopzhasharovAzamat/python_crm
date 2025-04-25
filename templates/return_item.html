@@ -13,7 +13,7 @@
             <div class="card-body">
                 <h5>Товар: {{ sale_item.product.name }}</h5>
                 <p><strong>Продано:</strong> {{ sale_item.quantity }} шт.</p>
-                <p><strong>Цена продажи:</strong> {{ sale_item.actual_price_total|floatformat:2 }} ₽</p>
+                <p><strong>Цена продажи:</strong> {{ sale_item.actual_price_total|floatformat:2 }} сом</p>
 
                 <form method="post">
                     {% csrf_token %}

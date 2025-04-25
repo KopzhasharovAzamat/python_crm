@@ -16,7 +16,7 @@
                 <ul class="list-group mb-4">
                     {% for item in sale.items.all %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ item.product.name }} - {{ item.quantity }} шт. по {{ item.actual_price_total|floatformat:2 }} ₽ (базовая: {{ item.base_price_total|floatformat:2 }} ₽)
+                        {{ item.product.name }} - {{ item.quantity }} шт. по {{ item.actual_price_total|floatformat:2 }} сом (базовая: {{ item.base_price_total|floatformat:2 }} сом)
                         <form method="post" style="display:inline;">
                             {% csrf_token %}
                             <input type="hidden" name="delete_item" value="true">
@@ -26,8 +26,8 @@
                     </li>
                     {% endfor %}
                 </ul>
-                <p><strong>Общая базовая стоимость:</strong> {{ sale.calculate_totals.0|floatformat:2 }} ₽</p>
-                <p><strong>Общая фактическая стоимость:</strong> {{ sale.calculate_totals.1|floatformat:2 }} ₽</p>
+                <p><strong>Общая базовая стоимость:</strong> {{ sale.calculate_totals.0|floatformat:2 }} сом</p>
+                <p><strong>Общая фактическая стоимость:</strong> {{ sale.calculate_totals.1|floatformat:2 }} сом</p>
                 {% else %}
                 <p>В этой продаже пока нет товаров.</p>
                 {% endif %}
@@ -44,10 +44,6 @@
                         {% endif %}
                     </div>
                     {% endfor %}
-                    <div class="mb-3">
-                        <label class="form-label">Итоговая цена:</label>
-                        <p id="totalPrice" class="form-text">0.00 ₽</p>
-                    </div>
                     <button type="submit" name="add_item" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить товар</button>
                 </form>
 
@@ -85,7 +81,7 @@
             }
 
             const totalPrice = quantity * actualPrice;
-            totalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+            totalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
         }
 
         if (productSelect && quantityInput && actualPriceInput) {

@@ -94,7 +94,7 @@
                     {% if product.quantity < 5 %}
                     <span class="text-danger"><strong>Осталось мало товара!</strong></span><br>
                     {% endif %}
-                    <strong>Цена:</strong> {{ product.selling_price }} ₽
+                    <strong>Цена:</strong> {{ product.selling_price }} сом
                 </p>
             </div>
             <div class="card-footer d-flex gap-2 justify-content-center flex-wrap">
@@ -124,7 +124,7 @@
                 <p><strong>Подкатегория:</strong> <span id="infoSubcategory"></span></p>
                 <p><strong>Склад:</strong> <span id="infoWarehouse"></span></p>
                 <p><strong>Количество на складе:</strong> <span id="infoStockQuantity"></span> шт.</p>
-                <p><strong>Цена продажи:</strong> <span id="infoSellingPrice"></span> ₽</p>
+                <p><strong>Цена продажи:</strong> <span id="infoSellingPrice"></span> сом</p>
                 <img id="infoProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
                 <div class="d-flex gap-2">
                     <button type="button" id="proceedToAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
@@ -150,7 +150,7 @@
                     <p><strong>Подкатегория:</strong> <span id="scanSubcategory"></span></p>
                     <p><strong>Склад:</strong> <span id="scanWarehouse"></span></p>
                     <p><strong>Количество на складе:</strong> <span id="scanStockQuantity"></span> шт.</p>
-                    <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> ₽</p>
+                    <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> сом</p>
                     <img id="scanProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
                     <div class="mb-3">
                         <label for="scanQuantity" class="form-label">Количество:</label>
@@ -162,7 +162,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Итоговая цена:</label>
-                        <p id="scanTotalPrice" class="form-text">0.00 ₽</p>
+                        <p id="scanTotalPrice" class="form-text">0.00 сом</p>
                     </div>
                     <p id="scanValidationError" class="text-danger d-none"></p>
                     <div class="d-flex gap-2">
@@ -193,33 +193,11 @@
     </div>
 </div>
 
-<!-- Модальное окно для подтверждения -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="confirmModalLabel">Подтверждение действия</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p id="confirmMessage"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-primary" id="confirmActionBtn">Подтвердить</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- JavaScript для обработки вставки UUID и кнопки "Продать" -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
     const errorMessage = document.getElementById('errorMessage');
-    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-    const confirmMessage = document.getElementById('confirmMessage');
-    const confirmActionBtn = document.getElementById('confirmActionBtn');
     const csrfToken = getCsrfToken();
 
     // --- Логика для модального окна информации о товаре ---
@@ -270,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
         scanProductPhoto.classList.add('d-none');
         scanQuantityInput.value = 1;
         scanActualPriceInput.value = '';
-        scanTotalPriceDisplay.textContent = '0.00 ₽';
+        scanTotalPriceDisplay.textContent = '0.00 сом';
         scanValidationError.classList.add('d-none');
         scanAddButton.disabled = false;
         scanStock = 0;
@@ -281,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const quantity = parseInt(scanQuantityInput.value) || 0;
         const actualPrice = parseFloat(scanActualPriceInput.value) || 0;
         const totalPrice = quantity * actualPrice;
-        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' ₽';
+        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
 
         scanValidationError.classList.add('d-none');
         scanAddButton.disabled = false;
@@ -490,32 +468,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('scanModal').addEventListener('hidden.bs.modal', function() {
         resetScanForm();
-    });
-
-    // Логика для подтверждения архивирования и удаления
-    document.querySelectorAll('.delete-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            const actionUrl = this.getAttribute('data-action');
-            const message = this.getAttribute('data-message');
-            confirmMessage.textContent = message;
-            confirmModal.show();
-
-            confirmActionBtn.onclick = function() {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = actionUrl;
-
-                const csrfTokenInput = document.createElement('input');
-                csrfTokenInput.type = 'hidden';
-                csrfTokenInput.name = 'csrfmiddlewaretoken';
-                csrfTokenInput.value = getCsrfToken();
-                form.appendChild(csrfTokenInput);
-
-                document.body.appendChild(form);
-                form.submit();
-            };
-        });
     });
 });
 </script>

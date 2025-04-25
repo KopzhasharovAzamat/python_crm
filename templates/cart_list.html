@@ -32,7 +32,7 @@
                 Корзина пуста
                 {% endfor %}
             </td>
-            <td>{{ cart.calculate_totals.1|floatformat:2 }} ₽</td>
+            <td>{{ cart.calculate_totals.1|floatformat:2 }} сом</td>
             <td>
                 <a href="{% url 'cart_add_item' cart.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
                 <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success btn-sm delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?"><i class="fas fa-check"></i> Продать</a>
