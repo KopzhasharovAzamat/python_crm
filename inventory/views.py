@@ -1052,14 +1052,28 @@ def admin_panel(request):
 
 @login_required
 def user_logs(request):
-    # Получаем логи только для текущего пользователя
-    logs = LogEntry.objects.filter(user=request.user).order_by('-timestamp')
+    # Определяем, является ли пользователь администратором
+    is_admin = request.user.is_superuser
+
+    # Базовый запрос для логов
+    if is_admin:
+        # Админ видит все логи
+        logs = LogEntry.objects.all()
+        users = User.objects.all()  # Для фильтра по пользователям
+    else:
+        # Обычный пользователь видит только свои логи
+        logs = LogEntry.objects.filter(user=request.user)
+        users = None  # Обычному пользователю фильтр по пользователям не нужен
 
     # Фильтры
     action_type = request.GET.get('action_type', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
+    user_filter = request.GET.get('user', '')  # Фильтр по имени пользователя
 
+    # Применяем фильтры
+    if is_admin and user_filter:
+        logs = logs.filter(user__username=user_filter)
     if action_type:
         logs = logs.filter(action_type=action_type)
     if date_from:
@@ -1076,6 +1090,9 @@ def user_logs(request):
         except ValueError:
             messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
 
+    # Сортируем логи по времени (от новых к старым)
+    logs = logs.order_by('-timestamp')
+
     # Получаем список типов действий для фильтра
     action_types = LogEntry.ACTION_TYPES
 
@@ -1085,4 +1102,7 @@ def user_logs(request):
         'action_type': action_type,
         'date_from': date_from,
         'date_to': date_to,
+        'is_admin': is_admin,  # Передаём флаг для шаблона
+        'users': users,  # Передаём список пользователей для фильтра
+        'user_filter': user_filter,  # Передаём текущий фильтр по пользователю
     })
