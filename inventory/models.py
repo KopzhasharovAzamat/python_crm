@@ -164,6 +164,24 @@ class CartItem(models.Model):
     def __str__(self):
         return f"{self.quantity} x {self.product.name} в корзине №{self.cart.number}"
 
+####################
+### CART COMMENT ###
+####################
+
+class CartComment(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='comments', verbose_name="Корзина")
+    text = models.TextField(verbose_name="Комментарий")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+
+    class Meta:
+        verbose_name = "Комментарий к корзине"
+        verbose_name_plural = "Комментарии к корзине"
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Комментарий к корзине №{self.cart.number} от {self.created_at}"
+
 ############
 ### SALE ###
 ############
@@ -212,6 +230,24 @@ class SaleItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} в продаже №{self.sale.number}"
+
+###################
+### SALE COMMENT ###
+###################
+
+class SaleComment(models.Model):
+    sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='comments', verbose_name="Продажа")
+    text = models.TextField(verbose_name="Комментарий")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+
+    class Meta:
+        verbose_name = "Комментарий к продаже"
+        verbose_name_plural = "Комментарии к продаже"
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Комментарий к продаже №{self.sale.number} от {self.created_at}"
 
 ##############
 ### RETURN ###

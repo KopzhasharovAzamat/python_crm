@@ -1,4 +1,3 @@
-# inventory/urls.py
 from django.urls import path
 from . import views
 
@@ -48,6 +47,9 @@ urlpatterns = [
     path('sales/<int:sale_id>/detail/', views.sale_detail, name='sale_detail'),
     path('sales/<int:sale_id>/edit/', views.sale_edit, name='sale_edit'),
     path('sales/<int:sale_id>/return/<int:item_id>/', views.return_item, name='return_item'),
+    path('sales/<int:sale_id>/comment/add/', views.sale_comment_add, name='sale_comment_add'),
+    path('sales/<int:sale_id>/comment/<int:comment_id>/edit/', views.sale_comment_edit, name='sale_comment_edit'),
+    path('sales/<int:sale_id>/comment/<int:comment_id>/delete/', views.sale_comment_delete, name='sale_comment_delete'),
 
     # Cart
     path('carts/', views.cart_list, name='cart_list'),
@@ -57,6 +59,9 @@ urlpatterns = [
     path('cart/<int:cart_id>/confirm/', views.cart_confirm, name='cart_confirm'),
     path('cart/<int:cart_id>/cancel/', views.cart_cancel, name='cart_cancel'),
     path('cart/<int:cart_id>/delete/', views.cart_delete, name='cart_delete'),
+    path('cart/<int:cart_id>/comment/add/', views.cart_comment_add, name='cart_comment_add'),
+    path('cart/<int:cart_id>/comment/<int:comment_id>/edit/', views.cart_comment_edit, name='cart_comment_edit'),
+    path('cart/<int:cart_id>/comment/<int:comment_id>/delete/', views.cart_comment_delete, name='cart_comment_delete'),
 
     # Scan
     path('scan/', views.scan_product, name='scan_product'),

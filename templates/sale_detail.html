@@ -4,37 +4,198 @@
 
 {% block content %}
 <div class="row justify-content-center mt-4">
-    <div class="col-md-8诈">
+    <div class="col-md-8">
         <div class="card shadow-sm animate__animated animate__fadeIn">
             <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h3 class="mb-0">Продажа №{{ sale.id }}</h3>
+                <h3 class="mb-0">Редактировать продажу №{{ sale.number }}</h3>
             </div>
             <div class="card-body">
                 <p><strong>Дата:</strong> {{ sale.date }}</p>
                 <p><strong>Владелец:</strong> {{ sale.owner.username }}</p>
 
-                {% if items %}
+                {% if sale.items.exists %}
                 <h5>Товары в продаже:</h5>
                 <ul class="list-group mb-4">
-                    {% for item in items %}
+                    {% for item in sale.items.all %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
                         {{ item.product.name }} - {{ item.quantity }} шт. по {{ item.actual_price_total|floatformat:2 }} сом (базовая: {{ item.base_price_total|floatformat:2 }} сом)
-                        <a href="{% url 'return_item' sale.id item.id %}" class="btn btn-danger btn-sm"><i class="fas fa-undo"></i> Вернуть</a>
+                        <form method="post" action="{% url 'sale_edit' sale.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="delete_item" value="1">
+                            <input type="hidden" name="item_id" value="{{ item.id }}">
+                            <button type="submit" class="btn btn-danger btn-sm delete-btn" data-action="{% url 'sale_edit' sale.id %}" data-message="Вы уверены, что хотите удалить товар '{{ item.product.name }}' из продажи?"><i class="fas fa-trash"></i> Удалить</button>
+                        </form>
                     </li>
                     {% endfor %}
                 </ul>
-                <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} сом</p>
-                <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} сом</p>
                 {% else %}
-                <p>В этой продаже нет товаров.</p>
+                <p class="text-muted">В этой продаже нет товаров.</p>
                 {% endif %}
 
+                <!-- Add Item Form -->
+                <h5>Добавить товар:</h5>
+                <form method="post" action="{% url 'sale_edit' sale.id %}" class="mb-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="add_item" value="1">
+                    <div class="mb-3">
+                        <label for="product" class="form-label">Товар:</label>
+                        {{ form.product }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label">Количество:</label>
+                        {{ form.quantity }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="actual_price" class="form-label">Фактическая цена за единицу:</label>
+                        {{ form.actual_price }}
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить товар</button>
+                </form>
+
+                <!-- Comments Section -->
+                <h5 class="mt-4">Комментарии:</h5>
+                {% if sale.comments.exists %}
+                <ul class="list-group mb-4">
+                    {% for comment in sale.comments.all %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="mb-1">{{ comment.text }}</p>
+                                <small class="text-muted">Добавлено: {{ comment.created_at|date:"d.m.Y H:i" }} | Обновлено: {{ comment.updated_at|date:"d.m.Y H:i" }}</small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-primary edit-comment-btn" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.text }}"><i class="fas fa-edit"></i> Редактировать</button>
+                                <a href="{% url 'sale_comment_delete' sale.id comment.id %}" class="btn btn-sm btn-danger delete-btn" data-action="{% url 'sale_comment_delete' sale.id comment.id %}" data-message="Вы уверены, что хотите удалить этот комментарий?"><i class="fas fa-trash"></i> Удалить</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">Комментариев нет.</p>
+                {% endif %}
+
+                <!-- Add Comment Form -->
+                <form method="post" action="{% url 'sale_comment_add' sale.id %}" class="mb-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="comment_text" class="form-label">Добавить комментарий:</label>
+                        <textarea class="form-control" id="comment_text" name="comment_text" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить комментарий</button>
+                </form>
+
                 <div class="d-flex gap-2">
-                    <a href="{% url 'sale_edit' sale.id %}" class="btn btn-primary flex-fill"><i class="fas fa-edit"></i> Редактировать продажу</a>
-                    <a href="{% url 'sales_list' %}" class="btn btn-secondary flex-fill"><i class="fas fa-arrow-left"></i> Назад к списку продаж</a>
+                    <a href="{% url 'sale_detail' sale.id %}" class="btn btn-secondary flex-fill"><i class="fas fa-arrow-left"></i> Назад к продаже</a>
+                    <a href="{% url 'sales_list' %}" class="btn btn-secondary flex-fill"><i class="fas fa-list"></i> К списку продаж</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal for Editing Comments -->
+<div class="modal fade" id="editCommentModal" tabindex="-1" aria-labelledby="editCommentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="editCommentModalLabel">Редактировать комментарий</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCommentForm" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="edit_comment_text" class="form-label">Комментарий:</label>
+                        <textarea class="form-control" id="edit_comment_text" name="comment_text" rows="4" required></textarea>
+                    </div>
+                    <p id="editCommentError" class="text-danger d-none">Комментарий не может быть пустым.</p>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Сохранить</button>
+                        <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal"><i class="fas fa-times"></i> Отменить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Errors -->
+<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="errorModalLabel">Ошибка</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="errorMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+    const errorMessage = document.getElementById('errorMessage');
+    const saleId = {{ sale.id }};
+    const csrfToken = getCsrfToken();
+
+    // --- Логика для редактирования комментариев ---
+    const editCommentModal = new bootstrap.Modal(document.getElementById('editCommentModal'));
+    const editCommentForm = document.getElementById('editCommentForm');
+    const editCommentText = document.getElementById('edit_comment_text');
+    const editCommentError = document.getElementById('editCommentError');
+    const editCommentButtons = document.querySelectorAll('.edit-comment-btn');
+
+    editCommentButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const commentId = this.getAttribute('data-comment-id');
+            const commentText = this.getAttribute('data-comment-text');
+            editCommentText.value = commentText;
+            editCommentForm.action = `/sales/${saleId}/comment/${commentId}/edit/`;
+            editCommentError.classList.add('d-none');
+            editCommentModal.show();
+        });
+    });
+
+    editCommentForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const commentText = editCommentText.value.trim();
+
+        if (!commentText) {
+            editCommentError.classList.remove('d-none');
+            return;
+        }
+
+        try {
+            const response = await fetch(editCommentForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'comment_text': commentText,
+                }),
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                errorMessage.textContent = data.error || 'Не удалось обновить комментарий.';
+                errorModal.show();
+            }
+        } catch (error) {
+            errorMessage.textContent = 'Ошибка при обновлении комментария.';
+            errorModal.show();
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -41,6 +41,40 @@
                 {% else %}
                 <p class="text-muted">Корзина пуста. Добавьте товары, чтобы продолжить.</p>
                 {% endif %}
+
+                <!-- Comments Section -->
+                <h5 class="mt-4">Комментарии:</h5>
+                {% if cart.comments.exists %}
+                <ul class="list-group mb-4">
+                    {% for comment in cart.comments.all %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="mb-1">{{ comment.text }}</p>
+                                <small class="text-muted">Добавлено: {{ comment.created_at|date:"d.m.Y H:i" }} | Обновлено: {{ comment.updated_at|date:"d.m.Y H:i" }}</small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-primary edit-comment-btn" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.text }}"><i class="fas fa-edit"></i> Редактировать</button>
+                                <a href="{% url 'cart_comment_delete' cart.id comment.id %}" class="btn btn-sm btn-danger delete-btn" data-action="{% url 'cart_comment_delete' cart.id comment.id %}" data-message="Вы уверены, что хотите удалить этот комментарий?"><i class="fas fa-trash"></i> Удалить</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">Комментариев нет.</p>
+                {% endif %}
+
+                <!-- Add Comment Form -->
+                <form method="post" action="{% url 'cart_comment_add' cart.id %}" class="mb-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="comment_text" class="form-label">Добавить комментарий:</label>
+                        <textarea class="form-control" id="comment_text" name="comment_text" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить комментарий</button>
+                </form>
+
                 <h5>Добавить товар:</h5>
                 <div class="d-flex gap-2 mb-3">
                     <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#manualAddModal"><i class="fas fa-search"></i> Ручной поиск</button>
@@ -157,6 +191,32 @@
     </div>
 </div>
 
+<!-- Modal for Editing Comments -->
+<div class="modal fade" id="editCommentModal" tabindex="-1" aria-labelledby="editCommentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h5 class="modal-title text-white" id="editCommentModalLabel">Редактировать комментарий</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editCommentForm" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="edit_comment_text" class="form-label">Комментарий:</label>
+                        <textarea class="form-control" id="edit_comment_text" name="comment_text" rows="4" required></textarea>
+                    </div>
+                    <p id="editCommentError" class="text-danger d-none">Комментарий не может быть пустым.</p>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Сохранить</button>
+                        <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal"><i class="fas fa-times"></i> Отменить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal for Errors -->
 <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -180,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
     const errorMessage = document.getElementById('errorMessage');
     const cartId = {{ cart.id }};
-    const csrfToken = getCsrfToken(); // Предполагается, что эта функция определена в base.html
+    const csrfToken = getCsrfToken();
 
     // --- Логика для модального окна ручного добавления ---
     const manualModal = new bootstrap.Modal(document.getElementById('manualAddModal'), {
@@ -205,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const manualValidationError = document.getElementById('manualValidationError');
     const cancelManualBtn = document.getElementById('cancelManualBtn');
 
-    let manualStock = 0; // Для хранения количества на складе
+    let manualStock = 0;
     let selectedProductId = null;
 
     function resetManualForm() {
@@ -237,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 manualCategory.textContent = data.category || 'Не указана';
                 manualSubcategory.textContent = data.subcategory || 'Не указана';
                 manualWarehouse.textContent = data.warehouse || 'Не указан';
-                manualStock = data.quantity; // Сохраняем количество на складе
+                manualStock = data.quantity;
                 manualStockQuantity.textContent = manualStock;
                 manualSellingPrice.textContent = data.selling_price.toFixed(2);
                 selectedProductId = data.id;
@@ -266,7 +326,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalPrice = quantity * actualPrice;
         manualTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
 
-        // Валидация
         manualValidationError.classList.add('d-none');
         manualAddButton.disabled = false;
 
@@ -360,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const scanValidationError = document.getElementById('scanValidationError');
     const cancelScanBtn = document.getElementById('cancelScanBtn');
 
-    let scanStock = 0; // Для хранения количества на складе
+    let scanStock = 0;
 
     function resetScanForm() {
         uniqueIdInput.value = '';
@@ -390,7 +449,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 scanCategory.textContent = data.category || 'Не указана';
                 scanSubcategory.textContent = data.subcategory || 'Не указана';
                 scanWarehouse.textContent = data.warehouse || 'Не указан';
-                scanStock = data.quantity; // Сохраняем количество на складе
+                scanStock = data.quantity;
                 scanStockQuantity.textContent = scanStock;
                 scanSellingPrice.textContent = data.selling_price.toFixed(2);
                 scanProductId.value = data.id;
@@ -419,7 +478,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalPrice = quantity * actualPrice;
         scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
 
-        // Валидация
         scanValidationError.classList.add('d-none');
         scanAddButton.disabled = false;
 
@@ -462,6 +520,58 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('scanModal').addEventListener('hidden.bs.modal', function() {
         resetScanForm();
+    });
+
+    // --- Логика для редактирования комментариев ---
+    const editCommentModal = new bootstrap.Modal(document.getElementById('editCommentModal'));
+    const editCommentForm = document.getElementById('editCommentForm');
+    const editCommentText = document.getElementById('edit_comment_text');
+    const editCommentError = document.getElementById('editCommentError');
+    const editCommentButtons = document.querySelectorAll('.edit-comment-btn');
+
+    editCommentButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const commentId = this.getAttribute('data-comment-id');
+            const commentText = this.getAttribute('data-comment-text');
+            editCommentText.value = commentText;
+            editCommentForm.action = `/cart/${cartId}/comment/${commentId}/edit/`;
+            editCommentError.classList.add('d-none');
+            editCommentModal.show();
+        });
+    });
+
+    editCommentForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const commentText = editCommentText.value.trim();
+
+        if (!commentText) {
+            editCommentError.classList.remove('d-none');
+            return;
+        }
+
+        try {
+            const response = await fetch(editCommentForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'comment_text': commentText,
+                }),
+            });
+
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                const data = await response.json();
+                errorMessage.textContent = data.error || 'Не удалось обновить комментарий.';
+                errorModal.show();
+            }
+        } catch (error) {
+            errorMessage.textContent = 'Ошибка при обновлении комментария.';
+            errorModal.show();
+        }
     });
 });
 </script>

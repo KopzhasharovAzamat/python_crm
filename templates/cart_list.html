@@ -45,6 +45,7 @@
             <th>№ Корзины</th>
             <th>Дата создания</th>
             <th>Товары</th>
+            <th>Комментарии</th>
             <th>Общая стоимость</th>
             <th>Действия</th>
         </tr>
@@ -61,6 +62,7 @@
                 Корзина пуста
                 {% endfor %}
             </td>
+            <td>{{ cart.comments.count }}</td>
             <td>{{ cart.calculate_totals.1|floatformat:2 }} сом</td>
             <td>
                 <a href="{% url 'cart_add_item' cart.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>

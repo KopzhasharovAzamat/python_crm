@@ -12,7 +12,8 @@ from django.utils import timezone
 from datetime import timedelta
 from .forms import RegisterForm, ProductForm, WarehouseForm, UserChangeForm, UserSettingsForm, CategoryForm, \
     SubcategoryForm, CartItemForm, ReturnForm, SaleItemForm, LoginForm
-from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, Return, LogEntry
+from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, \
+    Return, LogEntry, CartComment, SaleComment
 from django.http import JsonResponse
 
 # Helper function to log actions
@@ -360,7 +361,7 @@ def warehouse_delete(request, warehouse_id):
 
 @login_required
 def sales_list(request):
-    sales = Sale.objects.filter(owner=request.user).prefetch_related('items__product')
+    sales = Sale.objects.filter(owner=request.user).prefetch_related('items__product', 'comments')
 
     product_name = request.GET.get('product_name', '')
     warehouse = request.GET.get('warehouse', '')
@@ -461,10 +462,12 @@ def sales_list(request):
 def sale_detail(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
     items = sale.items.all()
+    comments = sale.comments.all()
     base_total, actual_total = sale.calculate_totals()
     return render(request, 'sale_detail.html', {
         'sale': sale,
         'items': items,
+        'comments': comments,
         'base_total': base_total,
         'actual_total': actual_total
     })
@@ -558,13 +561,51 @@ def return_item(request, sale_id, item_id):
         'form': form
     })
 
+@login_required
+def sale_comment_add(request, sale_id):
+    sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
+    if request.method == 'POST':
+        comment_text = request.POST.get('comment_text', '').strip()
+        if comment_text:
+            comment = SaleComment.objects.create(sale=sale, text=comment_text)
+            create_log_entry(request.user, 'ADD', f'Комментарий к продаже №{sale.number} добавлен пользователем {request.user.username}')
+            messages.success(request, 'Комментарий добавлен.')
+        else:
+            messages.error(request, 'Комментарий не может быть пустым.')
+    return redirect('sale_detail', sale_id=sale.id)
+
+@login_required
+def sale_comment_edit(request, sale_id, comment_id):
+    sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
+    comment = get_object_or_404(SaleComment, id=comment_id, sale=sale)
+    if request.method == 'POST':
+        comment_text = request.POST.get('comment_text', '').strip()
+        if comment_text:
+            comment.text = comment_text
+            comment.save()
+            create_log_entry(request.user, 'UPDATE', f'Комментарий к продаже №{sale.number} обновлён пользователем {request.user.username}')
+            messages.success(request, 'Комментарий обновлён.')
+        else:
+            messages.error(request, 'Комментарий не может быть пустым.')
+    return redirect('sale_detail', sale_id=sale.id)
+
+@login_required
+def sale_comment_delete(request, sale_id, comment_id):
+    sale = get_object_or_404(Sale, id=sale_id, owner=request.user)
+    comment = get_object_or_404(SaleComment, id=comment_id, sale=sale)
+    if request.method == 'POST':
+        comment.delete()
+        create_log_entry(request.user, 'DELETE', f'Комментарий к продаже №{sale.number} удалён пользователем {request.user.username}')
+        messages.success(request, 'Комментарий удалён.')
+    return redirect('sale_detail', sale_id=sale.id)
+
 ############
 ### CART ###
 ############
 
 @login_required
 def cart_list(request):
-    carts = Cart.objects.filter(owner=request.user).prefetch_related('items__product')
+    carts = Cart.objects.filter(owner=request.user).prefetch_related('items__product', 'comments')
 
     hide_empty = request.GET.get('hide_empty', 'off') == 'on'
     sort_by = request.GET.get('sort_by', '')
@@ -764,7 +805,10 @@ def cart_confirm(request, cart_id):
                            f'Недостаточно товара "{product.name}" на складе. В корзине: {total_quantity} шт., на складе: {product.quantity} шт.')
             return redirect('cart_add_item', cart_id=cart.id)
 
+    # Создаём продажу
     sale = Sale.objects.create(owner=request.user)
+
+    # Переносим товары из корзины в продажу
     for product_id, data in product_quantities.items():
         product = Product.objects.get(id=product_id)
         total_quantity = data['quantity']
@@ -778,6 +822,16 @@ def cart_confirm(request, cart_id):
                 base_price_total=item.base_price_total,
                 actual_price_total=item.actual_price_total
             )
+
+    # Переносим комментарии из корзины в продажу
+    comments = cart.comments.all()
+    for comment in comments:
+        SaleComment.objects.create(
+            sale=sale,
+            text=comment.text,
+            created_at=comment.created_at,
+            updated_at=comment.updated_at
+        )
 
     create_log_entry(request.user, 'SALE', f'Продажа №{sale.number} на основе корзины №{cart.number} завершена пользователем {request.user.username}')
     cart.delete()
@@ -800,6 +854,44 @@ def cart_delete(request, cart_id):
         messages.success(request, 'Корзина удалена.')
         return redirect('cart_list')
     return redirect('cart_list')
+
+@login_required
+def cart_comment_add(request, cart_id):
+    cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
+    if request.method == 'POST':
+        comment_text = request.POST.get('comment_text', '').strip()
+        if comment_text:
+            comment = CartComment.objects.create(cart=cart, text=comment_text)
+            create_log_entry(request.user, 'ADD', f'Комментарий к корзине №{cart.number} добавлен пользователем {request.user.username}')
+            messages.success(request, 'Комментарий добавлен.')
+        else:
+            messages.error(request, 'Комментарий не может быть пустым.')
+    return redirect('cart_add_item', cart_id=cart.id)
+
+@login_required
+def cart_comment_edit(request, cart_id, comment_id):
+    cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
+    comment = get_object_or_404(CartComment, id=comment_id, cart=cart)
+    if request.method == 'POST':
+        comment_text = request.POST.get('comment_text', '').strip()
+        if comment_text:
+            comment.text = comment_text
+            comment.save()
+            create_log_entry(request.user, 'UPDATE', f'Комментарий к корзине №{cart.number} обновлён пользователем {request.user.username}')
+            messages.success(request, 'Комментарий обновлён.')
+        else:
+            messages.error(request, 'Комментарий не может быть пустым.')
+    return redirect('cart_add_item', cart_id=cart.id)
+
+@login_required
+def cart_comment_delete(request, cart_id, comment_id):
+    cart = get_object_or_404(Cart, id=cart_id, owner=request.user)
+    comment = get_object_or_404(CartComment, id=comment_id, cart=cart)
+    if request.method == 'POST':
+        comment.delete()
+        create_log_entry(request.user, 'DELETE', f'Комментарий к корзине №{cart.number} удалён пользователем {request.user.username}')
+        messages.success(request, 'Комментарий удалён.')
+    return redirect('cart_add_item', cart_id=cart.id)
 
 @login_required
 def get_product_by_uuid(request):
@@ -842,6 +934,7 @@ def get_product_by_id(request):
         except ValueError:
             return JsonResponse({'error': 'Неверный ID товара'}, status=400)
     return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
+
 
 ############
 ### SCAN ###
