@@ -6,7 +6,7 @@ from .models import Product, Warehouse, Category, Subcategory, UserSettings, Car
 
 class RegisterForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
-    email = forms.EmailField(label="Электронная почта", required=True)  # Новое поле для email
+    email = forms.EmailField(label="Электронная почта", required=True)
 
     class Meta:
         model = User
@@ -48,11 +48,19 @@ class UserSettingsForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'category', 'subcategory', 'quantity', 'cost_price', 'selling_price', 'photo', 'warehouse']
+        fields = ['category', 'subcategory', 'quantity', 'cost_price', 'selling_price', 'photo', 'warehouse']
+        labels = {
+            'category': 'Модель',
+            'subcategory': 'Цвет',
+            'quantity': 'Количество',
+            'cost_price': 'Себестоимость',
+            'selling_price': 'Цена продажи',
+            'photo': 'Фото',
+            'warehouse': 'Склад',
+        }
         widgets = {
             'category': forms.Select(attrs={'class': 'form-control', 'id': 'id_category'}),
             'subcategory': forms.Select(attrs={'class': 'form-control', 'id': 'id_subcategory'}),
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
             'cost_price': forms.NumberInput(attrs={'class': 'form-control'}),
             'selling_price': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -62,18 +70,10 @@ class ProductForm(forms.ModelForm):
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.user = user  # Сохраняем user для проверки
         if user:
             self.fields['category'].queryset = Category.objects.filter(owner=user)
-            if self.instance and self.instance.pk and self.instance.category:
-                self.fields['subcategory'].queryset = Subcategory.objects.filter(category=self.instance.category, owner=user)
-            else:
-                self.fields['subcategory'].queryset = Subcategory.objects.none()
-            if 'category' in self.data:
-                try:
-                    category_id = int(self.data.get('category'))
-                    self.fields['subcategory'].queryset = Subcategory.objects.filter(category_id=category_id, owner=user)
-                except (ValueError, TypeError):
-                    self.fields['subcategory'].queryset = Subcategory.objects.none()
+            self.fields['subcategory'].queryset = Subcategory.objects.filter(owner=user)
 
     def clean_cost_price(self):
         cost_price = self.cleaned_data.get('cost_price')
@@ -86,6 +86,37 @@ class ProductForm(forms.ModelForm):
         if selling_price < 0:
             raise forms.ValidationError("Цена продажи не может быть отрицательной.")
         return selling_price
+
+    def clean_subcategory(self):
+        subcategory = self.cleaned_data.get('subcategory')
+        if not subcategory:
+            raise forms.ValidationError("Цвет обязателен для заполнения.")
+        return subcategory
+
+    def clean(self):
+        cleaned_data = super().clean()
+        category = cleaned_data.get('category')
+        subcategory = cleaned_data.get('subcategory')
+        warehouse = cleaned_data.get('warehouse')
+
+        # Проверяем уникальность комбинации category, subcategory, warehouse и owner
+        if category and subcategory and warehouse and self.user:
+            existing_product = Product.objects.filter(
+                category=category,
+                subcategory=subcategory,
+                warehouse=warehouse,
+                owner=self.user
+            )
+            # Если это редактирование, исключаем текущий объект из проверки
+            if self.instance and self.instance.pk:
+                existing_product = existing_product.exclude(pk=self.instance.pk)
+
+            if existing_product.exists():
+                raise forms.ValidationError(
+                    f"Товар с моделью '{category.name}', цветом '{subcategory.name}' и складом '{warehouse.name}' уже существует."
+                )
+
+        return cleaned_data
 
 class WarehouseForm(forms.ModelForm):
     class Meta:
@@ -128,7 +159,7 @@ class CategoryForm(forms.ModelForm):
         model = Category
         fields = ['name']
         labels = {
-            'name': 'Название',
+            'name': 'Модель',
         }
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -140,45 +171,38 @@ class CategoryForm(forms.ModelForm):
 
     def clean_name(self):
         name = self.cleaned_data['name']
-        if self.user:  # Проверка на уникальность только если пользователь передан
+        if self.user:
             existing_category = Category.objects.filter(name=name, owner=self.user)
-            # Если это редактирование, исключаем текущую категорию из проверки
             if self.instance and self.instance.pk:
                 existing_category = existing_category.exclude(pk=self.instance.pk)
             if existing_category.exists():
-                raise forms.ValidationError("Категория с таким именем уже существует.")
+                raise forms.ValidationError("Модель с таким названием уже существует.")
         return name
 
 class SubcategoryForm(forms.ModelForm):
     class Meta:
         model = Subcategory
-        fields = ['name', 'category']
+        fields = ['name']
         labels = {
-            'name': 'Название',
-            'category': 'Категория',
+            'name': 'Цвет',
         }
         widgets = {
-            'category': forms.Select(attrs={'class': 'form-control'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
-        if user:
-            self.fields['category'].queryset = Category.objects.filter(owner=user)
 
-    def clean(self):
-        cleaned_data = super().clean()
-        name = cleaned_data.get('name')
-        category = cleaned_data.get('category')
-        if name and category and self.user:
-            existing_subcategory = Subcategory.objects.filter(name=name, category=category, owner=self.user)
+    def clean_name(self):
+        name = self.cleaned_data['name']
+        if self.user:
+            existing_subcategory = Subcategory.objects.filter(name=name, owner=self.user)
             if self.instance and self.instance.pk:
                 existing_subcategory = existing_subcategory.exclude(pk=self.instance.pk)
             if existing_subcategory.exists():
-                raise forms.ValidationError("Подкатегория с таким именем уже существует в этой категории.")
-        return cleaned_data
+                raise forms.ValidationError("Цвет с таким названием уже существует.")
+        return name
 
 class SaleItemForm(forms.ModelForm):
     actual_price = forms.DecimalField(required=False, decimal_places=2, max_digits=10, label="Фактическая цена за единицу")

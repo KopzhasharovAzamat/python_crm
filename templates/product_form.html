@@ -18,14 +18,30 @@
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data" id="product-form">
                     {% csrf_token %}
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                            {% endfor %}
+                            {% for field in form %}
+                            {% for error in field.errors %}
+                            <li>{{ field.label }}: {{ error }}</li>
+                            {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
                     <div class="row g-3">
                         {% for field in form %}
                         <div class="col-md-6">
-                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                {{ field.label }}
+                                {% if field.name == 'subcategory' %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
                             {{ field }}
-                            {% if field.errors %}
-                            <div class="text-danger">{{ field.errors }}</div>
-                            {% endif %}
                             {% if field.name == 'photo' and form.instance.photo %}
                             <div class="mt-2">
                                 <p>Текущее изображение:</p>
@@ -36,6 +52,7 @@
                         {% endfor %}
                     </div>
                     <div class="mt-4 text-end">
+                        <a href="{% url 'products' %}" class="btn btn-secondary">Отмена</a>
                         <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Сохранить</button>
                     </div>
                 </form>
@@ -44,89 +61,43 @@
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    // Устанавливаем минимальные значения для полей
+    const quantityInput = document.getElementById('id_quantity');
+    const costPriceInput = document.getElementBy moderatorsId('id_cost_price');
+    const sellingPriceInput = document.getElementById('id_selling_price');
+    const subcategoryInput = document.getElementById('id_subcategory');
 
-    const csrftoken = getCookie('csrftoken');
+    if (quantityInput) quantityInput.setAttribute('min', 0);
+    if (costPriceInput) costPriceInput.setAttribute('min', 0);
+    if (sellingPriceInput) sellingPriceInput.setAttribute('min', 0);
 
-    $(document).ready(function() {
-        // Устанавливаем минимальные значения для полей
-        $('#id_quantity').attr('min', 0);
-        $('#id_cost_price').attr('min', 0);
-        $('#id_selling_price').attr('min', 0);
+    // Валидация формы перед отправкой
+    const form = document.getElementById('product-form');
+    form.addEventListener('submit', function(event) {
+        const costPrice = parseFloat(costPriceInput.value) || 0;
+        const sellingPrice = parseFloat(sellingPriceInput.value);
+        const subcategoryValue = subcategoryInput.value;
 
-        // Валидация формы перед отправкой
-        $('#product-form').on('submit', function(event) {
-            var costPrice = parseFloat($('#id_cost_price').val()) || 0;
-            var sellingPrice = parseFloat($('#id_selling_price').val());
-
-            if (costPrice < 0) {
-                event.preventDefault();
-                alert('Себестоимость не может быть отрицательной.');
-                return false;
-            }
-
-            if (sellingPrice < 0) {
-                event.preventDefault();
-                alert('Цена продажи не может быть отрицательной.');
-                return false;
-            }
-        });
-
-        // Функция для загрузки подкатегорий
-        function loadSubcategories(categoryId) {
-            console.log('Loading subcategories for category ID:', categoryId);
-            $.ajax({
-                url: '{% url 'get_subcategories' %}',
-                type: 'GET',
-                data: {
-                    'category_id': categoryId
-                },
-                beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-CSRFToken', csrftoken);
-                },
-                success: function(data) {
-                    console.log('Received subcategories:', data);
-                    var $subcategory = $('#id_subcategory');
-                    $subcategory.empty();
-                    $subcategory.append('<option value="">---------</option>');
-                    $.each(data.subcategories, function(index, subcategory) {
-                        var selected = (subcategory.id == '{{ form.instance.subcategory.id }}') ? 'selected' : '';
-                        $subcategory.append('<option value="' + subcategory.id + '" ' + selected + '>' + subcategory.name + '</option>');
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error('AJAX error:', status, error);
-                }
-            });
+        if (costPrice < 0) {
+            event.preventDefault();
+            alert('Себестоимость не может быть отрицательной.');
+            return false;
         }
 
-        // При изменении категории
-        $('#id_category').change(function() {
-            var categoryId = $(this).val();
-            loadSubcategories(categoryId);
-        });
+        if (sellingPrice < 0) {
+            event.preventDefault();
+            alert('Цена продажи не может быть отрицательной.');
+            return false;
+        }
 
-        // При загрузке страницы
-        var initialCategoryId = $('#id_category').val();
-        if (initialCategoryId) {
-            console.log('Triggering initial subcategory load');
-            loadSubcategories(initialCategoryId);
+        if (!subcategoryValue) {
+            event.preventDefault();
+            alert('Поле "Цвет" обязательно для заполнения.');
+            return false;
         }
     });
+});
 </script>
 {% endblock %}

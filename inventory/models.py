@@ -12,15 +12,16 @@ from django.utils import timezone
 ################
 
 class Category(models.Model):
-    name = models.CharField(max_length=100)
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    name = models.CharField(max_length=100, verbose_name="Название модели")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
 
     class Meta:
-        verbose_name = "Категория"
-        verbose_name_plural = "Категории"
+        verbose_name = "Модель"
+        verbose_name_plural = "Модели"
         constraints = [
             models.UniqueConstraint(fields=['name', 'owner'], name='unique_category_per_owner')
         ]
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -30,19 +31,19 @@ class Category(models.Model):
 ###################
 
 class Subcategory(models.Model):
-    name = models.CharField(max_length=100)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    name = models.CharField(max_length=100, verbose_name="Название цвета")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
 
     class Meta:
-        verbose_name = "Подкатегория"
-        verbose_name_plural = "Подкатегории"
+        verbose_name = "Цвет"
+        verbose_name_plural = "Цвета"
         constraints = [
-            models.UniqueConstraint(fields=['name', 'category', 'owner'], name='unique_subcategory_per_category_owner')
+            models.UniqueConstraint(fields=['name', 'owner'], name='unique_subcategory_per_owner')
         ]
+        ordering = ['name']
 
     def __str__(self):
-        return f"{self.name} ({self.category.name})"
+        return self.name
 
 #################
 ### WAREHOUSE ###
@@ -52,6 +53,11 @@ class Warehouse(models.Model):
     name = models.CharField(max_length=100, verbose_name="Название")
     owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
 
+    class Meta:
+        verbose_name = "Склад"
+        verbose_name_plural = "Склады"
+        ordering = ['name']
+
     def __str__(self):
         return self.name
 
@@ -60,10 +66,10 @@ class Warehouse(models.Model):
 ################
 
 class Product(models.Model):
-    name = models.CharField(max_length=200, verbose_name="Название")
+    name = models.CharField(max_length=200, verbose_name="Название", editable=False)
     unique_id = models.CharField(max_length=50, unique=True, editable=False, verbose_name="Уникальный идентификатор")
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, verbose_name="Категория")
-    subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Подкатегория")
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, verbose_name="Модель")
+    subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, verbose_name="Цвет")
     quantity = models.PositiveIntegerField(default=0, verbose_name="Количество")
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Себестоимость")
     selling_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена продажи")
@@ -74,19 +80,23 @@ class Product(models.Model):
     is_archived = models.BooleanField(default=False, verbose_name="Архивировано")
 
     def save(self, *args, **kwargs):
+        # Генерация имени как "Модель - Цвет"
+        if self.category and self.subcategory:  # Убеждаемся, что оба поля заполнены
+            self.name = f"{self.category.name} - {self.subcategory.name}"
+        else:
+            self.name = "Не указано"
+
         if not self.unique_id:
             self.unique_id = str(uuid.uuid4())[:50]
-        qr = qrcode.QRCode()
-        qr.add_data(self.unique_id)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        self.qr_code.save(f"qr_{self.unique_id}.png", File(buffer), save=False)
+            qr = qrcode.QRCode()
+            qr.add_data(self.unique_id)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            buffer = BytesIO()
+            img.save(buffer, format="PNG")
+            self.qr_code.save(f"qr_{self.unique_id}.png", File(buffer), save=False)
+
         super().save(*args, **kwargs)
-        if self.quantity < 5:
-            if hasattr(self, 'request'):
-                self.request.session['low_stock'] = f"Товар {self.name} заканчивается (осталось {self.quantity})"
 
     def __str__(self):
         return self.name
@@ -94,6 +104,13 @@ class Product(models.Model):
     class Meta:
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['category', 'subcategory', 'warehouse', 'owner'],
+                name='unique_product_category_subcategory_warehouse_owner'
+            )
+        ]
+        ordering = ['name']
 
 ############
 ### CART ###
@@ -244,6 +261,8 @@ class LogEntry(models.Model):
         ('UNBLOCK', 'Разблокировка'),
         ('RETURN', 'Возврат'),
         ('FAILED_LOGIN', 'Неудачная попытка входа'),
+        ('APPROVE', 'Подтверждение регистрации'),
+        ('REJECT', 'Отклонение регистрации'),
     )
 
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Время")
@@ -251,8 +270,11 @@ class LogEntry(models.Model):
     action_type = models.CharField(max_length=20, choices=ACTION_TYPES, verbose_name="Тип действия")
     message = models.TextField(verbose_name="Сообщение")
 
+    def get_action_type_display(self):
+        return dict(self.ACTION_TYPES).get(self.action_type, self.action_type)
+
     def __str__(self):
-        return f"{self.timestamp} - {self.get_action_type_display()} - {self.message}"
+        return f"{self.user} - {self.timestamp} - {self.get_action_type_display()} - {self.message}"
 
     class Meta:
         verbose_name = "Запись лога"

@@ -40,7 +40,6 @@ urlpatterns = [
     path('categories/delete/<int:category_id>/', views.category_delete, name='category_delete'),
 
     # Subcategory
-    path('get-subcategories/', views.get_subcategories, name='get_subcategories'),
     path('subcategories/<int:subcategory_id>/edit/', views.subcategory_edit, name='subcategory_edit'),
     path('subcategories/delete/<int:subcategory_id>/', views.subcategory_delete, name='subcategory_delete'),
 
@@ -68,7 +67,7 @@ urlpatterns = [
     path('stats/', views.stats, name='stats'),
 
     # Logs
-    path('logs/', views.user_logs, name='user_logs'),
+    path('logs/', views.logs, name='user_logs'),
 
     # Admin panel
     path('admin-panel/', views.admin_panel, name='admin_panel'),

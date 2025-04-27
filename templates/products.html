@@ -17,7 +17,7 @@
         </div>
         <div class="col-md-2">
             <select name="category" class="form-control">
-                <option value="">Все категории</option>
+                <option value="">Все модели</option>
                 {% for cat in categories %}
                 <option value="{{ cat.name }}" {% if request.GET.category == cat.name %}selected{% endif %}>{{ cat.name }}</option>
                 {% endfor %}
@@ -25,7 +25,7 @@
         </div>
         <div class="col-md-2">
             <select name="subcategory" class="form-control">
-                <option value="">Все подкатегории</option>
+                <option value="">Все цвета</option>
                 {% for subcat in subcategories %}
                 <option value="{{ subcat.name }}" {% if request.GET.subcategory == subcat.name %}selected{% endif %}>{{ subcat.name }}</option>
                 {% endfor %}
@@ -47,10 +47,10 @@
                 <option value="">Сортировать...</option>
                 <option value="name" {% if request.GET.sort_by == 'name' %}selected{% endif %}>По названию (А-Я)</option>
                 <option value="-name" {% if request.GET.sort_by == '-name' %}selected{% endif %}>По названию (Я-А)</option>
-                <option value="category__name" {% if request.GET.sort_by == 'category__name' %}selected{% endif %}>По категории (А-Я)</option>
-                <option value="-category__name" {% if request.GET.sort_by == '-category__name' %}selected{% endif %}>По категории (Я-А)</option>
-                <option value="subcategory__name" {% if request.GET.sort_by == 'subcategory__name' %}selected{% endif %}>По подкатегории (А-Я)</option>
-                <option value="-subcategory__name" {% if request.GET.sort_by == '-subcategory__name' %}selected{% endif %}>По подкатегории (Я-А)</option>
+                <option value="category__name" {% if request.GET.sort_by == 'category__name' %}selected{% endif %}>По модели (А-Я)</option>
+                <option value="-category__name" {% if request.GET.sort_by == '-category__name' %}selected{% endif %}>По модели (Я-А)</option>
+                <option value="subcategory__name" {% if request.GET.sort_by == 'subcategory__name' %}selected{% endif %}>По цвету (А-Я)</option>
+                <option value="-subcategory__name" {% if request.GET.sort_by == '-subcategory__name' %}selected{% endif %}>По цвету (Я-А)</option>
                 <option value="selling_price" {% if request.GET.sort_by == 'selling_price' %}selected{% endif %}>По цене (возр.)</option>
                 <option value="-selling_price" {% if request.GET.sort_by == '-selling_price' %}selected{% endif %}>По цене (убыв.)</option>
                 <option value="quantity" {% if request.GET.sort_by == 'quantity' %}selected{% endif %}>По количеству (возр.)</option>
@@ -87,8 +87,8 @@
             <div class="card-body">
                 <h5 class="card-title"><a href="{% url 'product_detail' product.id %}" class="text-decoration-none">{{ product.name }}</a></h5>
                 <p class="card-text">
-                    <strong>Категория:</strong> {{ product.category|default:"Не указана" }}<br>
-                    <strong>Подкатегория:</strong> {{ product.subcategory|default:"Не указана" }}<br>
+                    <strong>Модель:</strong> {{ product.category|default:"Не указана" }}<br>
+                    <strong>Цвет:</strong> {{ product.subcategory|default:"Не указан" }}<br>
                     <strong>Склад:</strong> {{ product.warehouse.name }}<br>
                     <strong>Количество:</strong> {{ product.quantity }}<br>
                     {% if product.quantity < 5 %}
@@ -120,8 +120,8 @@
             </div>
             <div class="modal-body">
                 <h5 id="infoProductName"></h5>
-                <p><strong>Категория:</strong> <span id="infoCategory"></span></p>
-                <p><strong>Подкатегория:</strong> <span id="infoSubcategory"></span></p>
+                <p><strong>Модель:</strong> <span id="infoCategory"></span></p>
+                <p><strong>Цвет:</strong> <span id="infoSubcategory"></span></p>
                 <p><strong>Склад:</strong> <span id="infoWarehouse"></span></p>
                 <p><strong>Количество на складе:</strong> <span id="infoStockQuantity"></span> шт.</p>
                 <p><strong>Цена продажи:</strong> <span id="infoSellingPrice"></span> сом</p>
@@ -146,8 +146,8 @@
             <div class="modal-body">
                 <div id="scanProductDetails">
                     <h5 id="scanProductName"></h5>
-                    <p><strong>Категория:</strong> <span id="scanCategory"></span></p>
-                    <p><strong>Подкатегория:</strong> <span id="scanSubcategory"></span></p>
+                    <p><strong>Модель:</strong> <span id="scanCategory"></span></p>
+                    <p><strong>Цвет:</strong> <span id="scanSubcategory"></span></p>
                     <p><strong>Склад:</strong> <span id="scanWarehouse"></span></p>
                     <p><strong>Количество на складе:</strong> <span id="scanStockQuantity"></span> шт.</p>
                     <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> сом</p>
@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function showProductInfo(data) {
         infoProductName.textContent = data.name;
         infoCategory.textContent = data.category || 'Не указана';
-        infoSubcategory.textContent = data.subcategory || 'Не указана';
+        infoSubcategory.textContent = data.subcategory || 'Не указан';
         infoWarehouse.textContent = data.warehouse || 'Не указан';
         infoStockQuantity.textContent = data.quantity;
         infoSellingPrice.textContent = data.selling_price.toFixed(2);
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function showScanModal(data) {
         scanProductName.textContent = data.name;
         scanCategory.textContent = data.category || 'Не указана';
-        scanSubcategory.textContent = data.subcategory || 'Не указана';
+        scanSubcategory.textContent = data.subcategory || 'Не указан';
         scanWarehouse.textContent = data.warehouse || 'Не указан';
         scanStock = data.quantity;
         scanStockQuantity.textContent = scanStock;

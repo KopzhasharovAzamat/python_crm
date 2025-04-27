@@ -15,7 +15,7 @@ from .forms import RegisterForm, ProductForm, WarehouseForm, UserChangeForm, Use
 from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, Category, Subcategory, UserSettings, User, Return, LogEntry
 from django.http import JsonResponse
 
-# Helper function to log actions (unchanged)
+# Helper function to log actions
 def create_log_entry(user, action_type, message):
     LogEntry.objects.create(user=user, action_type=action_type, message=message)
 
@@ -156,7 +156,7 @@ def product_list(request):
         products_paginated = paginator.page(paginator.num_pages)
 
     categories = Category.objects.filter(owner=request.user).select_related('owner')
-    subcategories = Subcategory.objects.filter(owner=request.user).select_related('category', 'owner')
+    subcategories = Subcategory.objects.filter(owner=request.user).select_related('owner')
     warehouses = Warehouse.objects.filter(owner=request.user).select_related('owner')
     low_stock_message = request.session.pop('low_stock', None)
 
@@ -185,10 +185,15 @@ def product_add(request):
         if form.is_valid():
             product = form.save(commit=False)
             product.owner = request.user
-            product.request = request
             product.save()
             create_log_entry(request.user, 'ADD', f'Товар "{product.name}" добавлен пользователем {request.user.username}')
+            if product.quantity < 5:
+                messages.warning(request, f"Товар {product.name} заканчивается (осталось {product.quantity})")
             return redirect('products')
+        else:
+            # Если форма не валидна, передаём её обратно в шаблон с ошибками
+            form.fields['warehouse'].queryset = Warehouse.objects.filter(owner=request.user)
+            return render(request, 'product_form.html', {'form': form})
     else:
         form = ProductForm(user=request.user)
         form.fields['warehouse'].queryset = Warehouse.objects.filter(owner=request.user)
@@ -200,8 +205,10 @@ def product_edit(request, product_id):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES, instance=product, user=request.user)
         if form.is_valid():
-            form.save()
+            product = form.save()
             create_log_entry(request.user, 'UPDATE', f'Товар "{product.name}" обновлён пользователем {request.user.username}')
+            if product.quantity < 5:
+                messages.warning(request, f"Товар {product.name} заканчивается (осталось {product.quantity})")
             return redirect('products')
     else:
         form = ProductForm(instance=product, user=request.user)
@@ -982,7 +989,7 @@ def stats(request):
     })
 
 ################
-### Category ###
+### CATEGORY ###
 ################
 
 @login_required
@@ -991,16 +998,20 @@ def category_manage(request):
     sort_by = request.GET.get('sort_by', '')
 
     categories = Category.objects.filter(owner=request.user)
+    subcategories = Subcategory.objects.filter(owner=request.user)
 
     if query:
         categories = categories.filter(name__icontains=query)
+        subcategories = subcategories.filter(name__icontains=query)
 
     # Ensure consistent ordering
     allowed_sort_fields = ['name', '-name']
     if sort_by in allowed_sort_fields:
         categories = categories.order_by(sort_by)
+        subcategories = subcategories.order_by(sort_by)
     else:
         categories = categories.order_by('name')  # Default ordering
+        subcategories = subcategories.order_by('name')
 
     category_form = CategoryForm(user=request.user)
     subcategory_form = SubcategoryForm(user=request.user)
@@ -1012,25 +1023,26 @@ def category_manage(request):
                 category = category_form.save(commit=False)
                 category.owner = request.user
                 category.save()
-                create_log_entry(request.user, 'ADD', f'Категория "{category.name}" добавлена пользователем {request.user.username}')
-                messages.success(request, 'Категория добавлена.')
+                create_log_entry(request.user, 'ADD', f'Модель "{category.name}" добавлена пользователем {request.user.username}')
+                messages.success(request, 'Модель добавлена.')
                 return redirect('category_manage')
             else:
-                messages.error(request, 'Ошибка при добавлении категории.')
+                messages.error(request, 'Ошибка при добавлении модели.')
         elif 'add_subcategory' in request.POST:
             subcategory_form = SubcategoryForm(request.POST, user=request.user)
             if subcategory_form.is_valid():
                 subcategory = subcategory_form.save(commit=False)
                 subcategory.owner = request.user
                 subcategory.save()
-                create_log_entry(request.user, 'ADD', f'Подкатегория "{subcategory.name}" добавлена пользователем {request.user.username}')
-                messages.success(request, 'Подкатегория добавлена.')
+                create_log_entry(request.user, 'ADD', f'Цвет "{subcategory.name}" добавлен пользователем {request.user.username}')
+                messages.success(request, 'Цвет добавлен.')
                 return redirect('category_manage')
             else:
-                messages.error(request, 'Ошибка при добавлении подкатегории.')
+                messages.error(request, 'Ошибка при добавлении цвета.')
 
     return render(request, 'categories.html', {
         'categories': categories,
+        'subcategories': subcategories,
         'category_form': category_form,
         'subcategory_form': subcategory_form,
         'query': query,
@@ -1045,11 +1057,11 @@ def category_edit(request, category_id):
         if form.is_valid():
             old_name = category.name
             category = form.save()
-            create_log_entry(request.user, 'UPDATE', f'Категория "{old_name}" обновлена на "{category.name}" пользователем {request.user.username}')
-            messages.success(request, 'Категория обновлена.')
+            create_log_entry(request.user, 'UPDATE', f'Модель "{old_name}" обновлена на "{category.name}" пользователем {request.user.username}')
+            messages.success(request, 'Модель обновлена.')
             return redirect('category_manage')
         else:
-            messages.error(request, 'Ошибка при обновлении категории.')
+            messages.error(request, 'Ошибка при обновлении модели.')
     else:
         form = CategoryForm(instance=category, user=request.user)
     return render(request, 'category_form.html', {'form': form, 'category': category})
@@ -1060,24 +1072,18 @@ def category_delete(request, category_id):
     if request.method == 'POST':
         related_products = Product.objects.filter(category=category, owner=request.user)
         if related_products.exists():
-            messages.error(request, f'Нельзя удалить категорию "{category.name}", так как с ней связаны товары.')
+            messages.error(request, f'Нельзя удалить модель "{category.name}", так как с ней связаны товары.')
             return redirect('category_manage')
 
         category_name = category.name
         category.delete()
-        create_log_entry(request.user, 'DELETE', f'Категория "{category_name}" удалена пользователем {request.user.username}')
-        messages.success(request, f'Категория "{category_name}" удалена.')
+        create_log_entry(request.user, 'DELETE', f'Модель "{category_name}" удалена пользователем {request.user.username}')
+        messages.success(request, f'Модель "{category_name}" удалена.')
     return redirect('category_manage')
 
 ####################
 ### SUBCATEGORY ###
 ####################
-
-@login_required
-def get_subcategories(request):
-    category_id = request.GET.get('category_id')
-    subcategories = Subcategory.objects.filter(category_id=category_id, owner=request.user).order_by('name').values('id', 'name')
-    return JsonResponse({'subcategories': list(subcategories)})
 
 @login_required
 def subcategory_edit(request, subcategory_id):
@@ -1086,8 +1092,8 @@ def subcategory_edit(request, subcategory_id):
         form = SubcategoryForm(request.POST, instance=subcategory, user=request.user)
         if form.is_valid():
             form.save()
-            create_log_entry(request.user, 'UPDATE', f'Подкатегория "{subcategory.name}" обновлена пользователем {request.user.username}')
-            messages.success(request, 'Подкатегория обновлена.')
+            create_log_entry(request.user, 'UPDATE', f'Цвет "{subcategory.name}" обновлен пользователем {request.user.username}')
+            messages.success(request, 'Цвет обновлен.')
             return redirect('category_manage')
     else:
         form = SubcategoryForm(instance=subcategory, user=request.user)
@@ -1099,13 +1105,13 @@ def subcategory_delete(request, subcategory_id):
     if request.method == 'POST':
         related_products = Product.objects.filter(subcategory=subcategory, owner=request.user)
         if related_products.exists():
-            messages.error(request, f'Нельзя удалить подкатегорию "{subcategory.name}", так как с ней связаны товары.')
+            messages.error(request, f'Нельзя удалить цвет "{subcategory.name}", так как с ним связаны товары.')
             return redirect('category_manage')
 
         subcategory_name = subcategory.name
         subcategory.delete()
-        create_log_entry(request.user, 'DELETE', f'Подкатегория "{subcategory_name}" удалена пользователем {request.user.username}')
-        messages.success(request, f'Подкатегория "{subcategory_name}" удалена.')
+        create_log_entry(request.user, 'DELETE', f'Цвет "{subcategory_name}" удален пользователем {request.user.username}')
+        messages.success(request, f'Цвет "{subcategory_name}" удален.')
     return redirect('category_manage')
 
 ############################
@@ -1255,50 +1261,40 @@ def admin_panel(request):
     categories = Category.objects.all().order_by('name')
     total_products = Product.objects.count()
     total_warehouses = Warehouse.objects.count()
-    category_form = CategoryForm(user=request.user)
-    subcategory_form = SubcategoryForm(user=request.user)
 
     return render(request, 'admin.html', {
         'pending_users': pending_users_paginated,
         'active_users': active_users_paginated,
-        'categories': categories,
-        'total_products': total_products,
-        'total_warehouses': total_warehouses,
-        'category_form': category_form,
-        'subcategory_form': subcategory_form,
+        'q_pending': q_pending,
+        'pending_date_from': pending_date_from,
+        'pending_date_to': pending_date_to,
+        'pending_sort_by': pending_sort_by,
         'q_active': q_active,
         'date_from': date_from,
         'date_to': date_to,
         'status': status,
         'sort_by': sort_by,
-        'q_pending': q_pending,
-        'pending_date_from': pending_date_from,
-        'pending_date_to': pending_date_to,
-        'pending_sort_by': pending_sort_by,
+        'categories': categories,
+        'total_products': total_products,
+        'total_warehouses': total_warehouses,
     })
 
 ############
 ### LOGS ###
 ############
 
-@login_required
-def user_logs(request):
-    is_admin = request.user.is_superuser
+@user_passes_test(lambda u: u.is_superuser)
+def logs(request):
+    logs = LogEntry.objects.all()
 
-    if is_admin:
-        logs = LogEntry.objects.all()
-        users = User.objects.all().order_by('username')
-    else:
-        logs = LogEntry.objects.filter(user=request.user)
-        users = None
-
+    user_filter = request.GET.get('user', '')
     action_type = request.GET.get('action_type', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
-    user_filter = request.GET.get('user', '')
+    sort_by = request.GET.get('sort_by', '')
 
-    if is_admin and user_filter:
-        logs = logs.filter(user__username=user_filter)
+    if user_filter:
+        logs = logs.filter(user__username__icontains=user_filter)
     if action_type:
         logs = logs.filter(action_type=action_type)
     if date_from:
@@ -1316,10 +1312,18 @@ def user_logs(request):
             messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
 
     # Ensure consistent ordering
-    logs = logs.order_by('-timestamp')
+    allowed_sort_fields = [
+        'timestamp', '-timestamp',
+        'user__username', '-user__username',
+        'action_type', '-action_type',
+    ]
+    if sort_by in allowed_sort_fields:
+        logs = logs.order_by(sort_by)
+    else:
+        logs = logs.order_by('-timestamp')  # Default ordering
 
     # Пагинация
-    paginator = Paginator(logs, 10)  # 10 логов на страницу
+    paginator = Paginator(logs, 20)  # 20 логов на страницу
     page_number = request.GET.get('page', 1)
     try:
         logs_paginated = paginator.page(page_number)
@@ -1328,15 +1332,73 @@ def user_logs(request):
     except EmptyPage:
         logs_paginated = paginator.page(paginator.num_pages)
 
+    # Передаём полный список кортежей ACTION_TYPES
     action_types = LogEntry.ACTION_TYPES
+
+    # Если нужны пользователи для фильтра (для админов)
+    users = User.objects.all() if request.user.is_superuser else []
 
     return render(request, 'user_logs.html', {
         'logs': logs_paginated,
-        'action_types': action_types,
+        'action_types': action_types,  # Передаём пары (value, name)
+        'user_filter': user_filter,
         'action_type': action_type,
         'date_from': date_from,
         'date_to': date_to,
-        'is_admin': is_admin,
-        'users': users,
-        'user_filter': user_filter,
+        'sort_by': sort_by,
+        'users': users,  # Добавляем список пользователей
+        'is_admin': request.user.is_superuser,  # Передаём флаг is_admin
+    })
+
+@user_passes_test(lambda u: u.is_superuser)
+def logs_filter(request):
+    user_filter = request.GET.get('user', '')
+    action_type = request.GET.get('action_type', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    sort_by = request.GET.get('sort_by', '')
+
+    logs = LogEntry.objects.all()
+
+    if user_filter:
+        logs = logs.filter(user__username__icontains=user_filter)
+    if action_type:
+        logs = logs.filter(action_type=action_type)
+    if date_from:
+        try:
+            date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
+            logs = logs.filter(timestamp__gte=date_from)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
+    if date_to:
+        try:
+            date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d')
+            date_to = date_to + timedelta(days=1)
+            logs = logs.filter(timestamp__lt=date_to)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
+
+    # Ensure consistent ordering
+    allowed_sort_fields = [
+        'timestamp', '-timestamp',
+        'user__username', '-user__username',
+        'action_type', '-action_type',
+    ]
+    if sort_by in allowed_sort_fields:
+        logs = logs.order_by(sort_by)
+    else:
+        logs = logs.order_by('-timestamp')  # Default ordering
+
+    # Пагинация
+    paginator = Paginator(logs, 20)  # 20 логов на страницу
+    page_number = request.GET.get('page', 1)
+    try:
+        logs_paginated = paginator.page(page_number)
+    except PageNotAnInteger:
+        logs_paginated = paginator.page(1)
+    except EmptyPage:
+        logs_paginated = paginator.page(paginator.num_pages)
+
+    return render(request, 'user_logs.html', {
+        'logs': logs_paginated,
     })

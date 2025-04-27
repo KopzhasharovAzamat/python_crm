@@ -36,8 +36,8 @@
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item"><strong>Название:</strong> {{ product.name }}</li>
                             <li class="list-group-item"><strong>Уникальный идентификатор:</strong> {{ product.unique_id }}</li>
-                            <li class="list-group-item"><strong>Категория:</strong> {{ product.category|default:"Не указана" }}</li>
-                            <li class="list-group-item"><strong>Подкатегория:</strong> {{ product.subcategory|default:"Не указана" }}</li>
+                            <li class="list-group-item"><strong>Модель:</strong> {{ product.category|default:"Не указана" }}</li>
+                            <li class="list-group-item"><strong>Цвет:</strong> {{ product.subcategory|default:"Не указан" }}</li>
                             <li class="list-group-item"><strong>Количество:</strong> {{ product.quantity }} шт.</li>
                             {% if show_cost_price %}
                                 <li class="list-group-item"><strong>Себестоимость:</strong> {{ product.cost_price|default:"Не указана" }} сом</li>
@@ -63,10 +63,10 @@
 function downloadQRCode() {
     const qrImage = document.getElementById('qr-code-image');
     const qrImageUrl = qrImage.src;
-    const productName = "{{ product.name|slugify }}"; // Используем имя продукта для имени файла
+    const productName = "{{ product.name|slugify }}";
     const link = document.createElement('a');
     link.href = qrImageUrl;
-    link.download = `qr-code-${productName}.png`; // Имя файла для скачивания
+    link.download = `qr-code-${productName}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
