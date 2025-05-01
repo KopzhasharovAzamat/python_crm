@@ -1376,9 +1376,16 @@ def admin_panel(request):
 ### LOGS ###
 ############
 
-@user_passes_test(lambda u: u.is_superuser)
+@login_required
 def logs(request):
-    logs = LogEntry.objects.all()
+    # Определяем, является ли пользователь админом
+    is_admin = request.user.is_superuser
+
+    # Фильтруем логи: админ видит все, обычный пользователь — только свои
+    if is_admin:
+        logs = LogEntry.objects.all()
+    else:
+        logs = LogEntry.objects.filter(user=request.user)
 
     user_filter = request.GET.get('user', '')
     action_type = request.GET.get('action_type', '')
@@ -1387,18 +1394,25 @@ def logs(request):
     sort_by = request.GET.get('sort_by', '')
 
     if user_filter:
-        logs = logs.filter(user__username__icontains=user_filter)
+        if is_admin:
+            logs = logs.filter(user__username__icontains=user_filter)
+        else:
+            logs = logs.filter(user=request.user)
     if action_type:
         logs = logs.filter(action_type=action_type)
     if date_from:
         try:
+            # Парсим дату и делаем её осведомлённой
             date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
+            date_from = timezone.make_aware(date_from)  # Делаем datetime осведомлённым
             logs = logs.filter(timestamp__gte=date_from)
         except ValueError:
             messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
     if date_to:
         try:
+            # Парсим дату и делаем её осведомлённой
             date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d')
+            date_to = timezone.make_aware(date_to)  # Делаем datetime осведомлённым
             date_to = date_to + timedelta(days=1)
             logs = logs.filter(timestamp__lt=date_to)
         except ValueError:
@@ -1428,19 +1442,19 @@ def logs(request):
     # Передаём полный список кортежей ACTION_TYPES
     action_types = LogEntry.ACTION_TYPES
 
-    # Если нужны пользователи для фильтра (для админов)
-    users = User.objects.all() if request.user.is_superuser else []
+    # Список пользователей для фильтра (только для админов)
+    users = User.objects.all() if is_admin else []
 
     return render(request, 'user_logs.html', {
         'logs': logs_paginated,
-        'action_types': action_types,  # Передаём пары (value, name)
+        'action_types': action_types,
         'user_filter': user_filter,
         'action_type': action_type,
         'date_from': date_from,
         'date_to': date_to,
         'sort_by': sort_by,
-        'users': users,  # Добавляем список пользователей
-        'is_admin': request.user.is_superuser,  # Передаём флаг is_admin
+        'users': users,
+        'is_admin': is_admin,
     })
 
 @user_passes_test(lambda u: u.is_superuser)
