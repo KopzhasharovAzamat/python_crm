@@ -18,11 +18,9 @@
                 <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>По названию (Я-А)</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary flex-fill"><i class="fas fa-filter"></i> Фильтр</button>
-        </div>
-        <div class="col-md-2">
-            <a href="{% url 'category_manage' %}" class="btn btn-secondary flex-fill"><i class="fas fa-times"></i> Очистить</a>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Фильтр</button>
+            <a href="{% url 'category_manage' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Очистить</a>
         </div>
     </div>
 </form>

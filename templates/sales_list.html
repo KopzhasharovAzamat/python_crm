@@ -50,8 +50,8 @@
                 <option value="-items__actual_price_total" {% if sort_by == '-items__actual_price_total' %}selected{% endif %}>По стоимости (убыв.)</option>
             </select>
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Фильтровать</button>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Фильтровать</button>
             <a href="{% url 'sales_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
         </div>
     </div>

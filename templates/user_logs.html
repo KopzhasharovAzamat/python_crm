@@ -18,7 +18,7 @@
             <div class="card-body">
                 <!-- Форма фильтрации -->
                 <form method="get" class="mb-4">
-                    <div class="row">
+                    <div class="row g-3">
                         {% if is_admin %}
                         <div class="col-md-3 mb-3">
                             <label for="user" class="form-label">Пользователь</label>
@@ -47,17 +47,9 @@
                             <label for="date_to" class="form-label">Дата по</label>
                             <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to|default_if_none:'' }}">
                         </div>
-                        <div class="col-md-{% if is_admin %}2{% else %}2{% endif %} mb-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Фильтровать</button>
-                        </div>
-                    </div>
-                </form>
-
-                <!-- Форма очистки фильтров -->
-                <form method="get" action="{% url 'user_logs' %}" class="mb-4">
-                    <div class="row">
-                        <div class="col-md-{% if is_admin %}12{% else %}12{% endif %} d-flex justify-content-end">
-                            <button type="submit" class="btn btn-secondary w-25"><i class="fas fa-times"></i> Очистить</button>
+                        <div class="col-auto mb-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Фильтровать</button>
+                            <a href="{% url 'user_logs' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Очистить</a>
                         </div>
                     </div>
                 </form>
