@@ -1,3 +1,4 @@
+# inventory/urls.py
 from django.urls import path
 from . import views
 
@@ -33,14 +34,23 @@ urlpatterns = [
     path('warehouses/<int:warehouse_id>/edit/', views.warehouse_edit, name='warehouse_edit'),
     path('warehouses/<int:warehouse_id>/delete/', views.warehouse_delete, name='warehouse_delete'),
 
-    # Category
-    path('categories/', views.category_manage, name='category_manage'),
-    path('categories/<int:category_id>/edit/', views.category_edit, name='category_edit'),
-    path('categories/delete/<int:category_id>/', views.category_delete, name='category_delete'),
+    # Brand
+    path('brands/', views.brand_manage, name='brand_manage'),
+    path('brands/<int:brand_id>/edit/', views.brand_edit, name='brand_edit'),
+    path('brands/delete/<int:brand_id>/', views.brand_delete, name='brand_delete'),
 
-    # Subcategory
-    path('subcategories/<int:subcategory_id>/edit/', views.subcategory_edit, name='subcategory_edit'),
-    path('subcategories/delete/<int:subcategory_id>/', views.subcategory_delete, name='subcategory_delete'),
+    # Model
+    path('models/<int:model_id>/edit/', views.model_edit, name='model_edit'),
+    path('models/delete/<int:model_id>/', views.model_delete, name='model_delete'),
+
+    # ModelSpecification
+    path('specifications/<int:specification_id>/edit/', views.specification_edit, name='specification_edit'),
+    path('specifications/delete/<int:specification_id>/', views.specification_delete, name='specification_delete'),
+
+    # ProductType
+    path('product-types/', views.product_type_manage, name='product_type_manage'),
+    path('product-types/<int:product_type_id>/edit/', views.product_type_edit, name='product_type_edit'),
+    path('product-types/delete/<int:product_type_id>/', views.product_type_delete, name='product_type_delete'),
 
     # Sale
     path('sales/', views.sales_list, name='sales_list'),
