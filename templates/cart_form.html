@@ -1,578 +1,582 @@
 <!--templates/cart_form.html-->
 {% extends 'base.html' %}
+{% load static %}
 {% load i18n %}
+
 {% block content %}
-<div class="row justify-content-center mt-4">
-    <div class="col-md-8">
-        <div class="card shadow-sm animate__animated animate__fadeIn">
-            <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h3 class="mb-0">Корзина №{{ cart.number }}</h3>
-            </div>
-            <div class="card-body">
-                {% if cart.items.exists %}
-                <h5>Товары в корзине:</h5>
-                <ul class="list-group mb-4">
-                    {% for item in cart.items.all %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ item.product.name }} - {{ item.quantity }} шт. по {{ item.actual_price_total|floatformat:2 }} сом (базовая: {{ item.base_price_total|floatformat:2 }} сом)
-                        <a href="{% url 'cart_remove_item' cart.id item.id %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</a>
-                    </li>
-                    {% endfor %}
-                </ul>
-                <h6>Общее количество по товарам:</h6>
-                <ul class="list-group mb-4">
-                    {% for product in product_totals %}
-                    <li class="list-group-item">
-                        {{ product.product__name }}: {{ product.total_quantity }} шт.
-                    </li>
-                    {% empty %}
-                    <li class="list-group-item text-muted">
-                        Нет товаров.
-                    </li>
-                    {% endfor %}
-                </ul>
-                <p><strong>Общее количество товаров:</strong> {{ total_quantity }} шт.</p>
-                <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} сом</p>
-                <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} сом</p>
-                <div class="d-flex gap-2 mb-4">
-                    <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success flex-fill delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-check"></i> Совершить продажу</a>
-                    <a href="{% url 'cart_cancel' cart.id %}" class="btn btn-secondary flex-fill delete-btn" data-action="{% url 'cart_cancel' cart.id %}" data-message="Вы уверены, что хотите отменить корзину №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-times"></i> Отменить</a>
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm animate__animated animate__fadeIn">
+                <div class="card-header text-center">
+                    <h3 class="mb-0">Корзина №{{ cart.number }}</h3>
                 </div>
-                {% else %}
-                <p class="text-muted">Корзина пуста. Добавьте товары, чтобы продолжить.</p>
-                {% endif %}
+                <div class="card-body">
+                    {% if cart.items.exists %}
+                    <h5>Товары в корзине:</h5>
+                    <ul class="list-group mb-4">
+                        {% for item in cart.items.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ item.product.name }} - {{ item.quantity }} шт. по {{ item.actual_price_total|floatformat:2 }} сом (базовая: {{ item.base_price_total|floatformat:2 }} сом)
+                            <a href="{% url 'cart_remove_item' cart.id item.id %}" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> Удалить</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <h6>Общее количество по товарам:</h6>
+                    <ul class="list-group mb-4">
+                        {% for product in product_totals %}
+                        <li class="list-group-item">
+                            {{ product.product__name }}: {{ product.total_quantity }} шт.
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted">
+                            Нет товаров.
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <p><strong>Общее количество товаров:</strong> {{ total_quantity }} шт.</p>
+                    <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} сом</p>
+                    <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} сом</p>
+                    <div class="d-flex gap-2 mb-4">
+                        <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success flex-fill delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-check"></i> Совершить продажу</a>
+                        <a href="{% url 'cart_cancel' cart.id %}" class="btn btn-secondary flex-fill delete-btn" data-action="{% url 'cart_cancel' cart.id %}" data-message="Вы уверены, что хотите отменить корзину №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-times"></i> Отменить</a>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Корзина пуста. Добавьте товары, чтобы продолжить.</p>
+                    {% endif %}
 
-                <!-- Comments Section -->
-                <h5 class="mt-4">Комментарии:</h5>
-                {% if cart.comments.exists %}
-                <ul class="list-group mb-4">
-                    {% for comment in cart.comments.all %}
-                    <li class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <p class="mb-1">{{ comment.text }}</p>
-                                <small class="text-muted">Добавлено: {{ comment.created_at|date:"d.m.Y H:i" }} | Обновлено: {{ comment.updated_at|date:"d.m.Y H:i" }}</small>
+                    <!-- Comments Section -->
+                    <h5 class="mt-4">Комментарии:</h5>
+                    {% if cart.comments.exists %}
+                    <ul class="list-group mb-4">
+                        {% for comment in cart.comments.all %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <p class="mb-1">{{ comment.text }}</p>
+                                    <small class="text-muted">Добавлено: {{ comment.created_at|date:"d.m.Y H:i" }} | Обновлено: {{ comment.updated_at|date:"d.m.Y H:i" }}</small>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-primary edit-comment-btn" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.text }}"><i class="fas fa-edit"></i> Редактировать</button>
+                                    <a href="{% url 'cart_comment_delete' cart.id comment.id %}" class="btn btn-sm btn-danger delete-btn" data-action="{% url 'cart_comment_delete' cart.id comment.id %}" data-message="Вы уверены, что хотите удалить этот комментарий?"><i class="fas fa-trash"></i> Удалить</a>
+                                </div>
                             </div>
-                            <div>
-                                <button class="btn btn-sm btn-primary edit-comment-btn" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.text }}"><i class="fas fa-edit"></i> Редактировать</button>
-                                <a href="{% url 'cart_comment_delete' cart.id comment.id %}" class="btn btn-sm btn-danger delete-btn" data-action="{% url 'cart_comment_delete' cart.id comment.id %}" data-message="Вы уверены, что хотите удалить этот комментарий?"><i class="fas fa-trash"></i> Удалить</a>
-                            </div>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="text-muted">Комментариев нет.</p>
-                {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted">Комментариев нет.</p>
+                    {% endif %}
 
-                <!-- Add Comment Form -->
-                <form method="post" action="{% url 'cart_comment_add' cart.id %}" class="mb-4">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="comment_text" class="form-label">Добавить комментарий:</label>
-                        <textarea class="form-control" id="comment_text" name="comment_text" rows="3" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить комментарий</button>
-                </form>
-
-                <h5>Добавить товар:</h5>
-                <div class="d-flex gap-2 mb-3">
-                    <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#manualAddModal"><i class="fas fa-search"></i> Ручной поиск</button>
-                    <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#scanModal"><i class="fas fa-qrcode"></i> Сканировать код</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal for Manual Add -->
-<div class="modal" id="manualAddModal" tabindex="-1" aria-labelledby="manualAddModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="manualAddModalLabel">Добавить товар</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="manualSelectForm">
-                    <div class="mb-3">
-                        <label for="manualProductSelect" class="form-label">Выберите товар:</label>
-                        <select id="manualProductSelect" class="form-select" required>
-                            <option value="">-- Выберите товар --</option>
-                            {% for product in products %}
-                            <option value="{{ product.id }}">{{ product.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <p id="manualSelectError" class="text-danger d-none">Товар не найден.</p>
-                </div>
-                <div id="manualProductDetails" class="d-none">
-                    <h5 id="manualProductName"></h5>
-                    <p><strong>Категория:</strong> <span id="manualCategory"></span></p>
-                    <p><strong>Подкатегория:</strong> <span id="manualSubcategory"></span></p>
-                    <p><strong>Склад:</strong> <span id="manualWarehouse"></span></p>
-                    <p><strong>Количество на складе:</strong> <span id="manualStockQuantity"></span> шт.</p>
-                    <p><strong>Цена продажи:</strong> <span id="manualSellingPrice"></span> сом</p>
-                    <img id="manualProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
-                    <div class="mb-3">
-                        <label for="manualQuantity" class="form-label">Количество:</label>
-                        <input type="number" id="manualQuantity" class="form-control" min="1" value="1" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="manualActualPrice" class="form-label">Фактическая цена за единицу:</label>
-                        <input type="number" step="0.01" id="manualActualPrice" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Итоговая цена:</label>
-                        <p id="manualTotalPrice" class="form-text">0.00 сом</p>
-                    </div>
-                    <p id="manualValidationError" class="text-danger d-none"></p>
-                    <div class="d-flex gap-2">
-                        <button type="button" id="manualAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
-                        <button type="button" id="cancelManualBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal for Scan -->
-<div class="modal" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="scanModalLabel">Сканировать код товара</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="scanInputForm">
-                    <div class="mb-3">
-                        <label for="unique_id" class="form-label">Введите код товара (или отсканируйте):</label>
-                        <div class="input-group">
-                            <input type="text" id="unique_id" class="form-control" placeholder="UUID товара" required>
-                            <button type="button" id="pasteCodeBtn" class="btn btn-outline-secondary"><i class="fas fa-paste"></i></button>
-                        </div>
-                    </div>
-                    <p id="scanError" class="text-danger d-none">Товар не найден.</p>
-                </div>
-                <div id="scanProductDetails" class="d-none">
-                    <h5 id="scanProductName"></h5>
-                    <p><strong>Категория:</strong> <span id="scanCategory"></span></p>
-                    <p><strong>Подкатегория:</strong> <span id="scanSubcategory"></span></p>
-                    <p><strong>Склад:</strong> <span id="scanWarehouse"></span></p>
-                    <p><strong>Количество на складе:</strong> <span id="scanStockQuantity"></span> шт.</p>
-                    <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> сом</p>
-                    <img id="scanProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
-                    <form method="post" action="{% url 'cart_add_item' cart.id %}" id="scanAddForm">
+                    <!-- Add Comment Form -->
+                    <form method="post" action="{% url 'cart_comment_add' cart.id %}" class="mb-4">
                         {% csrf_token %}
-                        <input type="hidden" name="product" id="scanProductId">
                         <div class="mb-3">
-                            <label for="scanQuantity" class="form-label">Количество:</label>
-                            <input type="number" name="quantity" id="scanQuantity" class="form-control" min="1" value="1" required>
+                            <label for="comment_text" class="form-label">Добавить комментарий:</label>
+                            <textarea class="form-control" id="comment_text" name="comment_text" rows="3" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить комментарий</button>
+                    </form>
+
+                    <h5>Добавить товар:</h5>
+                    <div class="d-flex gap-2 mb-3">
+                        <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#manualAddModal"><i class="fas fa-search"></i> Ручной поиск</button>
+                        <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#scanModal"><i class="fas fa-qrcode"></i> Сканировать код</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Manual Add -->
+    <div class="modal" id="manualAddModal" tabindex="-1" aria-labelledby="manualAddModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="manualAddModalLabel">Добавить товар</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="manualSelectForm">
+                        <div class="mb-3">
+                            <label for="manualProductSelect" class="form-label">Выберите товар:</label>
+                            <select id="manualProductSelect" class="form-select" required>
+                                <option value="">-- Выберите товар --</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}">{{ product.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <p id="manualSelectError" class="text-danger d-none">Товар не найден.</p>
+                    </div>
+                    <div id="manualProductDetails" class="d-none">
+                        <h5 id="manualProductName"></h5>
+                        <p><strong>Модель:</strong> <span id="manualCategory"></span></p>
+                        <p><strong>Цвет:</strong> <span id="manualSubcategory"></span></p>
+                        <p><strong>Склад:</strong> <span id="manualWarehouse"></span></p>
+                        <p><strong>Количество на складе:</strong> <span id="manualStockQuantity"></span> шт.</p>
+                        <p><strong>Цена продажи:</strong> <span id="manualSellingPrice"></span> сом</p>
+                        <img id="manualProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
+                        <div class="mb-3">
+                            <label for="manualQuantity" class="form-label">Количество:</label>
+                            <input type="number" id="manualQuantity" class="form-control" min="1" value="1" required>
                         </div>
                         <div class="mb-3">
-                            <label for="scanActualPrice" class="form-label">Фактическая цена за единицу:</label>
-                            <input type="number" step="0.01" name="actual_price" id="scanActualPrice" class="form-control">
+                            <label for="manualActualPrice" class="form-label">Фактическая цена за единицу:</label>
+                            <input type="number" step="0.01" id="manualActualPrice" class="form-control">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Итоговая цена:</label>
-                            <p id="scanTotalPrice" class="form-text">0.00 сом</p>
+                            <p id="manualTotalPrice" class="form-text">0.00 сом</p>
                         </div>
-                        <p id="scanValidationError" class="text-danger d-none"></p>
+                        <p id="manualValidationError" class="text-danger d-none"></p>
                         <div class="d-flex gap-2">
-                            <button type="submit" id="scanAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
-                            <button type="button" id="cancelScanBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                            <button type="button" id="manualAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                            <button type="button" id="cancelManualBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Scan -->
+    <div class="modal" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="scanModalLabel">Сканировать код товара</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="scanInputForm">
+                        <div class="mb-3">
+                            <label for="unique_id" class="form-label">Введите код товара (или отсканируйте):</label>
+                            <div class="input-group">
+                                <input type="text" id="unique_id" class="form-control" placeholder="UUID товара" required>
+                                <button type="button" id="pasteCodeBtn" class="btn btn-outline-secondary"><i class="fas fa-paste"></i></button>
+                            </div>
+                        </div>
+                        <p id="scanError" class="text-danger d-none">Товар не найден.</p>
+                    </div>
+                    <div id="scanProductDetails" class="d-none">
+                        <h5 id="scanProductName"></h5>
+                        <p><strong>Модель:</strong> <span id="scanCategory"></span></p>
+                        <p><strong>Цвет:</strong> <span id="scanSubcategory"></span></p>
+                        <p><strong>Склад:</strong> <span id="scanWarehouse"></span></p>
+                        <p><strong>Количество на складе:</strong> <span id="scanStockQuantity"></span> шт.</p>
+                        <p><strong>Цена продажи:</strong> <span id="scanSellingPrice"></span> сом</p>
+                        <img id="scanProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
+                        <form method="post" action="{% url 'cart_add_item' cart.id %}" id="scanAddForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="product" id="scanProductId">
+                            <div class="mb-3">
+                                <label for="scanQuantity" class="form-label">Количество:</label>
+                                <input type="number" name="quantity" id="scanQuantity" class="form-control" min="1" value="1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="scanActualPrice" class="form-label">Фактическая цена за единицу:</label>
+                                <input type="number" step="0.01" name="actual_price" id="scanActualPrice" class="form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Итоговая цена:</label>
+                                <p id="scanTotalPrice" class="form-text">0.00 сом</p>
+                            </div>
+                            <p id="scanValidationError" class="text-danger d-none"></p>
+                            <div class="d-flex gap-2">
+                                <button type="submit" id="scanAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                                <button type="button" id="cancelScanBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Editing Comments -->
+    <div class="modal fade" id="editCommentModal" tabindex="-1" aria-labelledby="editCommentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCommentModalLabel">Редактировать комментарий</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editCommentForm" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="edit_comment_text" class="form-label">Комментарий:</label>
+                            <textarea class="form-control" id="edit_comment_text" name="comment_text" rows="4" required></textarea>
+                        </div>
+                        <p id="editCommentError" class="text-danger d-none">Комментарий не может быть пустым.</p>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Сохранить</button>
+                            <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal"><i class="fas fa-times"></i> Отменить</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal for Editing Comments -->
-<div class="modal fade" id="editCommentModal" tabindex="-1" aria-labelledby="editCommentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="editCommentModalLabel">Редактировать комментарий</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editCommentForm" method="post">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="edit_comment_text" class="form-label">Комментарий:</label>
-                        <textarea class="form-control" id="edit_comment_text" name="comment_text" rows="4" required></textarea>
-                    </div>
-                    <p id="editCommentError" class="text-danger d-none">Комментарий не может быть пустым.</p>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Сохранить</button>
-                        <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal"><i class="fas fa-times"></i> Отменить</button>
-                    </div>
-                </form>
+    <!-- Modal for Errors -->
+    <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="errorModalLabel">Ошибка</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Modal for Errors -->
-<div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="errorModalLabel">Ошибка</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p id="errorMessage"></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-            </div>
-        </div>
-    </div>
-</div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+        const errorMessage = document.getElementById('errorMessage');
+        const cartId = {{ cart.id }};
+        const csrfToken = getCsrfToken();
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-    const errorMessage = document.getElementById('errorMessage');
-    const cartId = {{ cart.id }};
-    const csrfToken = getCsrfToken();
+        // --- Логика для модального окна ручного добавления ---
+        const manualModal = new bootstrap.Modal(document.getElementById('manualAddModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        const manualSelectForm = document.getElementById('manualSelectForm');
+        const manualProductSelect = document.getElementById('manualProductSelect');
+        const manualSelectError = document.getElementById('manualSelectError');
+        const manualProductDetails = document.getElementById('manualProductDetails');
+        const manualProductName = document.getElementById('manualProductName');
+        const manualCategory = document.getElementById('manualCategory');
+        const manualSubcategory = document.getElementById('manualSubcategory');
+        const manualWarehouse = document.getElementById('manualWarehouse');
+        const manualStockQuantity = document.getElementById('manualStockQuantity');
+        const manualSellingPrice = document.getElementById('manualSellingPrice');
+        const manualProductPhoto = document.getElementById('manualProductPhoto');
+        const manualQuantityInput = document.getElementById('manualQuantity');
+        const manualActualPriceInput = document.getElementById('manualActualPrice');
+        const manualTotalPriceDisplay = document.getElementById('manualTotalPrice');
+        const manualAddButton = document.getElementById('manualAddButton');
+        const manualValidationError = document.getElementById('manualValidationError');
+        const cancelManualBtn = document.getElementById('cancelManualBtn');
 
-    // --- Логика для модального окна ручного добавления ---
-    const manualModal = new bootstrap.Modal(document.getElementById('manualAddModal'), {
-        backdrop: 'static',
-        keyboard: false
-    });
-    const manualSelectForm = document.getElementById('manualSelectForm');
-    const manualProductSelect = document.getElementById('manualProductSelect');
-    const manualSelectError = document.getElementById('manualSelectError');
-    const manualProductDetails = document.getElementById('manualProductDetails');
-    const manualProductName = document.getElementById('manualProductName');
-    const manualCategory = document.getElementById('manualCategory');
-    const manualSubcategory = document.getElementById('manualSubcategory');
-    const manualWarehouse = document.getElementById('manualWarehouse');
-    const manualStockQuantity = document.getElementById('manualStockQuantity');
-    const manualSellingPrice = document.getElementById('manualSellingPrice');
-    const manualProductPhoto = document.getElementById('manualProductPhoto');
-    const manualQuantityInput = document.getElementById('manualQuantity');
-    const manualActualPriceInput = document.getElementById('manualActualPrice');
-    const manualTotalPriceDisplay = document.getElementById('manualTotalPrice');
-    const manualAddButton = document.getElementById('manualAddButton');
-    const manualValidationError = document.getElementById('manualValidationError');
-    const cancelManualBtn = document.getElementById('cancelManualBtn');
+        let manualStock = 0;
+        let selectedProductId = null;
 
-    let manualStock = 0;
-    let selectedProductId = null;
+        function resetManualForm() {
+            manualProductSelect.value = '';
+            manualSelectError.classList.add('d-none');
+            manualSelectForm.classList.remove('d-none');
+            manualProductDetails.classList.add('d-none');
+            manualProductPhoto.classList.add('d-none');
+            manualStock = 0;
+            manualValidationError.classList.add('d-none');
+            manualAddButton.disabled = false;
+            selectedProductId = null;
+        }
 
-    function resetManualForm() {
-        manualProductSelect.value = '';
-        manualSelectError.classList.add('d-none');
-        manualSelectForm.classList.remove('d-none');
-        manualProductDetails.classList.add('d-none');
-        manualProductPhoto.classList.add('d-none');
-        manualStock = 0;
-        manualValidationError.classList.add('d-none');
-        manualAddButton.disabled = false;
-        selectedProductId = null;
-    }
+        async function showManualProductDetails() {
+            const productId = manualProductSelect.value;
+            if (!productId) return;
 
-    async function showManualProductDetails() {
-        const productId = manualProductSelect.value;
-        if (!productId) return;
+            try {
+                const response = await fetch(`/get-product-price/?product_id=${productId}`);
+                const data = await response.json();
 
-        try {
-            const response = await fetch(`/get-product-price/?product_id=${productId}`);
-            const data = await response.json();
+                if (response.ok && !data.error) {
+                    manualSelectForm.classList.add('d-none');
+                    manualProductDetails.classList.remove('d-none');
+                    manualSelectError.classList.add('d-none');
 
-            if (response.ok && !data.error) {
-                manualSelectForm.classList.add('d-none');
-                manualProductDetails.classList.remove('d-none');
-                manualSelectError.classList.add('d-none');
+                    manualProductName.textContent = data.name;
+                    manualCategory.textContent = data.category || 'Не указана';
+                    manualSubcategory.textContent = data.subcategory || 'Не указана';
+                    manualWarehouse.textContent = data.warehouse || 'Не указан';
+                    manualStock = data.quantity;
+                    manualStockQuantity.textContent = manualStock;
+                    manualSellingPrice.textContent = data.selling_price.toFixed(2);
+                    selectedProductId = data.id;
+                    manualQuantityInput.value = 1;
+                    manualActualPriceInput.value = data.selling_price.toFixed(2);
 
-                manualProductName.textContent = data.name;
-                manualCategory.textContent = data.category || 'Не указана';
-                manualSubcategory.textContent = data.subcategory || 'Не указана';
-                manualWarehouse.textContent = data.warehouse || 'Не указан';
-                manualStock = data.quantity;
-                manualStockQuantity.textContent = manualStock;
-                manualSellingPrice.textContent = data.selling_price.toFixed(2);
-                selectedProductId = data.id;
-                manualQuantityInput.value = 1;
-                manualActualPriceInput.value = data.selling_price.toFixed(2);
+                    if (data.photo) {
+                        manualProductPhoto.src = data.photo;
+                        manualProductPhoto.classList.remove('d-none');
+                    }
 
-                if (data.photo) {
-                    manualProductPhoto.src = data.photo;
-                    manualProductPhoto.classList.remove('d-none');
+                    updateManualTotalPrice();
+                } else {
+                    manualSelectError.textContent = 'Товар не найден.';
+                    manualSelectError.classList.remove('d-none');
                 }
-
-                updateManualTotalPrice();
-            } else {
-                manualSelectError.textContent = 'Товар не найден.';
+            } catch (error) {
+                manualSelectError.textContent = 'Ошибка при поиске товара.';
                 manualSelectError.classList.remove('d-none');
             }
-        } catch (error) {
-            manualSelectError.textContent = 'Ошибка при поиске товара.';
-            manualSelectError.classList.remove('d-none');
         }
-    }
 
-    function updateManualTotalPrice() {
-        const quantity = parseInt(manualQuantityInput.value) || 0;
-        const actualPrice = parseFloat(manualActualPriceInput.value) || 0;
-        const totalPrice = quantity * actualPrice;
-        manualTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
+        function updateManualTotalPrice() {
+            const quantity = parseInt(manualQuantityInput.value) || 0;
+            const actualPrice = parseFloat(manualActualPriceInput.value) || 0;
+            const totalPrice = quantity * actualPrice;
+            manualTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
 
-        manualValidationError.classList.add('d-none');
-        manualAddButton.disabled = false;
+            manualValidationError.classList.add('d-none');
+            manualAddButton.disabled = false;
 
-        if (quantity <= 0) {
-            manualValidationError.textContent = 'Количество должно быть больше 0.';
-            manualValidationError.classList.remove('d-none');
-            manualAddButton.disabled = true;
-        } else if (quantity > manualStock) {
-            manualValidationError.textContent = `Количество не может быть больше, чем на складе (${manualStock} шт.).`;
-            manualValidationError.classList.remove('d-none');
-            manualAddButton.disabled = true;
-        } else if (actualPrice < 0) {
-            manualValidationError.textContent = 'Цена за единицу не может быть меньше 0.';
-            manualValidationError.classList.remove('d-none');
-            manualAddButton.disabled = true;
-        }
-    }
-
-    manualProductSelect.addEventListener('change', showManualProductDetails);
-    manualQuantityInput.addEventListener('input', updateManualTotalPrice);
-    manualActualPriceInput.addEventListener('input', updateManualTotalPrice);
-
-    manualAddButton.addEventListener('click', async function() {
-        const quantity = parseInt(manualQuantityInput.value);
-        const actualPrice = parseFloat(manualActualPriceInput.value);
-
-        try {
-            const response = await fetch(`/cart/${cartId}/add_item/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: JSON.stringify({
-                    product: selectedProductId,
-                    quantity: quantity,
-                    actual_price: actualPrice,
-                }),
-                credentials: 'include',
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                window.location.reload();
-            } else {
-                throw new Error(data.error || 'Не удалось добавить товар.');
+            if (quantity <= 0) {
+                manualValidationError.textContent = 'Количество должно быть больше 0.';
+                manualValidationError.classList.remove('d-none');
+                manualAddButton.disabled = true;
+            } else if (quantity > manualStock) {
+                manualValidationError.textContent = `Количество не может быть больше, чем на складе (${manualStock} шт.).`;
+                manualValidationError.classList.remove('d-none');
+                manualAddButton.disabled = true;
+            } else if (actualPrice < 0) {
+                manualValidationError.textContent = 'Цена за единицу не может быть меньше 0.';
+                manualValidationError.classList.remove('d-none');
+                manualAddButton.disabled = true;
             }
-        } catch (error) {
-            console.error('Ошибка:', error);
-            errorMessage.textContent = error.message;
-            errorModal.show();
-        }
-    });
-
-    cancelManualBtn.addEventListener('click', function() {
-        resetManualForm();
-    });
-
-    document.getElementById('manualAddModal').addEventListener('shown.bs.modal', function() {
-        manualProductSelect.focus();
-    });
-
-    document.getElementById('manualAddModal').addEventListener('hidden.bs.modal', function() {
-        resetManualForm();
-    });
-
-    // --- Логика для модального окна сканирования ---
-    const scanModal = new bootstrap.Modal(document.getElementById('scanModal'), {
-        backdrop: 'static',
-        keyboard: false
-    });
-    const uniqueIdInput = document.getElementById('unique_id');
-    const pasteCodeBtn = document.getElementById('pasteCodeBtn');
-    const scanInputForm = document.getElementById('scanInputForm');
-    const scanProductDetails = document.getElementById('scanProductDetails');
-    const scanError = document.getElementById('scanError');
-    const scanProductName = document.getElementById('scanProductName');
-    const scanCategory = document.getElementById('scanCategory');
-    const scanSubcategory = document.getElementById('scanSubcategory');
-    const scanWarehouse = document.getElementById('scanWarehouse');
-    const scanStockQuantity = document.getElementById('scanStockQuantity');
-    const scanSellingPrice = document.getElementById('scanSellingPrice');
-    const scanProductPhoto = document.getElementById('scanProductPhoto');
-    const scanProductId = document.getElementById('scanProductId');
-    const scanQuantityInput = document.getElementById('scanQuantity');
-    const scanActualPriceInput = document.getElementById('scanActualPrice');
-    const scanTotalPriceDisplay = document.getElementById('scanTotalPrice');
-    const scanAddButton = document.getElementById('scanAddButton');
-    const scanValidationError = document.getElementById('scanValidationError');
-    const cancelScanBtn = document.getElementById('cancelScanBtn');
-
-    let scanStock = 0;
-
-    function resetScanForm() {
-        uniqueIdInput.value = '';
-        scanError.classList.add('d-none');
-        scanInputForm.classList.remove('d-none');
-        scanProductDetails.classList.add('d-none');
-        scanProductPhoto.classList.add('d-none');
-        scanStock = 0;
-        scanValidationError.classList.add('d-none');
-        scanAddButton.disabled = false;
-    }
-
-    async function checkProductByUUID() {
-        const uniqueId = uniqueIdInput.value.trim();
-        if (!uniqueId) return;
-
-        try {
-            const response = await fetch(`/get-product-by-uuid/?unique_id=${uniqueId}`);
-            const data = await response.json();
-
-            if (response.ok && !data.error) {
-                scanInputForm.classList.add('d-none');
-                scanProductDetails.classList.remove('d-none');
-                scanError.classList.add('d-none');
-
-                scanProductName.textContent = data.name;
-                scanCategory.textContent = data.category || 'Не указана';
-                scanSubcategory.textContent = data.subcategory || 'Не указана';
-                scanWarehouse.textContent = data.warehouse || 'Не указан';
-                scanStock = data.quantity;
-                scanStockQuantity.textContent = scanStock;
-                scanSellingPrice.textContent = data.selling_price.toFixed(2);
-                scanProductId.value = data.id;
-                scanQuantityInput.value = 1;
-                scanActualPriceInput.value = data.selling_price.toFixed(2);
-
-                if (data.photo) {
-                    scanProductPhoto.src = data.photo;
-                    scanProductPhoto.classList.remove('d-none');
-                }
-
-                updateScanTotalPrice();
-            } else {
-                scanError.textContent = 'Товар не найден.';
-                scanError.classList.remove('d-none');
-            }
-        } catch (error) {
-            scanError.textContent = 'Ошибка при поиске товара.';
-            scanError.classList.remove('d-none');
-        }
-    }
-
-    function updateScanTotalPrice() {
-        const quantity = parseInt(scanQuantityInput.value) || 0;
-        const actualPrice = parseFloat(scanActualPriceInput.value) || 0;
-        const totalPrice = quantity * actualPrice;
-        scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
-
-        scanValidationError.classList.add('d-none');
-        scanAddButton.disabled = false;
-
-        if (quantity <= 0) {
-            scanValidationError.textContent = 'Количество должно быть больше 0.';
-            scanValidationError.classList.remove('d-none');
-            scanAddButton.disabled = true;
-        } else if (quantity > scanStock) {
-            scanValidationError.textContent = `Количество не может быть больше, чем на складе (${scanStock} шт.).`;
-            scanValidationError.classList.remove('d-none');
-            scanAddButton.disabled = true;
-        } else if (actualPrice < 0) {
-            scanValidationError.textContent = 'Цена за единицу не может быть меньше 0.';
-            scanValidationError.classList.remove('d-none');
-            scanAddButton.disabled = true;
-        }
-    }
-
-    uniqueIdInput.addEventListener('input', checkProductByUUID);
-    scanQuantityInput.addEventListener('input', updateScanTotalPrice);
-    scanActualPriceInput.addEventListener('input', updateScanTotalPrice);
-
-    pasteCodeBtn.addEventListener('click', async function() {
-        try {
-            const text = await navigator.clipboard.readText();
-            uniqueIdInput.value = text;
-            checkProductByUUID();
-        } catch (err) {
-            console.error('Ошибка при вставке из буфера обмена:', err);
-        }
-    });
-
-    cancelScanBtn.addEventListener('click', function() {
-        resetScanForm();
-    });
-
-    document.getElementById('scanModal').addEventListener('shown.bs.modal', function() {
-        uniqueIdInput.focus();
-    });
-
-    document.getElementById('scanModal').addEventListener('hidden.bs.modal', function() {
-        resetScanForm();
-    });
-
-    // --- Логика для редактирования комментариев ---
-    const editCommentModal = new bootstrap.Modal(document.getElementById('editCommentModal'));
-    const editCommentForm = document.getElementById('editCommentForm');
-    const editCommentText = document.getElementById('edit_comment_text');
-    const editCommentError = document.getElementById('editCommentError');
-    const editCommentButtons = document.querySelectorAll('.edit-comment-btn');
-
-    editCommentButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const commentId = this.getAttribute('data-comment-id');
-            const commentText = this.getAttribute('data-comment-text');
-            editCommentText.value = commentText;
-            editCommentForm.action = `/cart/${cartId}/comment/${commentId}/edit/`;
-            editCommentError.classList.add('d-none');
-            editCommentModal.show();
-        });
-    });
-
-    editCommentForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const commentText = editCommentText.value.trim();
-
-        if (!commentText) {
-            editCommentError.classList.remove('d-none');
-            return;
         }
 
-        try {
-            const response = await fetch(editCommentForm.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    'comment_text': commentText,
-                }),
-            });
+        manualProductSelect.addEventListener('change', showManualProductDetails);
+        manualQuantityInput.addEventListener('input', updateManualTotalPrice);
+        manualActualPriceInput.addEventListener('input', updateManualTotalPrice);
 
-            if (response.ok) {
-                window.location.reload();
-            } else {
+        manualAddButton.addEventListener('click', async function() {
+            const quantity = parseInt(manualQuantityInput.value);
+            const actualPrice = parseFloat(manualActualPriceInput.value);
+
+            try {
+                const response = await fetch(`/cart/${cartId}/add_item/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        product: selectedProductId,
+                        quantity: quantity,
+                        actual_price: actualPrice,
+                    }),
+                    credentials: 'include',
+                });
+
                 const data = await response.json();
-                errorMessage.textContent = data.error || 'Не удалось обновить комментарий.';
+
+                if (response.ok && data.success) {
+                    window.location.reload();
+                } else {
+                    throw new Error(data.error || 'Не удалось добавить товар.');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                errorMessage.textContent = error.message;
                 errorModal.show();
             }
-        } catch (error) {
-            errorMessage.textContent = 'Ошибка при обновлении комментария.';
-            errorModal.show();
+        });
+
+        cancelManualBtn.addEventListener('click', function() {
+            resetManualForm();
+        });
+
+        document.getElementById('manualAddModal').addEventListener('shown.bs.modal', function() {
+            manualProductSelect.focus();
+        });
+
+        document.getElementById('manualAddModal').addEventListener('hidden.bs.modal', function() {
+            resetManualForm();
+        });
+
+        // --- Логика для модального окна сканирования ---
+        const scanModal = new bootstrap.Modal(document.getElementById('scanModal'), {
+            backdrop: 'static',
+            keyboard: false
+        });
+        const uniqueIdInput = document.getElementById('unique_id');
+        const pasteCodeBtn = document.getElementById('pasteCodeBtn');
+        const scanInputForm = document.getElementById('scanInputForm');
+        const scanProductDetails = document.getElementById('scanProductDetails');
+        const scanError = document.getElementById('scanError');
+        const scanProductName = document.getElementById('scanProductName');
+        const scanCategory = document.getElementById('scanCategory');
+        const scanSubcategory = document.getElementById('scanSubcategory');
+        const scanWarehouse = document.getElementById('scanWarehouse');
+        const scanStockQuantity = document.getElementById('scanStockQuantity');
+        const scanSellingPrice = document.getElementById('scanSellingPrice');
+        const scanProductPhoto = document.getElementById('scanProductPhoto');
+        const scanProductId = document.getElementById('scanProductId');
+        const scanQuantityInput = document.getElementById('scanQuantity');
+        const scanActualPriceInput = document.getElementById('scanActualPrice');
+        const scanTotalPriceDisplay = document.getElementById('scanTotalPrice');
+        const scanAddButton = document.getElementById('scanAddButton');
+        const scanValidationError = document.getElementById('scanValidationError');
+        const cancelScanBtn = document.getElementById('cancelScanBtn');
+
+        let scanStock = 0;
+
+        function resetScanForm() {
+            uniqueIdInput.value = '';
+            scanError.classList.add('d-none');
+            scanInputForm.classList.remove('d-none');
+            scanProductDetails.classList.add('d-none');
+            scanProductPhoto.classList.add('d-none');
+            scanStock = 0;
+            scanValidationError.classList.add('d-none');
+            scanAddButton.disabled = false;
         }
+
+        async function checkProductByUUID() {
+            const uniqueId = uniqueIdInput.value.trim();
+            if (!uniqueId) return;
+
+            try {
+                const response = await fetch(`/get-product-by-uuid/?unique_id=${uniqueId}`);
+                const data = await response.json();
+
+                if (response.ok && !data.error) {
+                    scanInputForm.classList.add('d-none');
+                    scanProductDetails.classList.remove('d-none');
+                    scanError.classList.add('d-none');
+
+                    scanProductName.textContent = data.name;
+                    scanCategory.textContent = data.category || 'Не указана';
+                    scanSubcategory.textContent = data.subcategory || 'Не указана';
+                    scanWarehouse.textContent = data.warehouse || 'Не указан';
+                    scanStock = data.quantity;
+                    scanStockQuantity.textContent = scanStock;
+                    scanSellingPrice.textContent = data.selling_price.toFixed(2);
+                    scanProductId.value = data.id;
+                    scanQuantityInput.value = 1;
+                    scanActualPriceInput.value = data.selling_price.toFixed(2);
+
+                    if (data.photo) {
+                        scanProductPhoto.src = data.photo;
+                        scanProductPhoto.classList.remove('d-none');
+                    }
+
+                    updateScanTotalPrice();
+                } else {
+                    scanError.textContent = 'Товар не найден.';
+                    scanError.classList.remove('d-none');
+                }
+            } catch (error) {
+                scanError.textContent = 'Ошибка при поиске товара.';
+                scanError.classList.remove('d-none');
+            }
+        }
+
+        function updateScanTotalPrice() {
+            const quantity = parseInt(scanQuantityInput.value) || 0;
+            const actualPrice = parseFloat(scanActualPriceInput.value) || 0;
+            const totalPrice = quantity * actualPrice;
+            scanTotalPriceDisplay.textContent = totalPrice.toFixed(2) + ' сом';
+
+            scanValidationError.classList.add('d-none');
+            scanAddButton.disabled = false;
+
+            if (quantity <= 0) {
+                scanValidationError.textContent = 'Количество должно быть больше 0.';
+                scanValidationError.classList.remove('d-none');
+                scanAddButton.disabled = true;
+            } else if (quantity > scanStock) {
+                scanValidationError.textContent = `Количество не может быть больше, чем на складе (${scanStock} шт.).`;
+                scanValidationError.classList.remove('d-none');
+                scanAddButton.disabled = true;
+            } else if (actualPrice < 0) {
+                scanValidationError.textContent = 'Цена за единицу не может быть меньше 0.';
+                scanValidationError.classList.remove('d-none');
+                scanAddButton.disabled = true;
+            }
+        }
+
+        uniqueIdInput.addEventListener('input', checkProductByUUID);
+        scanQuantityInput.addEventListener('input', updateScanTotalPrice);
+        scanActualPriceInput.addEventListener('input', updateScanTotalPrice);
+
+        pasteCodeBtn.addEventListener('click', async function() {
+            try {
+                const text = await navigator.clipboard.readText();
+                uniqueIdInput.value = text;
+                checkProductByUUID();
+            } catch (err) {
+                console.error('Ошибка при вставке из буфера обмена:', err);
+            }
+        });
+
+        cancelScanBtn.addEventListener('click', function() {
+            resetScanForm();
+        });
+
+        document.getElementById('scanModal').addEventListener('shown.bs.modal', function() {
+            uniqueIdInput.focus();
+        });
+
+        document.getElementById('scanModal').addEventListener('hidden.bs.modal', function() {
+            resetScanForm();
+        });
+
+        // --- Логика для редактирования комментариев ---
+        const editCommentModal = new bootstrap.Modal(document.getElementById('editCommentModal'));
+        const editCommentForm = document.getElementById('editCommentForm');
+        const editCommentText = document.getElementById('edit_comment_text');
+        const editCommentError = document.getElementById('editCommentError');
+        const editCommentButtons = document.querySelectorAll('.edit-comment-btn');
+
+        editCommentButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const commentId = this.getAttribute('data-comment-id');
+                const commentText = this.getAttribute('data-comment-text');
+                editCommentText.value = commentText;
+                editCommentForm.action = `/cart/${cartId}/comment/${commentId}/edit/`;
+                editCommentError.classList.add('d-none');
+                editCommentModal.show();
+            });
+        });
+
+        editCommentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const commentText = editCommentText.value.trim();
+
+            if (!commentText) {
+                editCommentError.classList.remove('d-none');
+                return;
+            }
+
+            try {
+                const response = await fetch(editCommentForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'comment_text': commentText,
+                    }),
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const data = await response.json();
+                    errorMessage.textContent = data.error || 'Не удалось обновить комментарий.';
+                    errorModal.show();
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Ошибка при обновлении комментария.';
+                errorModal.show();
+            }
+        });
     });
-});
-</script>
+    </script>
+</div>
 {% endblock %}

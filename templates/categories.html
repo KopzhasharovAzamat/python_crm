@@ -1,142 +1,137 @@
 <!--templates/categories.html-->
 {% extends 'base.html' %}
+{% load static %}
 {% load i18n %}
 
 {% block content %}
-<h2 class="mb-4 animate__animated animate__fadeIn">Управление моделями и цветами</h2>
+<div class="container mt-4">
+    <h2 class="mb-6 animate__animated animate__fadeIn">Управление моделями и цветами</h2>
 
-<!-- Форма фильтров и сортировки -->
-<form method="get" class="mb-4" id="filter-form">
-    <div class="row g-3">
-        <div class="col-md-3">
-            <input type="text" name="q" id="search-input" placeholder="Поиск по названию..." value="{{ query }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <select name="sort_by" class="form-control">
-                <option value="">Сортировать...</option>
-                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>По названию (А-Я)</option>
-                <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>По названию (Я-А)</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Фильтр</button>
-            <a href="{% url 'category_manage' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Очистить</a>
-        </div>
-    </div>
-</form>
-
-<!-- Управление моделями и цветами -->
-<h3 class="mt-4 mb-3 animate__animated animate__fadeIn">Добавить модель или цвет</h3>
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h4 class="mb-0">Добавить модель</h4>
+    <!-- Форма фильтров и сортировки -->
+    <form method="get" class="mb-4" id="filter-form">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="q" id="search-input" placeholder="Поиск по названию..." value="{{ query }}" class="form-control">
             </div>
-            <div class="card-body">
-                <form method="post" action="{% url 'category_manage' %}">
-                    {% csrf_token %}
-                    {% if category_form.errors %}
-                    <div class="alert alert-warning">
-                        <ul class="mb-0">
-                            {% for field in category_form %}
-                            {% for error in field.errors %}
-                            <li>{{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                            {% for error in category_form.non_field_errors %}
-                            <li>{{ error }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                    {% for field in category_form %}
-                    <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                    </div>
-                    {% endfor %}
-                    <div class="d-grid">
-                        <button type="submit" name="add_category" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить модель</button>
-                    </div>
-                </form>
+            <div class="col-md-3">
+                <select name="sort_by" class="form-control">
+                    <option value="">Сеть...</option>
+                    <option value="name" {% if sort_by == 'name' %}selected{% endif %}>По названию (А-Я)</option>
+                    <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>По названию (Я-А)</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Фильтр</button>
+                <a href="{% url 'category_manage' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Очистить</a>
             </div>
         </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h4 class="mb-0">Добавить цвет</h4>
-            </div>
-            <div class="card-body">
-                <form method="post" action="{% url 'category_manage' %}">
-                    {% csrf_token %}
-                    {% if subcategory_form.errors %}
-                    <div class="alert alert-warning">
-                        <ul class="mb-0">
-                            {% for field in subcategory_form %}
-                            {% for error in field.errors %}
-                            <li>{{ field.label }}: {{ error }}</li>
-                            {% endfor %}
-                            {% endfor %}
-                            {% for error in subcategory_form.non_field_errors %}
-                            <li>{{ error }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                    {% for field in subcategory_form %}
-                    <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                    </div>
-                    {% endfor %}
-                    <div class="d-grid">
-                        <button type="submit" name="add_subcategory" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить цвет</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+    </form>
 
-<!-- Список моделей -->
-<h3 class="mt-5 mb-3 animate__animated animate__fadeIn">Существующие модели</h3>
-<div class="list-group animate__animated animate__fadeInUp mb-4">
-    {% for category in categories %}
-    <div class="list-group-item d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">{{ category.name }}</h5>
-        <div>
-            <a href="{% url 'category_edit' category.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Редактировать</a>
-            <button class="btn btn-sm btn-outline-danger delete-btn"
-                    data-action="{% url 'category_delete' category.id %}"
-                    data-message="Вы уверены, что хотите удалить модель '{{ category.name }}'? Связанные товары могут быть затронуты.">
-                <i class="fas fa-trash"></i> Удалить
-            </button>
+    <!-- Управление моделями и цветами -->
+    <h3 class="mt-4 mb-3 animate__animated animate__fadeIn">Добавить модель или цвет</h3>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm animate__animated animate__fadeInUp">
+                <div class="card-header">
+                    <h4 class="mb-0">Добавить модель</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'category_manage' %}">
+                        {% csrf_token %}
+                        {% if category_form.errors %}
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                {% for field in category_form %}
+                                {% for error in field.errors %}
+                                <li>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                                {% endfor %}
+                                {% for error in category_form.non_field_errors %}
+                                <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        {% for field in category_form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                        {% endfor %}
+                        <div class="d-grid">
+                            <button type="submit" name="add_category" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить модель</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm animate__animated animate__fadeInUp">
+                <div class="card-header">
+                    <h4 class="mb-0">Добавить цвет</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'category_manage' %}">
+                        {% csrf_token %}
+                        {% if subcategory_form.errors %}
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                {% for field in subcategory_form %}
+                                {% for error in field.errors %}
+                                <li>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                                {% endfor %}
+                                {% for error in subcategory_form.non_field_errors %}
+                                <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        {% for field in subcategory_form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                        {% endfor %}
+                        <div class="d-grid">
+                            <button type="submit" name="add_subcategory" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить цвет</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
-    {% empty %}
-    <div class="list-group-item text-center">Моделей пока нет.</div>
-    {% endfor %}
-</div>
 
-<!-- Список цветов -->
-<h3 class="mt-5 mb-3 animate__animated animate__fadeIn">Существующие цвета</h3>
-<div class="list-group animate__animated animate__fadeInUp">
-    {% for subcategory in subcategories %}
-    <div class="list-group-item d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">{{ subcategory.name }}</h5>
-        <div>
-            <a href="{% url 'subcategory_edit' subcategory.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i> Редактировать</a>
-            <button class="btn btn-sm btn-outline-danger delete-btn"
-                    data-action="{% url 'subcategory_delete' subcategory.id %}"
-                    data-message="Вы уверены, что хотите удалить цвет '{{ subcategory.name }}'? Связанные товары могут быть затронуты.">
-                <i class="fas fa-trash"></i> Удалить
-            </button>
+    <!-- Список моделей -->
+    <h3 class="mt-5 mb-3 animate__animated animate__fadeIn">Существующие модели</h3>
+    <div class="list-group animate__animated animate__fadeInUp mb-4">
+        {% for category in categories %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ category.name }}</h5>
+            <div>
+                <a href="{% url 'category_edit' category.id %}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Редактировать</a>
+                <button class="btn btn-sm btn-danger delete-btn" data-action="{% url 'category_delete' category.id %}" data-message="Вы уверены, что хотите удалить модель '{{ category.name }}'? Связанные товары могут быть затронуты."><i class="fas fa-trash"></i> Удалить</button>
+            </div>
         </div>
+        {% empty %}
+        <div class="list-group-item text-center">Моделей пока нет.</div>
+        {% endfor %}
     </div>
-    {% empty %}
-    <div class="list-group-item text-center">Цветов пока нет.</div>
-    {% endfor %}
+
+    <!-- Список цветов -->
+    <h3 class="mt-5 mb-3 animate__animated animate__fadeIn">Существующие цвета</h3>
+    <div class="list-group animate__animated animate__fadeInUp">
+        {% for subcategory in subcategories %}
+        <div class="list-group-item d-flex justify-content-between align-items-center-items">
+            <h5 class="mb-0">{{ subcategory.name }}</h5>
+            <div>
+                <a href="{% url 'subcategory_edit' subcategory.id %}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i> Редактировать</a>
+                <button class="btn btn-sm btn-danger delete-btn" data-action="{% url 'subcategory_delete' subcategory.id %}" data-message="Вы уверены, что хотите удалить цвет '{{ subcategory.name }}'? Связанные товары могут быть затронуты."><i class="fas fa-trash"></i> Удалить</button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="list-group-item text-center">Цветов пока нет.</div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

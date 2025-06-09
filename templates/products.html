@@ -1,4 +1,3 @@
-<!--templates/products.html-->
 {% extends 'base.html' %}
 {% load i18n %}
 
@@ -73,12 +72,13 @@
 </div>
 {% endif %}
 
-<div class="row row-cols-1 row-cols-md-3 g-4">
+<!-- Карусель товаров (опционально) -->
+<div class="slick-carousel mb-4">
     {% for product in products %}
-    <div class="col">
+    <div class="px-2">
         <div class="card h-100 {% if product.quantity < 5 %}border-danger{% endif %} animate__animated animate__fadeInUp">
             {% if product.photo %}
-            <img src="{{ product.photo.url }}" class="card-img-top" alt="{{ product.name }}" style="max-width: 100%;">
+            <img src="{{ product.photo.url }}" class="card-img-top" alt="{{ product.name }}">
             {% else %}
             <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
                 <i class="fas fa-image fa-3x text-white"></i>
@@ -110,12 +110,12 @@
     {% endfor %}
 </div>
 
-<!-- Модальное окно для отображения информации о товаре -->
+<!-- Модальные окна -->
 <div class="modal" id="productInfoModal" tabindex="-1" aria-labelledby="productInfoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="productInfoModalLabel">Информация о товаре</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="productInfoModalLabel">Информация о товаре</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -135,12 +135,11 @@
     </div>
 </div>
 
-<!-- Модальное окно для настройки количества и цены -->
 <div class="modal" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="scanModalLabel">Добавить товар в корзину</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="scanModalLabel">Добавить товар в корзину</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -175,12 +174,11 @@
     </div>
 </div>
 
-<!-- Модальное окно для ошибок -->
 <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="errorModalLabel">Ошибка</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">Ошибка</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -193,14 +191,13 @@
     </div>
 </div>
 
-<!-- JavaScript для обработки вставки UUID и кнопки "Продать" -->
+<!-- JavaScript -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
     const errorMessage = document.getElementById('errorMessage');
     const csrfToken = getCsrfToken();
 
-    // --- Логика для модального окна информации о товаре ---
     const productInfoModal = new bootstrap.Modal(document.getElementById('productInfoModal'), {
         backdrop: 'static',
         keyboard: false
@@ -214,7 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const infoProductPhoto = document.getElementById('infoProductPhoto');
     const proceedToAddButton = document.getElementById('proceedToAddButton');
 
-    // --- Логика для модального окна сканирования ---
     const scanModal = new bootstrap.Modal(document.getElementById('scanModal'), {
         backdrop: 'static',
         keyboard: false
@@ -317,7 +313,6 @@ document.addEventListener('DOMContentLoaded', function() {
         scanModal.show();
     }
 
-    // Обработчик для кнопки "Продать"
     document.querySelectorAll('.sell-btn').forEach(button => {
         button.addEventListener('click', async function() {
             const productId = this.getAttribute('data-product-id');
@@ -352,7 +347,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Обработчик для вставки UUID
     document.addEventListener('paste', async function(e) {
         const pastedText = (e.clipboardData || window.clipboardData).getData('text').trim();
         const uuidPattern = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -468,6 +462,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('scanModal').addEventListener('hidden.bs.modal', function() {
         resetScanForm();
+    });
+
+    // Инициализация карусели
+    $('.slick-carousel').slick({
+        dots: true,
+        infinite: true,
+        speed: 300,
+        slidesToShow: 3,
+        slidesToScroll: 1,
+        responsive: [
+            {
+                breakpoint: 992,
+                settings: {
+                    slidesToShow: 2,
+                    slidesToScroll: 1
+                }
+            },
+            {
+                breakpoint: 576,
+                settings: {
+                    slidesToShow: 1,
+                    slidesToScroll: 1
+                }
+            }
+        ]
     });
 });
 </script>
