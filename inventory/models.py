@@ -8,38 +8,75 @@ from io import BytesIO
 from django.utils import timezone
 
 ################
-### CATEGORY ###
+### BRAND ###
 ################
 
-class Category(models.Model):
-    name = models.CharField(max_length=100, verbose_name="Название модели")
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
+class Brand(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Название марки")
 
     class Meta:
-        verbose_name = "Модель"
-        verbose_name_plural = "Модели"
-        constraints = [
-            models.UniqueConstraint(fields=['name', 'owner'], name='unique_category_per_owner')
-        ]
+        verbose_name = "Марка автомобиля"
+        verbose_name_plural = "Марки автомобилей"
         ordering = ['name']
 
     def __str__(self):
         return self.name
 
-###################
-### SUBCATEGORY ###
-###################
+################
+### MODEL ###
+################
 
-class Subcategory(models.Model):
-    name = models.CharField(max_length=100, verbose_name="Название цвета")
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
+class Model(models.Model):
+    name = models.CharField(max_length=100, verbose_name="Название модели")
+    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name='models', verbose_name="Марка")
 
     class Meta:
-        verbose_name = "Цвет"
-        verbose_name_plural = "Цвета"
+        verbose_name = "Модель автомобиля"
+        verbose_name_plural = "Модели автомобилей"
         constraints = [
-            models.UniqueConstraint(fields=['name', 'owner'], name='unique_subcategory_per_owner')
+            models.UniqueConstraint(fields=['name', 'brand'], name='unique_model_per_brand')
         ]
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.brand.name} {self.name}"
+
+############################
+### MODEL SPECIFICATION ###
+############################
+
+class ModelSpecification(models.Model):
+    model = models.ForeignKey(Model, on_delete=models.CASCADE, related_name='specifications', verbose_name="Модель")
+    engine_capacity = models.FloatField(verbose_name="Объем двигателя (л)")
+    engine_code = models.CharField(max_length=50, verbose_name="Код двигателя")
+    horsepower = models.PositiveIntegerField(verbose_name="Лошадиные силы")
+    production_start = models.DateField(verbose_name="Начало производства")
+    production_end = models.DateField(null=True, blank=True, verbose_name="Конец производства")
+
+    class Meta:
+        verbose_name = "Спецификация модели"
+        verbose_name_plural = "Спецификации моделей"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['model', 'engine_capacity', 'engine_code'],
+                name='unique_specification_per_model'
+            )
+        ]
+        ordering = ['model__name', 'engine_capacity']
+
+    def __str__(self):
+        return f"{self.model} {self.engine_capacity} ({self.engine_code})"
+
+###################
+### PRODUCT TYPE ###
+###################
+
+class ProductType(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Название типа продукта")
+
+    class Meta:
+        verbose_name = "Тип продукта"
+        verbose_name_plural = "Типы продуктов"
         ordering = ['name']
 
     def __str__(self):
@@ -50,8 +87,7 @@ class Subcategory(models.Model):
 #################
 
 class Warehouse(models.Model):
-    name = models.CharField(max_length=100, verbose_name="Название")
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
+    name = models.CharField(max_length=100, unique=True, verbose_name="Название")
 
     class Meta:
         verbose_name = "Склад"
@@ -62,30 +98,31 @@ class Warehouse(models.Model):
         return self.name
 
 ################
-### PRODUCTS ###
+### PRODUCT ###
 ################
 
 class Product(models.Model):
-    name = models.CharField(max_length=200, verbose_name="Название", editable=False)
+    ORIGIN_CHOICES = (
+        ('ORIGINAL', 'Оригинал'),
+        ('CHINA', 'Китайская копия'),
+        ('USED', 'Б/У'),
+    )
+
+    name = models.CharField(max_length=200, verbose_name="Название")
     unique_id = models.CharField(max_length=50, unique=True, editable=False, verbose_name="Уникальный идентификатор")
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, verbose_name="Модель")
-    subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, verbose_name="Цвет")
-    quantity = models.PositiveIntegerField(default=0, verbose_name="Количество")
-    cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Себестоимость")
-    selling_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена продажи")
+    product_type = models.ForeignKey(ProductType, on_delete=models.SET_NULL, null=True, verbose_name="Тип продукта")
+    specifications = models.ManyToManyField(ModelSpecification, through='ProductSpecification', verbose_name="Спецификации моделей")
+    origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, verbose_name="Происхождение")
+    comment = models.TextField(blank=True, verbose_name="Комментарий")
     photo = models.ImageField(upload_to='products/photos/', blank=True, null=True, verbose_name="Фото")
     qr_code = models.ImageField(upload_to='products/qr_codes/', blank=True, null=True, verbose_name="QR-код")
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, verbose_name="Склад")
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Себестоимость")
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена продажи")
+    quantity = models.PositiveIntegerField(default=0, verbose_name="Количество")
     is_archived = models.BooleanField(default=False, verbose_name="Архивировано")
 
     def save(self, *args, **kwargs):
-        # Генерация имени как "Модель - Цвет"
-        if self.category and self.subcategory:  # Убеждаемся, что оба поля заполнены
-            self.name = f"{self.category.name} - {self.subcategory.name}"
-        else:
-            self.name = "Не указано"
-
         if not self.unique_id:
             self.unique_id = str(uuid.uuid4())[:50]
             qr = qrcode.QRCode()
@@ -106,31 +143,45 @@ class Product(models.Model):
         verbose_name_plural = "Товары"
         constraints = [
             models.UniqueConstraint(
-                fields=['category', 'subcategory', 'warehouse', 'owner'],
-                name='unique_product_category_subcategory_warehouse_owner'
+                fields=['name', 'product_type', 'warehouse'],
+                name='unique_product_name_type_warehouse'
             )
         ]
         ordering = ['name']
+
+#############################
+### PRODUCT SPECIFICATION ###
+#############################
+
+class ProductSpecification(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="Товар")
+    specification = models.ForeignKey(ModelSpecification, on_delete=models.CASCADE, verbose_name="Спецификация модели")
+
+    class Meta:
+        verbose_name = "Связь товар-спецификация"
+        verbose_name_plural = "Связи товар-спецификация"
+        constraints = [
+            models.UniqueConstraint(fields=['product', 'specification'], name='unique_product_specification')
+        ]
+
+    def __str__(self):
+        return f"{self.product.name} -> {self.specification}"
 
 ############
 ### CART ###
 ############
 
 class Cart(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Владелец")
-    number = models.PositiveIntegerField(verbose_name="Номер корзины", editable=False)
+    number = models.PositiveIntegerField(verbose_name="Номер корзины", editable=False, unique=True)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:
         verbose_name = "Корзина"
         verbose_name_plural = "Корзины"
-        constraints = [
-            models.UniqueConstraint(fields=['owner', 'number'], name='unique_cart_number_per_owner')
-        ]
 
     def save(self, *args, **kwargs):
         if not self.number:
-            max_number = Cart.objects.filter(owner=self.owner).aggregate(models.Max('number'))['number__max']
+            max_number = Cart.objects.aggregate(models.Max('number'))['number__max']
             self.number = (max_number or 0) + 1
         super().save(*args, **kwargs)
 
@@ -141,7 +192,7 @@ class Cart(models.Model):
         return base_total, actual_total
 
     def __str__(self):
-        return f"Корзина №{self.number} пользователя {self.owner.username} от {self.created_at}"
+        return f"Корзина №{self.number} от {self.created_at}"
 
 #################
 ### CART ITEM ###
@@ -173,6 +224,7 @@ class CartComment(models.Model):
     text = models.TextField(verbose_name="Комментарий")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Владелец")
 
     class Meta:
         verbose_name = "Комментарий к корзине"
@@ -240,6 +292,7 @@ class SaleComment(models.Model):
     text = models.TextField(verbose_name="Комментарий")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, verbose_name="Владелец")
 
     class Meta:
         verbose_name = "Комментарий к продаже"
@@ -272,7 +325,7 @@ class Return(models.Model):
 #####################
 
 class UserSettings(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Пользователь")
+    owner = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Владелец")
     hide_cost_price = models.BooleanField(default=False, verbose_name="Скрыть себестоимость")
     is_pending = models.BooleanField(default=True, verbose_name="Ожидает подтверждения")
 
@@ -302,7 +355,7 @@ class LogEntry(models.Model):
     )
 
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Время")
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='inventory_log_entries', verbose_name="Пользователь")
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='inventory_log_entries', verbose_name="Владелец")
     action_type = models.CharField(max_length=20, choices=ACTION_TYPES, verbose_name="Тип действия")
     message = models.TextField(verbose_name="Сообщение")
 
@@ -310,7 +363,7 @@ class LogEntry(models.Model):
         return dict(self.ACTION_TYPES).get(self.action_type, self.action_type)
 
     def __str__(self):
-        return f"{self.user} - {self.timestamp} - {self.get_action_type_display()} - {self.message}"
+        return f"{self.owner} - {self.timestamp} - {self.get_action_type_display()} - {self.message}"
 
     class Meta:
         verbose_name = "Запись лога"
