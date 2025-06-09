@@ -3,314 +3,231 @@
 {% load i18n %}
 
 {% block content %}
-<h2 class="mb-4 animate__animated animate__fadeIn">Админ-панель</h2>
+<div class="row mt-5">
+    <div class="col-12">
+        <h2 class="mb-4 animate__animated animate__fadeIn">Админ-панель</h2>
 
-<!-- Общая статистика -->
-<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-        <h3 class="mb-0">Общая статистика</h3>
-    </div>
-    <div class="card-body">
-        <p><strong>Всего товаров:</strong> {{ total_products }}</p>
-        <p><strong>Всего складов:</strong> {{ total_warehouses }}</p>
-    </div>
-</div>
-
-<!-- Запросы на регистрацию -->
-<h3 class="mb-3 animate__animated animate__fadeIn">Запросы на регистрацию</h3>
-<div class="mb-4">
-    <form method="get" id="pendingFilterForm">
-        <div class="row g-3 align-items-center">
-            <!-- Поиск -->
-            <div class="col-md-3">
-                <input type="text" name="q_pending" class="form-control" placeholder="Поиск по email или имени" value="{{ q_pending }}">
+        <!-- Общая статистика -->
+        <div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
+            <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                <h3 class="mb-0">Общая статистика</h3>
             </div>
-            <!-- Фильтр по дате -->
-            <div class="col-md-2">
-                <input type="date" name="pending_date_from" class="form-control" value="{{ pending_date_from }}" placeholder="Дата с">
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="pending_date_to" class="form-control" value="{{ pending_date_to }}" placeholder="Дата по">
-            </div>
-            <!-- Сортировка -->
-            <div class="col-md-3">
-                <select name="pending_sort_by" class="form-control">
-                    <option value="">Сортировать...</option>
-                    <option value="email" {% if pending_sort_by == 'email' %}selected{% endif %}>По email (возр.)</option>
-                    <option value="-email" {% if pending_sort_by == '-email' %}selected{% endif %}>По email (убыв.)</option>
-                    <option value="first_name" {% if pending_sort_by == 'first_name' %}selected{% endif %}>По имени (возр.)</option>
-                    <option value="-first_name" {% if pending_sort_by == '-first_name' %}selected{% endif %}>По имени (убыв.)</option>
-                    <option value="date_joined" {% if pending_sort_by == 'date_joined' %}selected{% endif %}>По дате (возр.)</option>
-                    <option value="-date_joined" {% if pending_sort_by == '-date_joined' %}selected{% endif %}>По дате (убыв.)</option>
-                </select>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
-                <a href="{% url 'admin_panel' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
+            <div class="card-body">
+                <p><strong>Всего товаров:</strong> {{ total_products }}</p>
+                <p><strong>Всего складов:</strong> {{ total_warehouses }}</p>
             </div>
         </div>
-    </form>
-</div>
-<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Электронная почта</th>
-                        <th>Имя</th>
-                        <th>Дата регистрации</th>
-                        <th>Статус</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in pending_users %}
-                    <tr>
-                        <td>{{ user.email|default:"—" }}</td>
-                        <td>{{ user.first_name|default:user.username }}</td>
-                        <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
-                        <td>Ожидает подтверждения</td>
-                        <td>
-                            <button class="btn btn-success btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="approve" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите подтвердить регистрацию пользователя {{ user.username }}?"><i class="fas fa-check"></i> Подтвердить</button>
-                            <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="reject" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите отклонить регистрацию пользователя {{ user.username }}?"><i class="fas fa-times"></i> Отклонить</button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center">Нет запросов на регистрацию.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 
-<!-- Пагинация для pending_users -->
-{% if pending_users.has_other_pages %}
-<div class="d-flex justify-content-center mt-4">
-    <nav aria-label="Pending users navigation">
-        <ul class="pagination">
-            {% with query_params=request.GET|dictsort:"0" %}
-            {% with query_string="" %}
-            {% for key, value in query_params.items %}
-                {% if key != "page_pending" and value %}
-                    {% if query_string %}
-                        {% with query_string=query_string|add:"&" %}
-                        {% endwith %}
-                    {% endif %}
-                    {% with query_string=query_string|add:key|add:"="|add:value %}
-                    {% endwith %}
+        <!-- Запросы на регистрацию -->
+        <h3 class="mb-3 animate__animated animate__fadeIn">Запросы на регистрацию</h3>
+        <form method="get" id="pendingFilterForm" class="mb-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-3">
+                    <input type="text" name="q_pending" class="form-control" placeholder="Поиск по email или имени" value="{{ q_pending }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="pending_date_from" class="form-control" value="{{ pending_date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="pending_date_to" class="form-control" value="{{ pending_date_to }}">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Фильтровать</button>
+                    <a href="{% url 'admin_panel' %}" class="btn btn-secondary"><i class="fas fa-undo"></i> Сбросить</a>
+                </div>
+            </div>
+        </form>
+        <div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Электронная почта</th>
+                                <th>Имя</th>
+                                <th>Дата регистрации</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_setting in pending_users %}
+                            <tr>
+                                <td>{{ user_setting.owner.email|default:"—" }}</td>
+                                <td>{{ user_setting.owner.first_name|default:user_setting.owner.username }}</td>
+                                <td>{{ user_setting.owner.date_joined|date:"d.m.Y H:i" }}</td>
+                                <td>
+                                    <form method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="user_id" value="{{ user_setting.owner.id }}">
+                                        <input type="hidden" name="action" value="approve">
+                                        <button type="submit" class="btn btn-success btn-sm" title="Подтвердить">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                    <form method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="user_id" value="{{ user_setting.owner.id }}">
+                                        <input type="hidden" name="action" value="reject">
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Отклонить">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center">Нет запросов.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if pending_users.has_other_pages %}
+                <nav aria-label="Pending users navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if pending_users.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page_pending={{ pending_users.previous_page_number }}{% if q_pending %}&q_pending={{ q_pending }}{% endif %}{% if pending_date_from %}&pending_date_from={{ pending_date_from }}{% endif %}{% if pending_date_to %}&pending_date_to={{ pending_date_to }}{% endif %}">«</a></li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">«</span></li>
+                        {% endif %}
+                        {% for num in pending_users.paginator.page_range %}
+                        <li class="page-item {% if pending_users.number == num %}active{% endif %}"><a class="page-link" href="?page_pending={{ num }}{% if q_pending %}&q_pending={{ q_pending }}{% endif %}{% if pending_date_from %}&pending_date_from={{ pending_date_from }}{% endif %}{% if pending_date_to %}&pending_date_to={{ pending_date_to }}{% endif %}">{{ num }}</a></li>
+                        {% endfor %}
+                        {% if pending_users.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page_pending={{ pending_users.next_page_number }}{% if q_pending %}&q_pending={{ q_pending }}{% endif %}{% if pending_date_from %}&pending_date_from={{ pending_date_from }}{% endif %}{% if pending_date_to %}&pending_date_to={{ pending_date_to }}{% endif %}">»</a></li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">»</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
                 {% endif %}
-            {% endfor %}
-
-            {% if pending_users.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page_pending={{ pending_users.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Previous">
-                    <span aria-hidden="true">«</span>
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#" aria-label="Previous">
-                    <span aria-hidden="true">«</span>
-                </a>
-            </li>
-            {% endif %}
-
-            {% for num in pending_users.paginator.page_range %}
-            {% if pending_users.number == num %}
-            <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
-            {% else %}
-            <li class="page-item"><a class="page-link" href="?page_pending={{ num }}{% if query_string %}&{{ query_string }}{% endif %}">{{ num }}</a></li>
-            {% endif %}
-            {% endfor %}
-
-            {% if pending_users.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page_pending={{ pending_users.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Next">
-                    <span aria-hidden="true">»</span>
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#" aria-label="Next">
-                    <span aria-hidden="true">»</span>
-                </a>
-            </li>
-            {% endif %}
-            {% endwith %}
-            {% endwith %}
-        </ul>
-    </nav>
-</div>
-{% endif %}
-
-<!-- Активные пользователи -->
-<h3 class="mb-3 animate__animated animate__fadeIn">Активные пользователи</h3>
-<div class="mb-4">
-    <form method="get" id="activeFilterForm">
-        <div class="row g-3 align-items-center">
-            <!-- Поиск -->
-            <div class="col-md-3">
-                <input type="text" name="q_active" class="form-control" placeholder="Поиск по email или имени" value="{{ q_active }}">
-            </div>
-            <!-- Фильтр по дате -->
-            <div class="col-md-2">
-                <input type="date" name="date_from" class="form-control" value="{{ date_from }}" placeholder="Дата с">
-            </div>
-            <div class="col-md-2">
-                <input type="date" name="date_to" class="form-control" value="{{ date_to }}" placeholder="Дата по">
-            </div>
-            <!-- Фильтр по статусу -->
-            <div class="col-md-2">
-                <select name="status" class="form-control">
-                    <option value="">Все статусы</option>
-                    <option value="active" {% if status == 'active' %}selected{% endif %}>Активен</option>
-                    <option value="blocked" {% if status == 'blocked' %}selected{% endif %}>Заблокирован</option>
-                </select>
-            </div>
-            <!-- Сортировка -->
-            <div class="col-md-3">
-                <select name="sort_by" class="form-control">
-                    <option value="">Сортировать...</option>
-                    <option value="email" {% if sort_by == 'email' %}selected{% endif %}>По email (возр.)</option>
-                    <option value="-email" {% if sort_by == '-email' %}selected{% endif %}>По email (убыв.)</option>
-                    <option value="first_name" {% if sort_by == 'first_name' %}selected{% endif %}>По имени (возр.)</option>
-                    <option value="-first_name" {% if sort_by == '-first_name' %}selected{% endif %}>По имени (убыв.)</option>
-                    <option value="date_joined" {% if sort_by == 'date_joined' %}selected{% endif %}>По дате (возр.)</option>
-                    <option value="-date_joined" {% if sort_by == '-date_joined' %}selected{% endif %}>По дате (убыв.)</option>
-                    <option value="is_active" {% if sort_by == 'is_active' %}selected{% endif %}>По статусу (возр.)</option>
-                    <option value="-is_active" {% if sort_by == '-is_active' %}selected{% endif %}>По статусу (убыв.)</option>
-                </select>
-            </div>
-            <div class="col-auto">
-                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
-                <a href="{% url 'admin_panel' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
             </div>
         </div>
-    </form>
-</div>
-<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Электронная почта</th>
-                        <th>Имя</th>
-                        <th>Дата регистрации</th>
-                        <th>Статус</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in active_users %}
-                    <tr>
-                        <td>{{ user.email|default:"—" }}</td>
-                        <td>{{ user.first_name|default:user.username }}</td>
-                        <td>{{ user.date_joined|date:"Y-m-d H:i" }}</td>
-                        <td>{{ user.is_active|yesno:"Активен,Заблокирован" }}</td>
-                        <td>
-                            {% if user.is_active %}
-                            <button class="btn btn-warning btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="block" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите заблокировать пользователя {{ user.username }}?"><i class="fas fa-lock"></i> Блокировать</button>
-                            {% else %}
-                            <button class="btn btn-success btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="unblock" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите разблокировать пользователя {{ user.username }}?"><i class="fas fa-unlock"></i> Разблокировать</button>
-                            {% endif %}
-                            <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'admin_panel' %}" data-action-type="delete" data-user-id="{{ user.id }}" data-message="Вы уверены, что хотите удалить пользователя {{ user.username }}?"><i class="fas fa-trash"></i> Удалить</button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center">Нет активных пользователей.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <!-- Активные пользователи -->
+        <h3 class="mb-3 animate__animated animate__fadeIn">Активные пользователи</h3>
+        <form method="get" id="activeFilterForm" class="mb-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-3">
+                    <input type="text" name="q_active" class="form-control" placeholder="Поиск по email или имени" value="{{ q_active }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Фильтровать</button>
+                    <a href="{% url 'admin_panel' %}" class="btn btn-secondary"><i class="fas fa-undo"></i> Сбросить</a>
+                </div>
+            </div>
+        </form>
+        <div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Электронная почта</th>
+                                <th>Имя</th>
+                                <th>Дата регистрации</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in active_users %}
+                            <tr>
+                                <td>{{ user.email|default:"—" }}</td>
+                                <td>{{ user.first_name|default:user.username }}</td>
+                                <td>{{ user.date_joined|date:"d.m.Y H:i" }}</td>
+                                <td>{{ user.is_active|yesno:"Активен,Заблокирован" }}</td>
+                                <td>
+                                    {% if user.is_active %}
+                                    <form method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                                        <input type="hidden" name="action" value="block">
+                                        <button type="submit" class="btn btn-warning btn-sm" title="Заблокировать">
+                                            <i class="fas fa-lock"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                                        <input type="hidden" name="action" value="unblock">
+                                        <button type="submit" class="btn btn-success btn-sm" title="Разблокировать">
+                                            <i class="fas fa-unlock"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    <form method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                                        <input type="hidden" name="action" value="delete">
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Удалить">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center">Нет пользователей.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if active_users.has_other_pages %}
+                <nav aria-label="Active users navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if active_users.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page_active={{ active_users.previous_page_number }}{% if q_active %}&q_active={{ q_active }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">«</a></li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">«</span></li>
+                        {% endif %}
+                        {% for num in active_users.paginator.page_range %}
+                        <li class="page-item {% if active_users.number == num %}active{% endif %}"><a class="page-link" href="?page_active={{ num }}{% if q_active %}&q_active={{ q_active }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">{{ num }}</a></li>
+                        {% endfor %}
+                        {% if active_users.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page_active={{ active_users.next_page_number }}{% if q_active %}&q_active={{ q_active }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}">»</a></li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">»</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Пагинация для active_users -->
-{% if active_users.has_other_pages %}
-<div class="d-flex justify-content-center mt-4">
-    <nav aria-label="Active users navigation">
-        <ul class="pagination">
-            {% with query_params=request.GET|dictsort:"0" %}
-            {% with query_string="" %}
-            {% for key, value in query_params.items %}
-                {% if key != "page_active" and value %}
-                    {% if query_string %}
-                        {% with query_string=query_string|add:"&" %}
-                        {% endwith %}
-                    {% endif %}
-                    {% with query_string=query_string|add:key|add:"="|add:value %}
-                    {% endwith %}
-                {% endif %}
-            {% endfor %}
-
-            {% if active_users.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page_active={{ active_users.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Previous">
-                    <span aria-hidden="true">«</span>
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#" aria-label="Previous">
-                    <span aria-hidden="true">«</span>
-                </a>
-            </li>
-            {% endif %}
-
-            {% for num in active_users.paginator.page_range %}
-            {% if active_users.number == num %}
-            <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
-            {% else %}
-            <li class="page-item"><a class="page-link" href="?page_active={{ num }}{% if query_string %}&{{ query_string }}{% endif %}">{{ num }}</a></li>
-            {% endif %}
-            {% endfor %}
-
-            {% if active_users.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page_active={{ active_users.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Next">
-                    <span aria-hidden="true">»</span>
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#" aria-label="Next">
-                    <span aria-hidden="true">»</span>
-                </a>
-            </li>
-            {% endif %}
-            {% endwith %}
-            {% endwith %}
-        </ul>
-    </nav>
-</div>
-{% endif %}
-
-<!-- JavaScript для автоматической отправки формы -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Для формы фильтров pending_users
-    const pendingForm = document.getElementById('pendingFilterForm');
-    pendingForm.querySelectorAll('input, select').forEach(element => {
-        element.addEventListener('change', function() {
-            pendingForm.submit();
-        });
-    });
-
-    // Для формы фильтров active_users
-    const activeForm = document.getElementById('activeFilterForm');
-    activeForm.querySelectorAll('input, select').forEach(element => {
-        element.addEventListener('change', function() {
-            activeForm.submit();
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (this.closest('form')) {
+                const form = this.closest('form');
+                const action = form.querySelector('input[name="action"]').value;
+                const username = form.closest('tr').querySelector('td:nth-child(2)').textContent;
+                let message = '';
+                if (action === 'approve') {
+                    message = `Подтвердить регистрацию ${username}?`;
+                } else if (action === 'reject') {
+                    message = `Отклонить регистрацию ${username}?`;
+                } else if (action === 'block') {
+                    message = `Заблокировать ${username}?`;
+                } else if (action === 'unblock') {
+                    message = `Разблокировать ${username}?`;
+                } else if (action === 'delete') {
+                    message = `Удалить ${username}?`;
+                }
+                if (message && !confirm(message)) {
+                    e.preventDefault();
+                }
+            }
         });
     });
 });
 </script>
-
 {% endblock %}

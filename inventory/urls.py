@@ -34,16 +34,13 @@ urlpatterns = [
     path('warehouses/<int:warehouse_id>/edit/', views.warehouse_edit, name='warehouse_edit'),
     path('warehouses/<int:warehouse_id>/delete/', views.warehouse_delete, name='warehouse_delete'),
 
-    # Brand
+    # Brand and Model Management
+    path('brand-model/', views.brand_model_manage, name='brand_model_manage'),
     path('brands/', views.brand_manage, name='brand_manage'),
     path('brands/<int:brand_id>/edit/', views.brand_edit, name='brand_edit'),
     path('brands/delete/<int:brand_id>/', views.brand_delete, name='brand_delete'),
-
-    # Model
     path('models/<int:model_id>/edit/', views.model_edit, name='model_edit'),
     path('models/delete/<int:model_id>/', views.model_delete, name='model_delete'),
-
-    # ModelSpecification
     path('specifications/<int:specification_id>/edit/', views.specification_edit, name='specification_edit'),
     path('specifications/delete/<int:specification_id>/', views.specification_delete, name='specification_delete'),
 
@@ -82,7 +79,7 @@ urlpatterns = [
     path('stats/', views.stats, name='stats'),
 
     # Logs
-    path('logs/', views.logs, name='user_logs'),
+    path('logs/', views.logs, name='logs'),
 
     # Admin panel
     path('admin-panel/', views.admin_panel, name='admin_panel'),

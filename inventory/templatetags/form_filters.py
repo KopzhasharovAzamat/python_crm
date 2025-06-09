@@ -5,7 +5,9 @@ register = template.Library()
 
 @register.filter
 def add_class(field, css_class):
-    """Добавляет CSS-класс к полю формы."""
-    if not hasattr(field, 'as_widget'):
-        return field
-    return field.as_widget(attrs={'class': css_class})
+    """
+    Adds a CSS class to a form field's widget.
+    """
+    if hasattr(field, 'as_widget'):
+        return field.as_widget(attrs={'class': css_class})
+    return field

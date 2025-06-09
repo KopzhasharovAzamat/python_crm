@@ -333,9 +333,58 @@ def warehouse_delete(request, warehouse_id):
         return redirect('warehouses')
     return redirect('warehouses')
 
+
 ############
-### BRAND ###
+### BRAND and MODEL MANAGEMENT ###
 ############
+
+@login_required
+def brand_model_manage(request):
+    query = request.GET.get('q', '')
+
+    brands = Brand.objects.all()
+    models = Model.objects.all()
+
+    if query:
+        brands = brands.filter(name__icontains=query)
+        models = models.filter(Q(name__icontains=query) | Q(brand__name__icontains=query))
+
+    brands = brands.order_by('name')
+    models = models.order_by('name')
+
+    brand_form = BrandForm()
+    model_form = ModelForm()
+
+    if request.method == 'POST':
+        if 'add_brand' in request.POST:
+            brand_form = BrandForm(request.POST)
+            if brand_form.is_valid():
+                brand = brand_form.save()
+                create_log_entry(request.user, 'ADD',
+                                 f'Марка "{brand.name}" добавлена пользователем {request.user.username}')
+                messages.success(request, 'Марка добавлена.')
+                return redirect('brand_model_manage')
+            else:
+                messages.error(request, 'Ошибка при добавлении марки.')
+        elif 'add_model' in request.POST:
+            model_form = ModelForm(request.POST)
+            if model_form.is_valid():
+                model = model_form.save()
+                create_log_entry(request.user, 'ADD',
+                                 f'Модель "{model.name}" добавлена пользователем {request.user.username}')
+                messages.success(request, 'Модель добавлена.')
+                return redirect('brand_model_manage')
+            else:
+                messages.error(request, 'Ошибка при добавлении модели.')
+
+    return render(request, 'brand_model_manage.html', {
+        'brands': brands,
+        'models': models,
+        'brand_form': brand_form,
+        'model_form': model_form,
+        'query': query,
+    })
+
 
 @login_required
 def brand_manage(request):
@@ -355,9 +404,10 @@ def brand_manage(request):
         brand_form = BrandForm(request.POST)
         if brand_form.is_valid():
             brand = brand_form.save()
-            create_log_entry(request.user, 'ADD', f'Марка "{brand.name}" добавлена пользователем {request.user.username}')
+            create_log_entry(request.user, 'ADD',
+                             f'Марка "{brand.name}" добавлена пользователем {request.user.username}')
             messages.success(request, 'Марка добавлена.')
-            return redirect('brand_manage')
+            return redirect('brand_model_manage')
         else:
             messages.error(request, 'Ошибка при добавлении марки.')
 
@@ -368,6 +418,7 @@ def brand_manage(request):
         'sort_by': sort_by,
     })
 
+
 @login_required
 def brand_edit(request, brand_id):
     brand = get_object_or_404(Brand, id=brand_id)
@@ -376,14 +427,16 @@ def brand_edit(request, brand_id):
         if form.is_valid():
             old_name = brand.name
             brand = form.save()
-            create_log_entry(request.user, 'UPDATE', f'Марка "{old_name}" обновлена на "{brand.name}" пользователем {request.user.username}')
+            create_log_entry(request.user, 'UPDATE',
+                             f'Марка "{old_name}" обновлена на "{brand.name}" пользователем {request.user.username}')
             messages.success(request, 'Марка обновлена.')
-            return redirect('brand_manage')
+            return redirect('brand_model_manage')
         else:
             messages.error(request, 'Ошибка при обновлении марки.')
     else:
         form = BrandForm(instance=brand)
-    return render(request, 'brand_form.html', {'form': form, 'brand': brand})
+    return render(request, 'brand_model_form.html', {'form': form})
+
 
 @login_required
 def brand_delete(request, brand_id):
@@ -392,12 +445,13 @@ def brand_delete(request, brand_id):
         related_models = Model.objects.filter(brand=brand)
         if related_models.exists():
             messages.error(request, f'Нельзя удалить марку "{brand.name}", так как с ней связаны модели.')
-            return redirect('brand_manage')
+            return redirect('brand_model_manage')
         brand_name = brand.name
         brand.delete()
-        create_log_entry(request.user, 'DELETE', f'Марка "{brand_name}" удалена пользователем {request.user.username}')
+        create_log_entry(request.user, 'DELETE', f'Марка "{brand_name}" удалена')
         messages.success(request, f'Марка "{brand_name}" удалена.')
-    return redirect('brand_manage')
+    return redirect('brand_model_manage')
+
 
 ############
 ### MODEL ###
@@ -421,9 +475,10 @@ def model_manage(request):
         model_form = ModelForm(request.POST)
         if model_form.is_valid():
             model = model_form.save()
-            create_log_entry(request.user, 'ADD', f'Модель "{model.name}" добавлена пользователем {request.user.username}')
+            create_log_entry(request.user, 'ADD',
+                             f'Модель "{model.name}" добавлена пользователем {request.user.username}')
             messages.success(request, 'Модель добавлена.')
-            return redirect('brand_manage')
+            return redirect('brand_model_manage')
         else:
             messages.error(request, 'Ошибка при добавлении модели.')
 
@@ -434,6 +489,7 @@ def model_manage(request):
         'sort_by': sort_by,
     })
 
+
 @login_required
 def model_edit(request, model_id):
     model = get_object_or_404(Model, id=model_id)
@@ -442,14 +498,16 @@ def model_edit(request, model_id):
         if form.is_valid():
             old_name = model.name
             model = form.save()
-            create_log_entry(request.user, 'UPDATE', f'Модель "{old_name}" обновлена на "{model.name}" пользователем {request.user.username}')
+            create_log_entry(request.user, 'UPDATE',
+                             f'Модель "{old_name}" обновлена на "{model.name}" пользователем {request.user.username}')
             messages.success(request, 'Модель обновлена.')
-            return redirect('brand_manage')
+            return redirect('brand_model_manage')
         else:
             messages.error(request, 'Ошибка при обновлении модели.')
     else:
         form = ModelForm(instance=model)
-    return render(request, 'model_form.html', {'form': form, 'model': model})
+    return render(request, 'brand_model_form.html', {'form': form})
+
 
 @login_required
 def model_delete(request, model_id):
@@ -458,12 +516,12 @@ def model_delete(request, model_id):
         related_specifications = ModelSpecification.objects.filter(model=model)
         if related_specifications.exists():
             messages.error(request, f'Нельзя удалить модель "{model.name}", так как с ней связаны спецификации.')
-            return redirect('brand_manage')
+            return redirect('brand_model_manage')
         model_name = model.name
         model.delete()
         create_log_entry(request.user, 'DELETE', f'Модель "{model_name}" удалена пользователем {request.user.username}')
         messages.success(request, f'Модель "{model_name}" удалена.')
-    return redirect('brand_manage')
+    return redirect('brand_model_manage')
 
 ######################
 ### SPECIFICATION ###
@@ -1310,7 +1368,86 @@ def logs(request):
 @user_passes_test(lambda u: u.is_superuser)
 @login_required
 def admin_panel(request):
-    pending_users = UserSettings.objects.filter(is_pending=True).select_related('owner').order_by('created_at')
+    # Фильтры для ожидающих пользователей
+    q_pending = request.GET.get('q_pending', '')
+    pending_date_from = request.GET.get('pending_date_from', '')
+    pending_date_to = request.GET.get('pending_date_to', '')
+
+    pending_users = UserSettings.objects.filter(is_pending=True).select_related('owner')
+
+    if q_pending:
+        pending_users = pending_users.filter(
+            Q(owner__email__icontains=q_pending) | Q(owner__first_name__icontains=q_pending) | Q(
+                owner__username__icontains=q_pending)
+        )
+
+    if pending_date_from:
+        try:
+            pending_date_from = datetime.strptime(pending_date_from, '%Y-%m-%d')
+            pending_users = pending_users.filter(owner__date_joined__gte=pending_date_from)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
+
+    if pending_date_to:
+        try:
+            pending_date_to = datetime.strptime(pending_date_to, '%Y-%m-%d') + timedelta(days=1)
+            pending_users = pending_users.filter(owner__date_joined__lt=pending_date_to)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
+
+    # Сортировка по дате регистрации пользователя
+    pending_users = pending_users.order_by('owner__date_joined')
+
+    # Пагинация для ожидающих пользователей
+    paginator_pending = Paginator(pending_users, 10)
+    page_pending = request.GET.get('page_pending', 1)
+    try:
+        pending_users_paginated = paginator_pending.page(page_pending)
+    except PageNotAnInteger:
+        pending_users_paginated = paginator_pending.page(1)
+    except EmptyPage:
+        pending_users_paginated = paginator_pending.page(paginator_pending.num_pages)
+
+    # Фильтры для активных пользователей
+    q_active = request.GET.get('q_active', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+
+    active_users = User.objects.filter(usersettings__is_pending=False).select_related('usersettings')
+
+    if q_active:
+        active_users = active_users.filter(
+            Q(email__icontains=q_active) | Q(first_name__icontains=q_active) | Q(username__icontains=q_active)
+        )
+
+    if date_from:
+        try:
+            date_from = datetime.strptime(date_from, '%Y-%m-%d')
+            active_users = active_users.filter(date_joined__gte=date_from)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
+
+    if date_to:
+        try:
+            date_to = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+            active_users = active_users.filter(date_joined__lt=date_to)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
+
+    # Пагинация для активных пользователей
+    paginator_active = Paginator(active_users, 10)
+    page_active = request.GET.get('page_active', 1)
+    try:
+        active_users_paginated = paginator_active.page(page_active)
+    except PageNotAnInteger:
+        active_users_paginated = paginator_active.page(1)
+    except EmptyPage:
+        active_users_paginated = paginator_active.page(paginator_active.num_pages)
+
+    # Статистика
+    total_products = Product.objects.count()
+    total_warehouses = Warehouse.objects.count()
+
     if request.method == 'POST':
         user_id = request.POST.get('user_id')
         action = request.POST.get('action')
@@ -1318,22 +1455,57 @@ def admin_panel(request):
             messages.error(request, 'Неверные данные запроса.')
             return redirect('admin_panel')
         try:
-            user_settings = get_object_or_404(UserSettings, owner__id=user_id, is_pending=True)
-            if action == 'approve':
-                user_settings.owner.is_active = True
-                user_settings.owner.save()
-                user_settings.is_pending = False
-                user_settings.save()
-                create_log_entry(request.user, 'APPROVE', f'Пользователь {user_settings.owner.username} подтверждён администратором {request.user.username}')
-                messages.success(request, f'Пользователь {user_settings.owner.username} подтверждён.')
-            elif action == 'reject':
-                username = user_settings.owner.username
-                user_settings.owner.delete()
-                create_log_entry(request.user, 'REJECT', f'Пользователь {username} отклонён администратором {request.user.username}')
-                messages.success(request, f'Пользователь {username} отклонён.')
+            if action in ['approve', 'reject']:
+                user_settings = get_object_or_404(UserSettings, owner__id=user_id, is_pending=True)
+                if action == 'approve':
+                    user_settings.owner.is_active = True
+                    user_settings.owner.save()
+                    user_settings.is_pending = False
+                    user_settings.save()
+                    create_log_entry(request.user, 'APPROVE',
+                                     f'Пользователь {user_settings.owner.username} подтверждён администратором {request.user.username}')
+                    messages.success(request, f'Пользователь {user_settings.owner.username} подтверждён.')
+                elif action == 'reject':
+                    username = user_settings.owner.username
+                    user_settings.owner.delete()
+                    create_log_entry(request.user, 'REJECT',
+                                     f'Пользователь {username} отклонён администратором {request.user.username}')
+                    messages.success(request, f'Пользователь {username} отклонён.')
+            elif action in ['block', 'unblock', 'delete']:
+                user = get_object_or_404(User, id=user_id)
+                if action == 'block':
+                    user.is_active = False
+                    user.save()
+                    create_log_entry(request.user, 'BLOCK',
+                                     f'Пользователь {user.username} заблокирован администратором {request.user.username}')
+                    messages.success(request, f'Пользователь {user.username} заблокирован.')
+                elif action == 'unblock':
+                    user.is_active = True
+                    user.save()
+                    create_log_entry(request.user, 'UNBLOCK',
+                                     f'Пользователь {user.username} разблокирован администратором {request.user.username}')
+                    messages.success(request, f'Пользователь {user.username} разблокирован.')
+                elif action == 'delete':
+                    username = user.username
+                    user.delete()
+                    create_log_entry(request.user, 'DELETE',
+                                     f'Пользователь {username} удалён администратором {request.user.username}')
+                    messages.success(request, f'Пользователь {username} удалён.')
             else:
                 messages.error(request, 'Неверное действие.')
         except Exception as e:
             messages.error(request, f'Ошибка при обработке запроса: {str(e)}')
         return redirect('admin_panel')
-    return render(request, 'admin_panel.html', {'pending_users': pending_users})
+
+    return render(request, 'admin.html', {
+        'pending_users': pending_users_paginated,
+        'active_users': active_users_paginated,
+        'total_products': total_products,
+        'total_warehouses': total_warehouses,
+        'q_pending': q_pending,
+        'pending_date_from': pending_date_from,
+        'pending_date_to': pending_date_to,
+        'q_active': q_active,
+        'date_from': date_from,
+        'date_to': date_to,
+    })
