@@ -6,31 +6,32 @@
 
 {% block extra_css %}
 <style>
-    .product-img {
-        width: 50px;
-        height: 50px;
-        object-fit: contain;
-    }
-    .filter-form .form-control, .filter-form .btn {
-        margin-bottom: 10px;
-    }
+.product-img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+.filter-form .form-control, .filter-form .btn {
+    margin-bottom: 5px;
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <div class="card shadow-sm">
+        <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="mb-0">Архивированные товары</h3>
-                <a href="{% url 'products' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Вернуться к товарам</a>
+                <a href="{% url 'products' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Товары</a>
             </div>
             <div class="card-body">
                 <!-- Фильтры -->
                 <form method="GET" class="filter-form mb-4">
-                    <div class="row">
+                    <div class="row g-2">
                         <div class="col-md-3">
-                            <input type="text" name="q" class="form-control" placeholder="Поиск по названию или UUID" value="{{ query }}">
+                            <input type="text" name="q" class="form-control" placeholder="Название или UUID" value="{{ query }}">
                         </div>
                         <div class="col-md-2">
                             <select name="product_type" class="form-control">

@@ -1,16 +1,19 @@
 <!--templates/cart_form.html-->
 {% extends 'base.html' %}
 {% load i18n %}
+
+{% block title %}Корзина №{{ cart.number }}{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center mt-4">
     <div class="col-md-8">
-        <div class="card shadow-sm animate__animated animate__fadeIn">
-            <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+        <div class="card">
+            <div class="card-header">
                 <h3 class="mb-0">Корзина №{{ cart.number }}</h3>
             </div>
             <div class="card-body">
                 {% if cart.items.exists %}
-                <h5>Товары в корзине:</h5>
+                <h5 class="mb-3">Товары в корзине:</h5>
                 <ul class="list-group mb-4">
                     {% for item in cart.items.all %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -34,16 +37,20 @@
                 <p><strong>Общее количество товаров:</strong> {{ total_quantity }} шт.</p>
                 <p><strong>Общая базовая стоимость:</strong> {{ base_total|floatformat:2 }} сом</p>
                 <p><strong>Общая фактическая стоимость:</strong> {{ actual_total|floatformat:2 }} сом</p>
-                <div class="d-flex gap-2 mb-4">
-                    <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success flex-fill delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-check"></i> Совершить продажу</a>
-                    <a href="{% url 'cart_cancel' cart.id %}" class="btn btn-secondary flex-fill delete-btn" data-action="{% url 'cart_cancel' cart.id %}" data-message="Вы уверены, что хотите отменить корзину №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-times"></i> Отменить</a>
+                <div class="row g-2 mb-4">
+                    <div class="col-md-6">
+                        <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-primary w-100 delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-check"></i> Совершить продажу</a>
+                    </div>
+                    <div class="col-md-6">
+                        <a href="{% url 'cart_cancel' cart.id %}" class="btn btn-secondary w-100 delete-btn" data-action="{% url 'cart_cancel' cart.id %}" data-message="Вы уверены, что хотите отменить корзину №{{ cart.number }}?" data-cart-id="{{ cart.id }}"><i class="fas fa-times"></i> Отменить</a>
+                    </div>
                 </div>
                 {% else %}
                 <p class="text-muted">Корзина пуста. Добавьте товары, чтобы продолжить.</p>
                 {% endif %}
 
-                <!-- Comments Section -->
-                <h5 class="mt-4">Комментарии:</h5>
+                <!-- Комментарии -->
+                <h5 class="mt-4 mb-3">Комментарии:</h5>
                 {% if cart.comments.exists %}
                 <ul class="list-group mb-4">
                     {% for comment in cart.comments.all %}
@@ -53,9 +60,9 @@
                                 <p class="mb-1">{{ comment.text }}</p>
                                 <small class="text-muted">Добавлено: {{ comment.created_at|date:"d.m.Y H:i" }} | Обновлено: {{ comment.updated_at|date:"d.m.Y H:i" }}</small>
                             </div>
-                            <div>
-                                <button class="btn btn-sm btn-primary edit-comment-btn" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.text }}"><i class="fas fa-edit"></i> Редактировать</button>
-                                <a href="{% url 'cart_comment_delete' cart.id comment.id %}" class="btn btn-sm btn-danger delete-btn" data-action="{% url 'cart_comment_delete' cart.id comment.id %}" data-message="Вы уверены, что хотите удалить этот комментарий?"><i class="fas fa-trash"></i> Удалить</a>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary btn-sm edit-comment-btn" data-comment-id="{{ comment.id }}" data-comment-text="{{ comment.text }}"><i class="fas fa-edit"></i> Редактировать</button>
+                                <button class="btn btn-danger btn-sm delete-comment-btn" data-comment-id="{{ comment.id }}" data-action="{% url 'cart_comment_delete' cart.id comment.id %}" data-message="Вы уверены, что хотите удалить этот комментарий?"><i class="fas fa-trash"></i> Удалить</button>
                             </div>
                         </div>
                     </li>
@@ -65,32 +72,41 @@
                 <p class="text-muted">Комментариев нет.</p>
                 {% endif %}
 
-                <!-- Add Comment Form -->
+                <!-- Форма добавления комментария -->
                 <form method="post" action="{% url 'cart_comment_add' cart.id %}" class="mb-4">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="comment_text" class="form-label">Добавить комментарий:</label>
-                        <textarea class="form-control" id="comment_text" name="comment_text" rows="3" required></textarea>
+                    <div class="row g-2">
+                        <div class="col-md-12">
+                            <label for="comment_text" class="form-label">Добавить комментарий:</label>
+                            <textarea class="form-control" id="comment_text" name="comment_text" rows="3" required></textarea>
+                        </div>
+                        <div class="col-md-12">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить комментарий</button>
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить комментарий</button>
                 </form>
 
-                <h5>Добавить товар:</h5>
-                <div class="d-flex gap-2 mb-3">
-                    <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#manualAddModal"><i class="fas fa-search"></i> Ручной поиск</button>
-                    <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#scanModal"><i class="fas fa-qrcode"></i> Сканировать код</button>
+                <!-- Добавление товара -->
+                <h5 class="mb-3">Добавить товар:</h5>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#manualAddModal"><i class="fas fa-search"></i> Ручной поиск</button>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-info w-100" data-bs-toggle="modal" data-bs-target="#scanModal"><i class="fas fa-qrcode"></i> Сканировать код</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal for Manual Add -->
+<!-- Модальное окно для ручного добавления -->
 <div class="modal" id="manualAddModal" tabindex="-1" aria-labelledby="manualAddModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="manualAddModalLabel">Добавить товар</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="manualAddModalLabel">Добавить товар</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -104,7 +120,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <p id="manualSelectError" class="text-danger d-none">Товар не найден.</p>
+                    <div id="manualSelectError" class="alert alert-danger d-none">Товар не найден.</div>
                 </div>
                 <div id="manualProductDetails" class="d-none">
                     <h5 id="manualProductName"></h5>
@@ -114,22 +130,28 @@
                     <p><strong>Количество на складе:</strong> <span id="manualStockQuantity"></span> шт.</p>
                     <p><strong>Цена продажи:</strong> <span id="manualSellingPrice"></span> сом</p>
                     <img id="manualProductPhoto" class="img-fluid mb-2 d-none" style="max-height: 200px;">
-                    <div class="mb-3">
-                        <label for="manualQuantity" class="form-label">Количество:</label>
-                        <input type="number" id="manualQuantity" class="form-control" min="1" value="1" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="manualActualPrice" class="form-label">Фактическая цена за единицу:</label>
-                        <input type="number" step="0.01" id="manualActualPrice" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Итоговая цена:</label>
-                        <p id="manualTotalPrice" class="form-text">0.00 сом</p>
-                    </div>
-                    <p id="manualValidationError" class="text-danger d-none"></p>
-                    <div class="d-flex gap-2">
-                        <button type="button" id="manualAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
-                        <button type="button" id="cancelManualBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label for="manualQuantity" class="form-label">Количество:</label>
+                            <input type="number" id="manualQuantity" class="form-control" min="1" value="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="manualActualPrice" class="form-label">Фактическая цена за единицу:</label>
+                            <input type="number" step="0.01" id="manualActualPrice" class="form-control">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Итоговая цена:</label>
+                            <p id="manualTotalPrice" class="form-text">0.00 сом</p>
+                        </div>
+                        <div class="col-md-12">
+                            <div id="manualValidationError" class="alert alert-danger d-none"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" id="manualAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" id="cancelManualBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -137,12 +159,12 @@
     </div>
 </div>
 
-<!-- Modal for Scan -->
+<!-- Модальное окно для сканирования -->
 <div class="modal" id="scanModal" tabindex="-1" aria-labelledby="scanModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="scanModalLabel">Сканировать код товара</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="scanModalLabel">Сканировать код товара</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -154,7 +176,7 @@
                             <button type="button" id="pasteCodeBtn" class="btn btn-outline-secondary"><i class="fas fa-paste"></i></button>
                         </div>
                     </div>
-                    <p id="scanError" class="text-danger d-none">Товар не найден.</p>
+                    <div id="scanError" class="alert alert-danger d-none">Товар не найден.</div>
                 </div>
                 <div id="scanProductDetails" class="d-none">
                     <h5 id="scanProductName"></h5>
@@ -167,22 +189,28 @@
                     <form method="post" action="{% url 'cart_add_item' cart.id %}" id="scanAddForm">
                         {% csrf_token %}
                         <input type="hidden" name="product" id="scanProductId">
-                        <div class="mb-3">
-                            <label for="scanQuantity" class="form-label">Количество:</label>
-                            <input type="number" name="quantity" id="scanQuantity" class="form-control" min="1" value="1" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="scanActualPrice" class="form-label">Фактическая цена за единицу:</label>
-                            <input type="number" step="0.01" name="actual_price" id="scanActualPrice" class="form-control">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Итоговая цена:</label>
-                            <p id="scanTotalPrice" class="form-text">0.00 сом</p>
-                        </div>
-                        <p id="scanValidationError" class="text-danger d-none"></p>
-                        <div class="d-flex gap-2">
-                            <button type="submit" id="scanAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
-                            <button type="button" id="cancelScanBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label for="scanQuantity" class="form-label">Количество:</label>
+                                <input type="number" name="quantity" id="scanQuantity" class="form-control" min="1" value="1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="scanActualPrice" class="form-label">Фактическая цена за единицу:</label>
+                                <input type="number" step="0.01" name="actual_price" id="scanActualPrice" class="form-control">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Итоговая цена:</label>
+                                <p id="scanTotalPrice" class="form-text">0.00 сом</p>
+                            </div>
+                            <div class="col-md-12">
+                                <div id="scanValidationError" class="alert alert-danger d-none"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="submit" id="scanAddButton" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить в корзину</button>
+                            </div>
+                            <div class="col-md-6">
+                                <button type="button" id="cancelScanBtn" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Отменить</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -191,25 +219,31 @@
     </div>
 </div>
 
-<!-- Modal for Editing Comments -->
+<!-- Модальное окно для редактирования комментариев -->
 <div class="modal fade" id="editCommentModal" tabindex="-1" aria-labelledby="editCommentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="editCommentModalLabel">Редактировать комментарий</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="editCommentModalLabel">Редактировать комментарий</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="editCommentForm" method="post">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="edit_comment_text" class="form-label">Комментарий:</label>
-                        <textarea class="form-control" id="edit_comment_text" name="comment_text" rows="4" required></textarea>
-                    </div>
-                    <p id="editCommentError" class="text-danger d-none">Комментарий не может быть пустым.</p>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Сохранить</button>
-                        <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal"><i class="fas fa-times"></i> Отменить</button>
+                    <div class="row g-2">
+                        <div class="col-md-12">
+                            <label for="edit_comment_text" class="form-label">Комментарий:</label>
+                            <textarea class="form-control" id="edit_comment_text" name="comment_text" rows="4" required></textarea>
+                        </div>
+                        <div class="col-md-12">
+                            <div id="editCommentError" class="alert alert-danger d-none">Комментарий не может быть пустым.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save"></i> Сохранить</button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal"><i class="fas fa-times"></i> Отменить</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -217,16 +251,16 @@
     </div>
 </div>
 
-<!-- Modal for Errors -->
+<!-- Модальное окно для ошибок -->
 <div class="modal fade" id="errorModal" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h5 class="modal-title text-white" id="errorModalLabel">Ошибка</h5>
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">Ошибка</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p id="errorMessage"></p>
+                <div id="errorMessage" class="alert alert-danger"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
@@ -615,6 +649,50 @@ document.addEventListener('DOMContentLoaded', function() {
             errorMessage.textContent = 'Ошибка при обновлении комментария.';
             errorModal.show();
         }
+    });
+
+    // --- Логика для удаления комментариев ---
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteName = document.getElementById('deleteName');
+    const deleteCommentButtons = document.querySelectorAll('.delete-comment-btn');
+
+    deleteCommentButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const commentId = this.getAttribute('data-comment-id');
+            const action = this.getAttribute('data-action');
+            const message = this.getAttribute('data-message');
+            deleteName.textContent = 'комментарий';
+            deleteForm.action = action;
+            document.getElementById('deleteModalLabel').textContent = 'Подтверждение удаления';
+            deleteModal.show();
+
+            // Перехват отправки формы для AJAX
+            deleteForm.onsubmit = async function(e) {
+                e.preventDefault();
+                try {
+                    const response = await fetch(action, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (response.ok) {
+                        deleteModal.hide();
+                        window.location.reload();
+                    } else {
+                        const data = await response.json();
+                        errorMessage.textContent = data.error || 'Не удалось удалить комментарий.';
+                        errorModal.show();
+                    }
+                } catch (error) {
+                    errorMessage.textContent = 'Ошибка при удалении комментария.';
+                    errorModal.show();
+                }
+            };
+        });
     });
 });
 </script>

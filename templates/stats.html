@@ -2,193 +2,202 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
+{% block title %}Статистика{% endblock %}
+
 {% block content %}
-<h2 class="mb-4 animate__animated animate__fadeIn">Статистика</h2>
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">Статистика</h3>
+            </div>
+            <div class="card-body">
+                <!-- Общая статистика -->
+                <div class="row g-2 mb-4">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5>Выручка за день</h5>
+                                <p class="fs-3">{{ daily_revenue|floatformat:2 }} сом</p>
+                                {% if show_cost_price and daily_profit is not None %}
+                                <p>Прибыль: {{ daily_profit|floatformat:2 }} сом</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5>Выручка за неделю</h5>
+                                <p class="fs-3">{{ weekly_revenue|floatformat:2 }} сом</p>
+                                {% if show_cost_price and weekly_profit is not None %}
+                                <p>Прибыль: {{ weekly_profit|floatformat:2 }} сом</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5>Выручка за месяц</h5>
+                                <p class="fs-3">{{ monthly_revenue|floatformat:2 }} сом</p>
+                                {% if show_cost_price and monthly_profit is not None %}
+                                <p>Прибыль: {{ monthly_profit|floatformat:2 }} сом</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5>Общая выручка</h5>
+                                <p class="fs-3">{{ total_revenue|floatformat:2 }} сом</p>
+                                {% if show_cost_price and total_profit is not None %}
+                                <p>Прибыль: {{ total_profit|floatformat:2 }} сом</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-<!-- Общая статистика -->
-<div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-body text-center">
-                <h5>Выручка за день</h5>
-                <p class="display-6">{{ daily_revenue|floatformat:2 }} сом</p>
-                {% if show_cost_price and daily_profit is not None %}
-                <p>Прибыль: {{ daily_profit|floatformat:2 }} сом</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-body text-center">
-                <h5>Выручка за неделю</h5>
-                <p class="display-6">{{ weekly_revenue|floatformat:2 }} сом</p>
-                {% if show_cost_price and weekly_profit is not None %}
-                <p>Прибыль: {{ weekly_profit|floatformat:2 }} сом</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-body text-center">
-                <h5>Выручка за месяц</h5>
-                <p class="display-6">{{ monthly_revenue|floatformat:2 }} сом</p>
-                {% if show_cost_price and monthly_profit is not None %}
-                <p>Прибыль: {{ monthly_profit|floatformat:2 }} сом</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-body text-center">
-                <h5>Общая выручка</h5>
-                <p class="display-6">{{ total_revenue|floatformat:2 }} сом</p>
-                {% if show_cost_price and total_profit is not None %}
-                <p>Прибыль: {{ total_profit|floatformat:2 }} сом</p>
-                {% endif %}
+                <!-- Дополнительные метрики -->
+                <div class="row g-2 mb-4">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5>Общее количество продаж</h5>
+                                <p class="fs-3">{{ total_sales_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5>Средний чек</h5>
+                                <p class="fs-3">{{ average_check|floatformat:2 }} сом</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5>Самый продаваемый товар</h5>
+                                {% if top_product_by_quantity %}
+                                <p>По количеству: {{ top_product_by_quantity.product__name }} ({{ top_product_by_quantity.total_quantity }} шт.)</p>
+                                {% else %}
+                                <p>По количеству: Нет данных</p>
+                                {% endif %}
+                                {% if top_product_by_revenue %}
+                                <p>По выручке: {{ top_product_by_revenue.product__name }} ({{ top_product_by_revenue.total_revenue|floatformat:2 }} сом)</p>
+                                {% else %}
+                                <p>По выручке: Нет данных</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Динамика продаж по дням -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="mb-0">Динамика продаж за последнюю неделю</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="dailySalesChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Динамика продаж по категориям -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="mb-0">Динамика продаж по категориям</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Категория</th>
+                                        <th>Количество продаж</th>
+                                        <th>Выручка (сом)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in category_stats %}
+                                    <tr>
+                                        <td>{{ stat.product__product_type__name|default:"Без категории" }}</td>
+                                        <td>{{ stat.total_quantity }}</td>
+                                        <td>{{ stat.total_revenue|floatformat:2 }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center">Нет данных</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Динамика продаж по складам -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h3 class="mb-0">Динамика продаж по складам</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Склад</th>
+                                        <th>Количество продаж</th>
+                                        <th>Выручка (сом)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for stat in warehouse_stats %}
+                                    <tr>
+                                        <td>{{ stat.product__warehouse__name|default:"Без склада" }}</td>
+                                        <td>{{ stat.total_quantity }}</td>
+                                        <td>{{ stat.total_revenue|floatformat:2 }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="3" class="text-center">Нет данных</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Дополнительные метрики -->
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-body text-center">
-                <h5>Общее количество продаж</h5>
-                <p class="display-6">{{ total_sales_count }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-body text-center">
-                <h5>Средний чек</h5>
-                <p class="display-6">{{ average_check|floatformat:2 }} сом</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-body text-center">
-                <h5>Самый продаваемый товар</h5>
-                {% if top_product_by_quantity %}
-                <p>По количеству: {{ top_product_by_quantity.product__name }} ({{ top_product_by_quantity.total_quantity }} шт.)</p>
-                {% else %}
-                <p>По количеству: Нет данных</p>
-                {% endif %}
-                {% if top_product_by_revenue %}
-                <p>По выручке: {{ top_product_by_revenue.product__name }} ({{ top_product_by_revenue.total_revenue|floatformat:2 }} сом)</p>
-                {% else %}
-                <p>По выручке: Нет данных</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Динамика продаж по дням -->
-<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-        <h3 class="mb-0">Динамика продаж за последнюю неделю</h3>
-    </div>
-    <div class="card-body">
-        <canvas id="dailySalesChart"></canvas>
-    </div>
-</div>
-
-<!-- Динамика продаж по категориям -->
-<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-        <h3 class="mb-0">Динамика продаж по категориям</h3>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Категория</th>
-                        <th>Количество продаж</th>
-                        <th>Выручка (сом)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stat in category_stats %}
-                    <tr>
-                        <td>{{ stat.product__product_type__name|default:"Без категории" }}</td>
-                        <td>{{ stat.total_quantity }}</td>
-                        <td>{{ stat.total_revenue|floatformat:2 }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center">Нет данных</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Динамика продаж по складам -->
-<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-        <h3 class="mb-0">Динамика продаж по складам</h3>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Склад</th>
-                        <th>Количество продаж</th>
-                        <th>Выручка (сом)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stat in warehouse_stats %}
-                    <tr>
-                        <td>{{ stat.product__warehouse__name|default:"Без склада" }}</td>
-                        <td>{{ stat.total_quantity }}</td>
-                        <td>{{ stat.total_revenue|floatformat:2 }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center">Нет данных</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Графики -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // График динамики продаж по дням
-    const dailySalesCtx = document.getElementById('dailySalesChart').getContext('2d');
-    const dailySalesChart = new Chart(dailySalesCtx, {
-        type: 'line',
-        data: {
-            labels: [{% for day in daily_sales_last_week %}'{{ day.date }}',{% endfor %}],
-            datasets: [{
-                label: 'Выручка (сом)',
-                data: [{% for day in daily_sales_last_week %}{{ day.revenue }},{% endfor %}],
-                borderColor: '#7F9CF5',
-                backgroundColor: 'rgba(163, 191, 250, 0.2)',
-                fill: true,
-                tension: 0.1
-            }]
-        },
-        options: {
-            scales: {
-                y: { beginAtZero: true }
-            }
+const dailySalesCtx = document.getElementById('dailySalesChart').getContext('2d');
+const dailySalesChart = new Chart(dailySalesCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for day in daily_sales_last_week %}'{{ day.date }}',{% endfor %}],
+        datasets: [{
+            label: 'Выручка (сом)',
+            data: [{% for day in daily_sales_last_week %}{{ day.revenue }},{% endfor %}],
+            borderColor: '#1E3A8A',
+            backgroundColor: 'rgba(30, 58, 138, 0.2)',
+            fill: true,
+            tension: 0.1
+        }]
+    },
+    options: {
+        scales: {
+            y: { beginAtZero: true }
         }
-    });
+    }
+});
 </script>
 {% endblock %}

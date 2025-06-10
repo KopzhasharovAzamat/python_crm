@@ -2,55 +2,73 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}История действий{% endblock %}
+{% block title %}
+{% if is_admin %}История действий{% else %}Мои действия{% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="row mt-5">
-    <div class="col-12">
-        <div class="card shadow-sm animate__animated animate__fadeIn">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h3 class="mb-0">История действий</h3>
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">
+                    {% if is_admin %}История действий{% else %}Мои действия{% endif %}
+                </h3>
             </div>
             <div class="card-body">
+                <!-- Форма фильтрации -->
                 <form method="get" class="mb-4">
-                    <div class="row g-3">
+                    <div class="row g-2">
+                        {% if is_admin %}
                         <div class="col-md-3">
+                            <label for="user" class="form-label">Пользователь</label>
+                            <select name="user" id="user" class="form-select">
+                                <option value="">Все пользователи</option>
+                                {% for user in users %}
+                                <option value="{{ user.username }}" {% if user_filter == user.username %}selected{% endif %}>{{ user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-{% if is_admin %}3{% else %}4{% endif %}">
                             <label for="action_type" class="form-label">Тип действия</label>
-                            <select name="action_type" id="action_type" class="form-control">
+                            <select name="action_type" id="action_type" class="form-select">
                                 <option value="">Все</option>
-                                {% for type in action_types %}
-                                <option value="{{ type.action_type }}" {% if action_type == type.action_type %}selected{% endif %}>
-                                    {{ type.action_type }}
+                                {% for action in action_types %}
+                                <option value="{{ action.action_type }}" {% if action_type == action.action_type %}selected{% endif %}>
+                                    {{ action.action_type }}
                                 </option>
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-{% if is_admin %}2{% else %}3{% endif %}">
                             <label for="date_from" class="form-label">Дата с</label>
-                            <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from }}">
+                            <input type="date" name="date_from" id="date_from" class="form-control" value="{{ date_from|default_if_none:'' }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-{% if is_admin %}2{% else %}3{% endif %}">
                             <label for="date_to" class="form-label">Дата по</label>
-                            <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to }}">
+                            <input type="date" name="date_to" id="date_to" class="form-control" value="{{ date_to|default_if_none:'' }}">
                         </div>
-                        <div class="col-md-3">
-                            <label for="search_query" class="form-label">Поиск</label>
-                            <input type="text" name="search_query" id="search_query" class="form-control" placeholder="Введите запрос" value="{{ search_query }}">
+                        <div class="col-md-{% if is_admin %}2{% else %}2{% endif %} align-self-end">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Фильтровать</button>
                         </div>
-                        <div class="col-md-12 mt-3">
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Фильтровать</button>
-                            <a href="{% url 'logs' %}" class="btn btn-secondary"><i class="fas fa-undo"></i> Сбросить</a>
+                        <div class="col-md-{% if is_admin %}2{% else %}2{% endif %} align-self-end">
+                            <a href="{% url 'logs' %}" class="btn btn-secondary w-100"><i class="fas fa-times"></i> Очистить</a>
                         </div>
                     </div>
                 </form>
 
+                <!-- Таблица логов -->
                 {% if logs %}
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
                             <tr>
                                 <th>Дата и время</th>
-                                <th>Тип действия</th>
+                                <th>Действие</th>
+                                {% if is_admin %}
+                                <th>Пользователь</th>
+                                {% endif %}
                                 <th>Сообщение</th>
                             </tr>
                         </thead>
@@ -59,34 +77,70 @@
                             <tr>
                                 <td>{{ log.timestamp|date:"d.m.Y H:i" }}</td>
                                 <td>{{ log.action_type }}</td>
+                                {% if is_admin %}
+                                <td>{{ log.owner.username|default:"Неизвестный" }}</td>
+                                {% endif %}
                                 <td>{{ log.message }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% else %}
+                <p class="text-muted">
+                    {% if is_admin %}Нет записей о действиях.{% else %}Нет записей о ваших действиях.{% endif %}
+                </p>
+                {% endif %}
+
+                <!-- Пагинация -->
                 {% if logs.has_other_pages %}
-                <nav aria-label="Logs navigation">
+                <nav aria-label="Page navigation">
                     <ul class="pagination justify-content-center">
+                        {% with query_params=request.GET|dictsort:"0" %}
+                        {% with query_string="" %}
+                        {% for key, value in query_params.items %}
+                            {% if key != "page" and value %}
+                                {% if query_string %}
+                                    {% with query_string=query_string|add:"&" %}
+                                    {% endwith %}
+                                {% endif %}
+                                {% with query_string=query_string|add:key|add:"="|add:value %}
+                                {% endwith %}
+                            {% endif %}
+                        {% endfor %}
                         {% if logs.has_previous %}
-                        <li class="page-item"><a class="page-link" href="?page={{ logs.previous_page_number }}">«</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ logs.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">«</a>
+                        </li>
                         {% else %}
-                        <li class="page-item disabled"><a class="page-link" href="#">«</a></li>
+                        <li class="page-item disabled">
+                            <span class="page-link">«</span>
+                        </li>
                         {% endif %}
                         {% for num in logs.paginator.page_range %}
-                        <li class="page-item {% if logs.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        <li class="page-item {% if logs.number == num %}active{% endif %}">
+                            <a class="page-link" href="?page={{ num }}{% if query_string %}&{{ query_string }}{% endif %}">{{ num }}</a>
+                        </li>
                         {% endfor %}
                         {% if logs.has_next %}
-                        <li class="page-item"><a class="page-link" href="?page={{ logs.next_page_number }}">»</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ logs.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}">»</a>
+                        </li>
                         {% else %}
-                        <li class="page-item disabled"><a class="page-link" href="#">»</a></li>
+                        <li class="page-item disabled">
+                            <span class="page-link">»</span>
+                        </li>
                         {% endif %}
+                        {% endwith %}
+                        {% endwith %}
                     </ul>
                 </nav>
                 {% endif %}
-                {% else %}
-                <p class="text-center">Логов нет.</p>
-                {% endif %}
+
+                <!-- Кнопка назад -->
+                <div class="d-grid mt-4">
+                    <a href="{% url 'products' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Назад к товарам</a>
+                </div>
             </div>
         </div>
     </div>

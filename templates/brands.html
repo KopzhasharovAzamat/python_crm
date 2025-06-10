@@ -1,32 +1,29 @@
 <!--templates/brands.html-->
 {% extends 'base.html' %}
 {% load i18n %}
-{% load static %}
 
-{% block title %}
-Управление марками
-{% endblock %}
+{% block title %}Управление марками{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
+<div class="row justify-content-center">
     <div class="col-md-10">
-        <div class="card shadow-sm animate__animated animate__fadeIn">
-            <div class="card-header text-white text-center">
+        <div class="card">
+            <div class="card-header">
                 <h3 class="mb-0">Управление марками</h3>
             </div>
             <div class="card-body">
                 <!-- Поиск и сортировка -->
                 <form method="get" class="mb-4">
-                    <div class="row">
+                    <div class="row g-2">
                         <div class="col-md-6">
                             <div class="input-group">
-                                <input type="text" name="q" class="form-control" placeholder="Поиск по названию марки..." value="{{ query|default:'' }}">
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Поиск</button>
+                                <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ query|default:'' }}">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <select name="sort_by" class="form-select" onchange="this.form.submit()">
-                                <option value="">Сортировать по...</option>
+                                <option value="">Сортировка</option>
                                 <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Название (А-Я)</option>
                                 <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Название (Я-А)</option>
                             </select>
@@ -37,12 +34,18 @@
                 <!-- Форма добавления марки -->
                 <form method="post" class="mb-4">
                     {% csrf_token %}
-                    <div class="row">
+                    <div class="row g-2">
                         <div class="col-md-6">
-                            {{ brand_form.as_p }}
+                            {{ brand_form.name.label_tag }}
+                            {{ brand_form.name }}
+                            {% if brand_form.name.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ brand_form.name.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="col-md-3 align-self-end">
-                            <button type="submit" name="add_brand" class="btn btn-success w-100"><i class="fas fa-plus"></i> Добавить марку</button>
+                            <button type="submit" name="add_brand" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить</button>
                         </div>
                     </div>
                 </form>
@@ -62,11 +65,8 @@
                             <tr>
                                 <td>{{ brand.name }}</td>
                                 <td>
-                                    <a href="{% url 'brand_edit' brand.id %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> Редактировать</a>
-                                    <form action="{% url 'brand_delete' brand.id %}" method="post" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите удалить марку {{ brand.name }}?');"><i class="fas fa-trash"></i> Удалить</button>
-                                    </form>
+                                    <a href="{% url 'brand_edit' brand.id %}" class="btn btn-sm btn-primary" title="Редактировать"><i class="fas fa-edit"></i></a>
+                                    <button class="btn btn-sm btn-danger delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'brand_delete' brand.id %}" data-name="{{ brand.name }}" title="Удалить"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -80,4 +80,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const url = this.getAttribute('data-url');
+            const name = this.getAttribute('data-name');
+            document.getElementById('deleteName').textContent = name;
+            document.getElementById('deleteForm').action = url;
+        });
+    });
+});
+</script>
 {% endblock %}

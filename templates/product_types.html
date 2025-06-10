@@ -1,32 +1,29 @@
 <!--templates/product_types.html-->
 {% extends 'base.html' %}
 {% load i18n %}
-{% load static %}
 
-{% block title %}
-Управление типами продуктов
-{% endblock %}
+{% block title %}Управление типами продуктов{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
+<div class="row justify-content-center">
     <div class="col-md-10">
-        <div class="card shadow-sm animate__animated animate__fadeIn">
-            <div class="card-header text-white text-center">
+        <div class="card">
+            <div class="card-header">
                 <h3 class="mb-0">Управление типами продуктов</h3>
             </div>
             <div class="card-body">
                 <!-- Поиск и сортировка -->
                 <form method="get" class="mb-4">
-                    <div class="row">
+                    <div class="row g-2">
                         <div class="col-md-6">
                             <div class="input-group">
-                                <input type="text" name="q" class="form-control" placeholder="Поиск по названию типа..." value="{{ query|default:'' }}">
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Поиск</button>
+                                <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ query|default:'' }}">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <select name="sort_by" class="form-select" onchange="this.form.submit()">
-                                <option value="">Сортировать по...</option>
+                                <option value="">Сортировка</option>
                                 <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Название (А-Я)</option>
                                 <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Название (Я-А)</option>
                             </select>
@@ -37,12 +34,18 @@
                 <!-- Форма добавления типа продукта -->
                 <form method="post" class="mb-4">
                     {% csrf_token %}
-                    <div class="row">
+                    <div class="row g-2">
                         <div class="col-md-6">
-                            {{ product_type_form.as_p }}
+                            {{ product_type_form.name.label_tag }}
+                            {{ product_type_form.name }}
+                            {% if product_type_form.name.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ product_type_form.name.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="col-md-3 align-self-end">
-                            <button type="submit" name="add_product_type" class="btn btn-success w-100"><i class="fas fa-plus"></i> Добавить тип продукта</button>
+                            <button type="submit" name="add_product_type" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить</button>
                         </div>
                     </div>
                 </form>
@@ -62,11 +65,8 @@
                             <tr>
                                 <td>{{ product_type.name }}</td>
                                 <td>
-                                    <a href="{% url 'product_type_edit' product_type.id %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> Редактировать</a>
-                                    <form action="{% url 'product_type_delete' product_type.id %}" method="post" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите удалить тип продукта {{ product_type.name }}?');"><i class="fas fa-trash"></i> Удалить</button>
-                                    </form>
+                                    <a href="{% url 'product_type_edit' product_type.id %}" class="btn btn-sm btn-primary" title="Редактировать"><i class="fas fa-edit"></i></a>
+                                    <button class="btn btn-sm btn-danger delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'product_type_delete' product_type.id %}" data-name="{{ product_type.name }}" title="Удалить"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -80,4 +80,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const url = this.getAttribute('data-url');
+            const name = this.getAttribute('data-name');
+            document.getElementById('deleteName').textContent = name;
+            document.getElementById('deleteForm').action = url;
+        });
+    });
+});
+</script>
 {% endblock %}

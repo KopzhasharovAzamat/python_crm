@@ -5,8 +5,8 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
+        <div class="card">
+            <div class="card-header">
                 <h3 class="mb-0">
                     {% if form.instance.pk %}
                         Редактировать товар
@@ -42,7 +42,7 @@
                             {% if field.name == 'photo' and form.instance.photo %}
                             <div class="mt-2">
                                 <p>Текущее изображение:</p>
-                                <img src="{{ form.instance.photo.url }}" alt="Текущее изображение" style="max-width: 200px; max-height: 200px;">
+                                <img src="{{ form.instance.photo.url }}" alt="Текущее изображение" style="max-width: 200px; max-height: 200px; border-radius: 4px;">
                             </div>
                             {% endif %}
                             {% if field.name == 'specifications' %}

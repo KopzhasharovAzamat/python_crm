@@ -1545,7 +1545,19 @@ def stats(request):
 
 @login_required
 def logs(request):
-    logs = LogEntry.objects.filter(owner=request.user).order_by('-timestamp')
+    user = request.user
+    is_admin = user.is_superuser
+
+    if is_admin:
+        logs = LogEntry.objects.all().select_related('owner').order_by('-timestamp')
+        user_filter = request.GET.get('user', '')
+        if user_filter:
+            logs = logs.filter(owner__username=user_filter)
+        users = User.objects.all().order_by('username')
+    else:
+        logs = LogEntry.objects.filter(owner=user).order_by('-timestamp')
+        users = []
+
     action_type = request.GET.get('action_type', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
@@ -1577,7 +1589,7 @@ def logs(request):
     except EmptyPage:
         logs_paginated = paginator.page(paginator.num_pages)
 
-    action_types = LogEntry.objects.filter(owner=request.user).values('action_type').distinct()
+    action_types = LogEntry.objects.values('action_type').distinct()
     return render(request, 'logs.html', {
         'logs': logs_paginated,
         'action_type': action_type,
@@ -1585,6 +1597,9 @@ def logs(request):
         'date_to': date_to,
         'search_query': search_query,
         'action_types': action_types,
+        'is_admin': is_admin,
+        'users': users,
+        'user_filter': user_filter if is_admin else '',
     })
 
 ###################

@@ -1,32 +1,29 @@
 <!--templates/specifications.html-->
 {% extends 'base.html' %}
 {% load i18n %}
-{% load static %}
 
-{% block title %}
-Управление спецификациями
-{% endblock %}
+{% block title %}Управление спецификациями{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
+<div class="row justify-content-center">
     <div class="col-md-10">
-        <div class="card shadow-sm animate__animated animate__fadeIn">
-            <div class="card-header text-white text-center">
+        <div class="card">
+            <div class="card-header">
                 <h3 class="mb-0">Управление спецификациями</h3>
             </div>
             <div class="card-body">
                 <!-- Поиск и сортировка -->
                 <form method="get" class="mb-4">
-                    <div class="row">
+                    <div class="row g-2">
                         <div class="col-md-6">
                             <div class="input-group">
-                                <input type="text" name="q" class="form-control" placeholder="Поиск по коду двигателя или модели..." value="{{ query|default:'' }}">
-                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Поиск</button>
+                                <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ query|default:'' }}">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <select name="sort_by" class="form-select" onchange="this.form.submit()">
-                                <option value="">Сортировать по...</option>
+                                <option value="">Сортировка</option>
                                 <option value="model__name" {% if sort_by == 'model__name' %}selected{% endif %}>Модель (А-Я)</option>
                                 <option value="-model__name" {% if sort_by == '-model__name' %}selected{% endif %}>Модель (Я-А)</option>
                                 <option value="engine_code" {% if sort_by == 'engine_code' %}selected{% endif %}>Код двигателя (А-Я)</option>
@@ -39,12 +36,65 @@
                 <!-- Форма добавления спецификации -->
                 <form method="post" class="mb-4">
                     {% csrf_token %}
-                    <div class="row">
-                        <div class="col-md-8">
-                            {{ specification_form.as_p }}
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            {{ specification_form.model.label_tag }}
+                            {{ specification_form.model }}
+                            {% if specification_form.model.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ specification_form.model.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            {{ specification_form.engine_capacity.label_tag }}
+                            {{ specification_form.engine_capacity }}
+                            {% if specification_form.engine_capacity.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ specification_form.engine_capacity.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            {{ specification_form.engine_code.label_tag }}
+                            {{ specification_form.engine_code }}
+                            {% if specification_form.engine_code.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ specification_form.engine_code.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2">
+                            {{ specification_form.horsepower.label_tag }}
+                            {{ specification_form.horsepower }}
+                            {% if specification_form.horsepower.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ specification_form.horsepower.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                         <div class="col-md-3 align-self-end">
-                            <button type="submit" name="add_specification" class="btn btn-success w-100"><i class="fas fa-plus"></i> Добавить спецификацию</button>
+                            <button type="submit" name="add_specification" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить</button>
+                        </div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-3">
+                            {{ specification_form.production_start.label_tag }}
+                            {{ specification_form.production_start }}
+                            {% if specification_form.production_start.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ specification_form.production_start.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            {{ specification_form.production_end.label_tag }}
+                            {{ specification_form.production_end }}
+                            {% if specification_form.production_end.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ specification_form.production_end.errors }}
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </form>
@@ -56,9 +106,9 @@
                         <thead>
                             <tr>
                                 <th>Модель</th>
-                                <th>Объем двигателя</th>
+                                <th>Объём двигателя</th>
                                 <th>Код двигателя</th>
-                                <th>Лошадиные силы</th>
+                                <th>Л.с.</th>
                                 <th>Начало производства</th>
                                 <th>Конец производства</th>
                                 <th>Действия</th>
@@ -74,11 +124,8 @@
                                 <td>{{ spec.production_start|date:"d.m.Y" }}</td>
                                 <td>{{ spec.production_end|date:"d.m.Y"|default:"-" }}</td>
                                 <td>
-                                    <a href="{% url 'specification_edit' spec.id %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> Редактировать</a>
-                                    <form action="{% url 'specification_delete' spec.id %}" method="post" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите удалить спецификацию для модели {{ spec.model }}?');"><i class="fas fa-trash"></i> Удалить</button>
-                                    </form>
+                                    <a href="{% url 'specification_edit' spec.id %}" class="btn btn-sm btn-primary" title="Редактировать"><i class="fas fa-edit"></i></a>
+                                    <button class="btn btn-sm btn-danger delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'specification_delete' spec.id %}" data-name="{{ spec.model.name }}" title="Удалить"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -92,4 +139,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const url = this.getAttribute('data-url');
+            const name = this.getAttribute('data-name');
+            document.getElementById('deleteName').textContent = name;
+            document.getElementById('deleteForm').action = url;
+        });
+    });
+});
+</script>
 {% endblock %}

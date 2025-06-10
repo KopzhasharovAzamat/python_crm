@@ -2,82 +2,103 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
+{% block title %}Склады{% endblock %}
+
 {% block content %}
-<h2 class="mb-4 animate__animated animate__fadeIn">Склады</h2>
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-                <h4 class="mb-0">Добавить склад</h4>
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">Склады</h3>
             </div>
             <div class="card-body">
-                <form method="post">
+                <!-- Форма добавления склада -->
+                <form method="post" class="mb-4">
                     {% csrf_token %}
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.errors %}
-                        <div class="text-danger">{{ field.errors }}</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить склад</button>
+                    <div class="row g-2">
+                        {% for field in form %}
+                        <div class="col-md-4">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ field.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <div class="col-md-4 align-self-end">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> Добавить</button>
+                        </div>
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% if warehouses %}
-<div class="row row-cols-1 row-cols-md-2 g-4">
-    {% for warehouse in warehouses %}
-    <div class="col">
-        <div class="card shadow-sm animate__animated animate__fadeInUp">
-            <div class="card-header" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE); color: #2D3748;">
-                <h5 class="mb-0">{{ warehouse.name }}</h5>
-            </div>
-            <div class="card-body">
-                <p><strong>Всего товаров:</strong> {{ warehouse.product_set.count }}</p>
-                {% if warehouse.product_set.exists %}
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Товар</th>
-                                <th>Категория</th>
-                                <th>Подкатегория</th>
-                                <th>Остаток</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for product in warehouse.product_set.all %}
-                            <tr>
-                                <td>{{ product.name }}</td>
-                                <td>{{ product.category|default:"Не указана" }}</td>
-                                <td>{{ product.subcategory|default:"Не указана" }}</td>
-                                <td>{{ product.quantity }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+
+                <!-- Список складов -->
+                {% if warehouses %}
+                <div class="row g-4">
+                    {% for warehouse in warehouses %}
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">{{ warehouse.name }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Всего товаров:</strong> {{ warehouse.product_set.count }}</p>
+                                {% if warehouse.product_set.exists %}
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Товар</th>
+                                                <th>Категория</th>
+                                                <th>Подкатегория</th>
+                                                <th>Остаток</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for product in warehouse.product_set.all %}
+                                            <tr>
+                                                <td>{{ product.name }}</td>
+                                                <td>{{ product.category|default:"Не указана" }}</td>
+                                                <td>{{ product.subcategory|default:"Не указана" }}</td>
+                                                <td>{{ product.quantity }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <p class="text-muted">Товары отсутствуют.</p>
+                                {% endif %}
+                            </div>
+                            <div class="card-footer d-flex justify-content-between">
+                                <a href="{% url 'warehouse_edit' warehouse.id %}" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
+                                <button class="btn btn-danger btn-sm delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal" data-url="{% url 'warehouse_delete' warehouse.id %}" data-name="{{ warehouse.name }}"><i class="fas fa-trash"></i> Удалить</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-muted">Товары отсутствуют.</p>
+                <p class="text-muted">Склады отсутствуют.</p>
                 {% endif %}
-            </div>
-            <div class="card-footer text-center">
-                <a href="{% url 'warehouse_edit' warehouse.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
-                <button class="btn btn-danger btn-sm delete-btn" data-action="{% url 'warehouse_delete' warehouse.id %}" data-message="Вы уверены, что хотите удалить склад {{ warehouse.name }}? Все связанные товары будут удалены."><i class="fas fa-trash"></i> Удалить</button>
             </div>
         </div>
     </div>
-    {% endfor %}
 </div>
-{% else %}
-<div class="alert alert-info animate__animated animate__fadeIn">
-    Склады отсутствуют. Нажмите "Добавить склад", чтобы создать новый.
-</div>
-{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            const url = this.getAttribute('data-url');
+            const name = this.getAttribute('data-name');
+            document.getElementById('deleteName').textContent = name;
+            document.getElementById('deleteForm').action = url;
+        });
+    });
+});
+</script>
 {% endblock %}

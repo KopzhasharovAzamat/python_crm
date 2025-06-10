@@ -1,13 +1,14 @@
 <!--templates/login.html-->
 {% extends 'base.html' %}
 {% load i18n %}
-{% load form_filters %}
+
+{% block title %}Вход{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
+<div class="row justify-content-center mt-4">
     <div class="col-md-5">
-        <div class="card shadow-sm animate__animated animate__fadeIn">
-            <div class="card-header text-white text-center" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+        <div class="card">
+            <div class="card-header">
                 <h3 class="mb-0">Вход</h3>
             </div>
             <div class="card-body">
@@ -18,23 +19,25 @@
                 {% endif %}
                 <form method="post">
                     {% csrf_token %}
-                    {% for field in form %}
-                    <div class="mb-3">
-                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                        {{ field|add_class:"form-control" }}
-                        {% if field.errors %}
-                        <div class="invalid-feedback d-block">
-                            {{ field.errors|join:", " }}
+                    <div class="row g-2">
+                        {% for field in form %}
+                        <div class="col-md-12">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="alert alert-danger mt-2">
+                                {{ field.errors|join:", " }}
+                            </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Войти</button>
+                        {% endfor %}
+                        <div class="col-md-12">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-sign-in-alt"></i> Войти</button>
+                        </div>
                     </div>
                 </form>
                 <p class="text-center mt-3">
-                    Нет аккаунта? <a href="{% url 'register' %}" class="text-decoration-none" style="color: #FBB6CE;">Зарегистрируйтесь</a>
+                    Нет аккаунта? <a href="{% url 'register' %}" class="text-primary text-decoration-none">Зарегистрируйтесь</a>
                 </p>
             </div>
         </div>

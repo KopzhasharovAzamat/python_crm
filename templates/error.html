@@ -2,8 +2,24 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
+{% block title %}Ошибка{% endblock %}
+
 {% block content %}
-    <h2>Ошибка</h2>
-    <p>{{ message }}</p>
-    <a href="{% url 'products' %}" class="btn btn-primary">Назад</a>
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">Ошибка</h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    {{ message }}
+                </div>
+                <div class="d-grid">
+                    <a href="{% url 'products' %}" class="btn btn-primary"><i class="fas fa-arrow-left"></i> Назад к товарам</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
