@@ -1,63 +1,89 @@
 <!--templates/sales_list.html-->
 {% extends 'base.html' %}
+{% load static %}
+
 {% block content %}
 <h2 class="mb-4 animate__animated animate__fadeIn">Список продаж</h2>
 
-<!-- Форма фильтров -->
-<form method="get" class="mb-4">
-    <div class="row g-3">
-        <div class="col-md-2">
-            <input type="text" name="product_name" placeholder="Название товара" value="{{ product_name }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <select name="warehouse" class="form-control">
-                <option value="">Все склады</option>
-                {% for wh in warehouses %}
-                <option value="{{ wh.name }}" {% if warehouse == wh.name %}selected{% endif %}>{{ wh.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-2">
-            <input type="date" name="date_from" placeholder="Дата с" value="{{ date_from }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <input type="date" name="date_to" placeholder="Дата по" value="{{ date_to }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <input type="number" name="min_amount" placeholder="Мин. сумма" value="{{ min_amount }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <input type="number" name="max_amount" placeholder="Макс. сумма" value="{{ max_amount }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <input type="number" name="min_quantity" placeholder="Мин. кол-во" value="{{ min_quantity }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <input type="number" name="max_quantity" placeholder="Макс. кол-во" value="{{ max_quantity }}" class="form-control">
-        </div>
-        <div class="col-md-2">
-            <select name="sort_by" class="form-control">
-                <option value="">Сортировать...</option>
-                <option value="date" {% if sort_by == 'date' %}selected{% endif %}>По дате (возр.)</option>
-                <option value="-date" {% if sort_by == '-date' %}selected{% endif %}>По дате (убыв.)</option>
-                <option value="items__product__name" {% if sort_by == 'items__product__name' %}selected{% endif %}>По названию товара (возр.)</option>
-                <option value="-items__product__name" {% if sort_by == '-items__product__name' %}selected{% endif %}>По названию товара (убыв.)</option>
-                <option value="items__quantity" {% if sort_by == 'items__quantity' %}selected{% endif %}>По количеству (возр.)</option>
-                <option value="-items__quantity" {% if sort_by == '-items__quantity' %}selected{% endif %}>По количеству (убыв.)</option>
-                <option value="items__product__warehouse__name" {% if sort_by == 'items__product__warehouse__name' %}selected{% endif %}>По складу (возр.)</option>
-                <option value="-items__product__warehouse__name" {% if sort_by == '-items__product__warehouse__name' %}selected{% endif %}>По складу (убыв.)</option>
-                <option value="items__actual_price_total" {% if sort_by == 'items__actual_price_total' %}selected{% endif %}>По стоимости (возр.)</option>
-                <option value="-items__actual_price_total" {% if sort_by == '-items__actual_price_total' %}selected{% endif %}>По стоимости (убыв.)</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Фильтровать</button>
-            <a href="{% url 'sales_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
+<!-- Обновлённая форма фильтров и сортировки -->
+<div class="accordion mb-4" id="filtersAccordion">
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="filtersHeading">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="true" aria-controls="filtersCollapse">
+                Фильтры и сортировка
+            </button>
+        </h2>
+        <div id="filtersCollapse" class="accordion-collapse collapse show" aria-labelledby="filtersHeading">
+            <div class="accordion-body">
+                <form method="get" autocomplete="off">
+                    <div class="row g-2">
+                        <div class="col-md-2">
+                            <input type="number" name="number_query" placeholder="№ продажи" value="{{ number_query }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" name="product_name" placeholder="Название товара" value="{{ product_name }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <select name="warehouse_id" class="form-control">
+                                <option value="">Все склады</option>
+                                {% for wh in warehouses %}
+                                <option value="{{ wh.id }}" {% if warehouse_id == wh.id|stringformat:"s" %}selected{% endif %}>{{ wh.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="product_type_id" class="form-control">
+                                <option value="">Все категории</option>
+                                {% for pt in product_types %}
+                                <option value="{{ pt.id }}" {% if product_type_id == pt.id|stringformat:"s" %}selected{% endif %}>{{ pt.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="date_from" placeholder="Дата с" value="{{ date_from }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="date_to" placeholder="Дата по" value="{{ date_to }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="min_amount" placeholder="Мин. сумма" value="{{ min_amount }}" class="form-control" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="max_amount" placeholder="Макс. сумма" value="{{ max_amount }}" class="form-control" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="min_quantity" placeholder="Мин. кол-во" value="{{ min_quantity }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="max_quantity" placeholder="Макс. кол-во" value="{{ max_quantity }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <select name="sort_by" class="form-control">
+                                <option value="">Сортировать...</option>
+                                <option value="number" {% if sort_by == 'number' %}selected{% endif %}>По № (возр.)</option>
+                                <option value="-number" {% if sort_by == '-number' %}selected{% endif %}>По № (убыв.)</option>
+                                <option value="date" {% if sort_by == 'date' %}selected{% endif %}>По дате (возр.)</option>
+                                <option value="-date" {% if sort_by == '-date' %}selected{% endif %}>По дате (убыв.)</option>
+                                <option value="total_quantity" {% if sort_by == 'total_quantity' %}selected{% endif %}>По количеству (возр.)</option>
+                                <option value="-total_quantity" {% if sort_by == '-total_quantity' %}selected{% endif %}>По количеству (убыв.)</option>
+                                <option value="total_amount" {% if sort_by == 'total_amount' %}selected{% endif %}>По сумме (возр.)</option>
+                                <option value="-total_amount" {% if sort_by == '-total_amount' %}selected{% endif %}>По сумме (убыв.)</option>
+                                <option value="comment_count" {% if sort_by == 'comment_count' %}selected{% endif %}>По коммент. (возр.)</option>
+                                <option value="-comment_count" {% if sort_by == '-comment_count' %}selected{% endif %}>По коммент. (убыв.)</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Применить</button>
+                            <a href="{% url 'sales_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</form>
+</div>
 
-<!-- Таблица продаж -->
+<!-- Обновлённая таблица продаж -->
 {% if sales %}
 <table class="table table-striped table-hover animate__animated animate__fadeIn">
     <thead>
@@ -66,6 +92,7 @@
             <th>Дата</th>
             <th>Товары</th>
             <th>Комментарии</th>
+            <th>Количество</th>
             <th>Сумма</th>
             <th>Действия</th>
         </tr>
@@ -74,18 +101,19 @@
         {% for sale in sales %}
         <tr>
             <td>{{ sale.number }}</td>
-            <td>{{ sale.date|date:"Y-m-d H:i" }}</td>
+            <td>{{ sale.date|date:"Y-m-d H:i:s" }}</td>
             <td>
                 {% for item in sale.items.all %}
-                {{ item.product.name }} ({{ item.quantity }} шт.)<br>
+                {{ item.product.name }} ({{ item.quantity }} шт.)<br />
                 {% empty %}
                 Нет товаров
                 {% endfor %}
             </td>
             <td>{{ sale.comments.count }}</td>
-            <td>{{ sale.calculate_totals.1|floatformat:2 }} сом</td>
+            <td>{{ sale.total_quantity }}</td>
+            <td>{{ sale.total_amount|floatformat:2 }} сом</td>
             <td>
-                <a href="{% url 'sale_detail' sale.id %}" class="btn btn-info btn-sm"><i class="fas fa-eye"></i> Подробности</a>
+                <a href="{% url 'sale_detail' sale.id %}" class="btn btn-primary btn-sm"><i class="fas fa-eye"></i> Подробности</a>
                 <a href="{% url 'sale_edit' sale.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
             </td>
         </tr>
@@ -106,7 +134,7 @@
             {% with query_params=request.GET|dictsort:"0" %}
                 {% with query_string="" %}
                     {% for key, value in query_params.items %}
-                        {% if key != "page" and value %}
+                        {% if key != "page" %}
                             {% if query_string %}
                                 {% with query_string=query_string|add:"&" %}
                                     <!-- Concatenate & to the query string -->

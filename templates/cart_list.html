@@ -12,31 +12,72 @@
 </div>
 
 <!-- Форма фильтров и сортировки -->
-<form method="get" class="mb-4">
-    <div class="row g-3 align-items-center">
-        <div class="col-auto">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="hide_empty" id="hideEmpty" {% if hide_empty %}checked{% endif %}>
-                <label class="form-check-label" for="hideEmpty">Скрыть пустые корзины</label>
+<div class="accordion mb-4" id="filtersAccordion">
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="filtersHeading">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="true" aria-controls="filtersCollapse">
+                Фильтры и сортировка
+            </button>
+        </h2>
+        <div id="filtersCollapse" class="accordion-collapse collapse show" aria-labelledby="filtersHeading">
+            <div class="accordion-body">
+                <form method="get">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <input type="number" name="number_query" placeholder="№ корзины" value="{{ number_query }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="text" name="product_name" placeholder="Название товара" value="{{ product_name }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="date_from" placeholder="Дата с" value="{{ date_from }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="date_to" placeholder="Дата по" value="{{ date_to }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="min_amount" placeholder="Мин. сумма" value="{{ min_amount }}" class="form-control" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="max_amount" placeholder="Макс. сумма" value="{{ max_amount }}" class="form-control" step="0.01">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="min_quantity" placeholder="Мин. кол-во" value="{{ min_quantity }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="max_quantity" placeholder="Макс. кол-во" value="{{ max_quantity }}" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="hide_empty" id="hideEmpty" {% if hide_empty %}checked{% endif %}>
+                                <label class="form-check-label" for="hideEmpty">Скрыть пустые корзины</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="sort_by" class="form-control">
+                                <option value="">Сортировать...</option>
+                                <option value="number" {% if sort_by == 'number' %} selected {% endif %}>По номеру (возр.)</option>
+                                <option value="-number" {% if sort_by == '-number' %}selected{% endif %}>По номеру (убыв.)</option>
+                                <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>По дате (возр.)</option>
+                                <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>По дате (убыв.)</option>
+                                <option value="total_cost" {% if sort_by == 'total_cost' %}selected{% endif %}>По стоимости (возр.)</option>
+                                <option value="-total_cost" {% if sort_by == '-total_cost' %}selected{% endif %}>По стоимости (убыв.)</option>
+                                <option value="total_quantity" {% if sort_by == 'total_quantity' %}selected{% endif %}>По количеству (возр.)</option>
+                                <option value="-total_quantity" {% if sort_by == '-total_quantity' %}selected{% endif %}>По количеству (убыв.)</option>
+                                <option value="comment_count" {% if sort_by == 'comment_count' %}selected{% endif %}>По коммент. (возр.)</option>
+                                <option value="-comment_count" {% if sort_by == '-comment_count' %}selected{% endif %}>По коммент. (убыв.)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary me-2"><i class="fas fa-filter"></i> Применить</button>
+                            <a href="{% url 'cart_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
-        <div class="col-md-3">
-            <select name="sort_by" class="form-control">
-                <option value="">Сортировать...</option>
-                <option value="number" {% if sort_by == 'number' %}selected{% endif %}>По номеру (возр.)</option>
-                <option value="-number" {% if sort_by == '-number' %}selected{% endif %}>По номеру (убыв.)</option>
-                <option value="created_at" {% if sort_by == 'created_at' %}selected{% endif %}>По дате (возр.)</option>
-                <option value="-created_at" {% if sort_by == '-created_at' %}selected{% endif %}>По дате (убыв.)</option>
-                <option value="total_cost" {% if sort_by == 'total_cost' %}selected{% endif %}>По стоимости (возр.)</option>
-                <option value="-total_cost" {% if sort_by == '-total_cost' %}selected{% endif %}>По стоимости (убыв.)</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Применить</button>
-            <a href="{% url 'cart_list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Сбросить</a>
-        </div>
     </div>
-</form>
+</div>
 
 {% if carts %}
 <table class="table table-striped table-hover animate__animated animate__fadeIn">
@@ -62,8 +103,8 @@
                 Корзина пуста
                 {% endfor %}
             </td>
-            <td>{{ cart.comments.count }}</td>
-            <td>{{ cart.calculate_totals.1|floatformat:2 }} сом</td>
+            <td>{{ cart.comment_count }}</td>
+            <td>{{ cart.total_cost|floatformat:2 }} сом</td>
             <td>
                 <a href="{% url 'cart_add_item' cart.id %}" class="btn btn-warning btn-sm"><i class="fas fa-edit"></i> Редактировать</a>
                 <a href="{% url 'cart_confirm' cart.id %}" class="btn btn-success btn-sm delete-btn" data-action="{% url 'cart_confirm' cart.id %}" data-message="Вы уверены, что хотите завершить продажу корзины №{{ cart.number }}?"><i class="fas fa-check"></i> Продать</a>
@@ -137,25 +178,69 @@
                         {% else %}
                             <li class="page-item"><a class="page-link" href="?page={{ num }}{% if query_string %}&{{ query_string }}{% endif %}">{{ num }}</a></li>
                         {% endif %}
-                    {% endfor %}
+                    </div>
+                </div>
+            </div>
+        })
+        {% endfor %}
 
-                    {% if carts.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ carts.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Next">
-                                <span aria-hidden="true">»</span>
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#" aria-label="Next">
-                                <span aria-hidden="true">»</span>
-                            </a>
-                        </li>
-                    {% endif %}
+        {% if carts.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ carts.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Next">
+                    <span aria-hidden="true">»</span>
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <a class="page-link" href="#" aria-label="Next">
+                    <span aria-hidden="true">»</span>
+                </a>
+            </li>
+        {% endif %}
                 {% endwith %}
             {% endwith %}
         </ul>
     </nav>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmActionBtn = document.getElementById('confirmActionBtn');
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const actionUrl = this.getAttribute('data-action');
+            const message = this.getAttribute('data-message');
+            confirmMessage.textContent = message;
+            confirmModal.show();
+
+            // Устанавливаем обработчик для кнопки подтверждения
+            confirmActionBtn.onclick = function() {
+                // Создаём форму для отправки POST-запроса
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = actionUrl;
+
+                // Добавляем CSRF-токен
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            };
+        });
+    });
+});
+</script>
 {% endblock %}

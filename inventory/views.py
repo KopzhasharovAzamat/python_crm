@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q, F, Value, FloatField
+from django.db.models import Q, F, Value, FloatField, Count, IntegerField
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -701,8 +701,10 @@ def product_type_delete(request, product_type_id):
 @login_required
 def sales_list(request):
     sales = Sale.objects.filter(owner=request.user).prefetch_related('items__product', 'comments')
+    number_query = request.GET.get('number_query', '')
     product_name = request.GET.get('product_name', '')
-    warehouse = request.GET.get('warehouse', '')
+    warehouse_id = request.GET.get('warehouse_id', '')
+    product_type_id = request.GET.get('product_type_id', '')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     min_amount = request.GET.get('min_amount', '')
@@ -711,58 +713,86 @@ def sales_list(request):
     max_quantity = request.GET.get('max_quantity', '')
     sort_by = request.GET.get('sort_by', '')
 
+    # Применяем аннотации всегда, чтобы total_amount и total_quantity были доступны
+    sales = sales.annotate(
+        total_amount=Coalesce(Sum('items__actual_price_total'), Value(0.0), output_field=FloatField()),
+        total_quantity=Coalesce(Sum('items__quantity'), Value(0), output_field=IntegerField()),
+        comment_count=Count('comments')
+    )
+
+    if number_query:
+        try:
+            number = int(number_query)
+            sales = sales.filter(number=number)
+        except ValueError:
+            messages.error(request, 'Номер продажи должен быть целым числом.')
+
     if product_name:
-        sales = sales.filter(items__product__name__icontains=product_name)
-    if warehouse:
-        sales = sales.filter(items__product__warehouse__name=warehouse)
+        sales = sales.filter(items__product__name__icontains=product_name).distinct()
+
+    if warehouse_id:
+        try:
+            warehouse_id = int(warehouse_id)
+            sales = sales.filter(items__product__warehouse__id=warehouse_id).distinct()
+        except ValueError:
+            messages.error(request, 'Неверный ID склада.')
+
+    if product_type_id:
+        try:
+            product_type_id = int(product_type_id)
+            sales = sales.filter(items__product__product_type__id=product_type_id).distinct()
+        except ValueError:
+            messages.error(request, 'Неверный ID типа продукта.')
+
     if date_from:
         try:
             date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
-            sales = sales.filter(date__gte=date_from)
+            sales = sales.filter(date__date__gte=date_from)
         except ValueError:
             messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
+
     if date_to:
         try:
             date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d')
-            date_to = date_to + timedelta(days=1)
-            sales = sales.filter(date__lt=date_to)
+            date_to = date_to + timedelta(days=1)  # Включаем весь день
+            sales = sales.filter(date__date__lt=date_to)
         except ValueError:
             messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
-    if min_amount or max_amount:
-        sales = sales.annotate(total_amount=Sum('items__actual_price_total'))
-        if min_amount:
-            try:
-                min_amount = float(min_amount)
-                sales = sales.filter(total_amount__gte=min_amount)
-            except ValueError:
-                messages.error(request, 'Минимальная сумма должна быть числом.')
-        if max_amount:
-            try:
-                max_amount = float(max_amount)
-                sales = sales.filter(total_amount__lte=max_amount)
-            except ValueError:
-                messages.error(request, 'Максимальная сумма должна быть числом.')
-    if min_quantity or max_quantity:
-        sales = sales.annotate(total_quantity=Sum('items__quantity'))
-        if min_quantity:
-            try:
-                min_quantity = int(min_quantity)
-                sales = sales.filter(total_quantity__gte=min_quantity)
-            except ValueError:
-                messages.error(request, 'Минимальное количество должно быть целым числом.')
-        if max_quantity:
-            try:
-                max_quantity = int(max_quantity)
-                sales = sales.filter(total_quantity__lte=max_quantity)
-            except ValueError:
-                messages.error(request, 'Максимальное количество должно быть целым числом.')
+
+    if min_amount:
+        try:
+            min_amount = float(min_amount)
+            sales = sales.filter(total_amount__gte=min_amount)
+        except ValueError:
+            messages.error(request, 'Минимальная сумма должна быть числом.')
+
+    if max_amount:
+        try:
+            max_amount = float(max_amount)
+            sales = sales.filter(total_amount__lte=max_amount)
+        except ValueError:
+            messages.error(request, 'Максимальная сумма должна быть числом.')
+
+    if min_quantity:
+        try:
+            min_quantity = int(min_quantity)
+            sales = sales.filter(total_quantity__gte=min_quantity)
+        except ValueError:
+            messages.error(request, 'Минимальное количество должно быть целым числом.')
+
+    if max_quantity:
+        try:
+            max_quantity = int(max_quantity)
+            sales = sales.filter(total_quantity__lte=max_quantity)
+        except ValueError:
+            messages.error(request, 'Максимальное количество должно быть целым числом.')
 
     allowed_sort_fields = [
+        'number', '-number',
         'date', '-date',
-        'items__product__name', '-items__product__name',
-        'items__quantity', '-items__quantity',
-        'items__product__warehouse__name', '-items__product__warehouse__name',
-        'items__actual_price_total', '-items__actual_price_total'
+        'total_quantity', '-total_quantity',
+        'total_amount', '-total_amount',
+        'comment_count', '-comment_count',
     ]
     if sort_by in allowed_sort_fields:
         sales = sales.order_by(sort_by)
@@ -779,11 +809,16 @@ def sales_list(request):
         sales_paginated = paginator.page(paginator.num_pages)
 
     warehouses = Warehouse.objects.all().order_by('name')
+    product_types = ProductType.objects.all().order_by('name')
+
     return render(request, 'sales_list.html', {
         'sales': sales_paginated,
         'warehouses': warehouses,
+        'product_types': product_types,
+        'number_query': number_query,
         'product_name': product_name,
-        'warehouse': warehouse,
+        'warehouse_id': warehouse_id,
+        'product_type_id': product_type_id,
         'date_from': date_from,
         'date_to': date_to,
         'min_amount': min_amount,
@@ -928,24 +963,81 @@ def sale_comment_delete(request, sale_id, comment_id):
 @login_required
 def cart_list(request):
     carts = Cart.objects.all().prefetch_related('items__product', 'comments')
+    number_query = request.GET.get('number_query', '')
+    product_name = request.GET.get('product_name', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    min_amount = request.GET.get('min_amount', '')
+    max_amount = request.GET.get('max_amount', '')
+    min_quantity = request.GET.get('min_quantity', '')
+    max_quantity = request.GET.get('max_quantity', '')
     hide_empty = request.GET.get('hide_empty', 'off') == 'on'
     sort_by = request.GET.get('sort_by', '')
 
+    if number_query:
+        try:
+            number = int(number_query)
+            carts = carts.filter(number=number)
+        except ValueError:
+            messages.error(request, 'Номер корзины должен быть целым числом.')
+    if product_name:
+        carts = carts.filter(items__product__name__icontains=product_name).distinct()
+    if date_from:
+        try:
+            date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d')
+            carts = carts.filter(created_at__gte=date_from)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "с". Используйте YYYY-MM-DD.')
+    if date_to:
+        try:
+            date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d')
+            date_to = date_to + timedelta(days=1)
+            carts = carts.filter(created_at__lt=date_to)
+        except ValueError:
+            messages.error(request, 'Неверный формат даты "по". Используйте YYYY-MM-DD.')
+    if min_amount or max_amount:
+        carts = carts.annotate(total_amount=Coalesce(Sum('items__actual_price_total'), Value(0.0), output_field=FloatField()))
+        if min_amount:
+            try:
+                min_amount = float(min_amount)
+                carts = carts.filter(total_amount__gte=min_amount)
+            except ValueError:
+                messages.error(request, 'Минимальная сумма должна быть числом.')
+        if max_amount:
+            try:
+                max_amount = float(max_amount)
+                carts = carts.filter(total_amount__lte=max_amount)
+            except ValueError:
+                messages.error(request, 'Максимальная сумма должна быть числом.')
+    if min_quantity or max_quantity:
+        carts = carts.annotate(total_quantity=Coalesce(Sum('items__quantity'), Value(0), output_field=FloatField()))
+        if min_quantity:
+            try:
+                min_quantity = int(min_quantity)
+                carts = carts.filter(total_quantity__gte=min_quantity)
+            except ValueError:
+                messages.error(request, 'Минимальное количество должно быть целым числом.')
+        if max_quantity:
+            try:
+                max_quantity = int(max_quantity)
+                carts = carts.filter(total_quantity__lte=max_quantity)
+            except ValueError:
+                messages.error(request, 'Максимальное количество должно быть целым числом.')
     if hide_empty:
         carts = carts.filter(items__isnull=False).distinct()
 
     carts = carts.annotate(
-        total_cost=Coalesce(
-            Sum('items__actual_price_total'),
-            Value(0.0),
-            output_field=FloatField()
-        )
+        total_cost=Coalesce(Sum('items__actual_price_total'), Value(0.0), output_field=FloatField()),
+        total_quantity=Coalesce(Sum('items__quantity'), Value(0), output_field=FloatField()),
+        comment_count=Count('comments')
     )
 
     allowed_sort_fields = [
         'number', '-number',
         'created_at', '-created_at',
-        'total_cost', '-total_cost'
+        'total_cost', '-total_cost',
+        'total_quantity', '-total_quantity',
+        'comment_count', '-comment_count'
     ]
     if sort_by in allowed_sort_fields:
         carts = carts.order_by(sort_by)
@@ -963,6 +1055,14 @@ def cart_list(request):
 
     return render(request, 'cart_list.html', {
         'carts': carts_paginated,
+        'number_query': number_query,
+        'product_name': product_name,
+        'date_from': date_from,
+        'date_to': date_to,
+        'min_amount': min_amount,
+        'max_amount': max_amount,
+        'min_quantity': min_quantity,
+        'max_quantity': max_quantity,
         'hide_empty': hide_empty,
         'sort_by': sort_by,
     })
