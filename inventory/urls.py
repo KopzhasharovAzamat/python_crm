@@ -20,7 +20,9 @@ urlpatterns = [
     path('products/<int:product_id>/delete/', views.product_delete, name='product_delete'),
     path('products/<int:product_id>/detail/', views.product_detail, name='product_detail'),
     path('get-product-price/', views.get_product_price, name='get_product_price'),
+    path('get_product_price/', views.get_product_price, name='get_product_price_alt'),  # Альтернативный маршрут
     path('get-product-by-uuid/', views.get_product_by_uuid, name='get_product_by_uuid'),
+    path('get_product_by_uuid/', views.get_product_by_uuid, name='get_product_by_uuid_alt'),  # Альтернативный маршрут
     path('get-product-by-id/', views.get_product_by_id, name='get_product_by_id'),
 
     # Archive
@@ -67,6 +69,7 @@ urlpatterns = [
     path('carts/', views.cart_list, name='cart_list'),
     path('cart/create/', views.cart_create, name='cart_create'),
     path('cart/<int:cart_id>/add_item/', views.cart_add_item, name='cart_add_item'),
+    path('cart/<int:cart_id>/add/', views.cart_add_item, name='cart_add_item_alt'),  # Альтернативный маршрут
     path('cart/<int:cart_id>/remove_item/<int:item_id>/', views.cart_remove_item, name='cart_remove_item'),
     path('cart/<int:cart_id>/confirm/', views.cart_confirm, name='cart_confirm'),
     path('cart/<int:cart_id>/cancel/', views.cart_cancel, name='cart_cancel'),

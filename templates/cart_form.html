@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
     const errorMessage = document.getElementById('errorMessage');
     const cartId = {{ cart.id }};
-    const csrfToken = getCsrfToken();
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
     // --- Логика для модального окна ручного добавления ---
     const manualModal = new bootstrap.Modal(document.getElementById('manualAddModal'), {
@@ -278,6 +278,8 @@ document.addEventListener('DOMContentLoaded', function() {
         manualValidationError.classList.add('d-none');
         manualAddButton.disabled = false;
         selectedProductId = null;
+        manualQuantityInput.value = '1';
+        manualActualPriceInput.value = '';
     }
 
     async function showManualProductDetails() {
@@ -286,15 +288,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const response = await fetch(`/get-product-price/?product_id=${productId}`);
+            if (!response.ok) throw new Error('Ошибка сервера');
             const data = await response.json();
 
-            if (response.ok && !data.error) {
+            if (data.error) {
+                manualSelectError.textContent = data.error;
+                manualSelectError.classList.remove('d-none');
+            } else {
                 manualSelectForm.classList.add('d-none');
                 manualProductDetails.classList.remove('d-none');
                 manualSelectError.classList.add('d-none');
 
                 manualProductName.textContent = data.name;
-                manualCategory.textContent = data.category || 'Не указана';
+                manualCategory.textContent = data.product_type || 'Не указана';
                 manualSubcategory.textContent = data.subcategory || 'Не указана';
                 manualWarehouse.textContent = data.warehouse || 'Не указан';
                 manualStock = data.quantity;
@@ -310,9 +316,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 updateManualTotalPrice();
-            } else {
-                manualSelectError.textContent = 'Товар не найден.';
-                manualSelectError.classList.remove('d-none');
             }
         } catch (error) {
             manualSelectError.textContent = 'Ошибка при поиске товара.';
@@ -350,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     manualAddButton.addEventListener('click', async function() {
         const quantity = parseInt(manualQuantityInput.value);
-        const actualPrice = parseFloat(manualActualPriceInput.value);
+        const actualPrice = parseFloat(manualActualPriceInput.value) || null;
 
         try {
             const response = await fetch(`/cart/${cartId}/add_item/`, {
@@ -358,31 +361,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'X-CSRFToken': csrfToken,
                     'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
-                    product: selectedProductId,
+                    product_id: selectedProductId,
                     quantity: quantity,
-                    actual_price: actualPrice,
-                }),
-                credentials: 'include',
+                    actual_price: actualPrice
+                })
             });
 
             const data = await response.json();
-
             if (response.ok && data.success) {
+                manualModal.hide();
                 window.location.reload();
             } else {
                 throw new Error(data.error || 'Не удалось добавить товар.');
             }
         } catch (error) {
-            console.error('Ошибка:', error);
             errorMessage.textContent = error.message;
             errorModal.show();
         }
     });
 
     cancelManualBtn.addEventListener('click', function() {
+        manualModal.hide();
         resetManualForm();
     });
 
@@ -430,6 +432,8 @@ document.addEventListener('DOMContentLoaded', function() {
         scanStock = 0;
         scanValidationError.classList.add('d-none');
         scanAddButton.disabled = false;
+        scanQuantityInput.value = '1';
+        scanActualPriceInput.value = '';
     }
 
     async function checkProductByUUID() {
@@ -438,15 +442,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const response = await fetch(`/get-product-by-uuid/?unique_id=${uniqueId}`);
+            if (!response.ok) throw new Error('Ошибка сервера');
             const data = await response.json();
 
-            if (response.ok && !data.error) {
+            if (data.error) {
+                scanError.textContent = data.error;
+                scanError.classList.remove('d-none');
+            } else {
                 scanInputForm.classList.add('d-none');
                 scanProductDetails.classList.remove('d-none');
                 scanError.classList.add('d-none');
 
                 scanProductName.textContent = data.name;
-                scanCategory.textContent = data.category || 'Не указана';
+                scanCategory.textContent = data.product_type || 'Не указана';
                 scanSubcategory.textContent = data.subcategory || 'Не указана';
                 scanWarehouse.textContent = data.warehouse || 'Не указан';
                 scanStock = data.quantity;
@@ -462,9 +470,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 updateScanTotalPrice();
-            } else {
-                scanError.textContent = 'Товар не найден.';
-                scanError.classList.remove('d-none');
             }
         } catch (error) {
             scanError.textContent = 'Ошибка при поиске товара.';
@@ -507,10 +512,47 @@ document.addEventListener('DOMContentLoaded', function() {
             checkProductByUUID();
         } catch (err) {
             console.error('Ошибка при вставке из буфера обмена:', err);
+            scanError.textContent = 'Ошибка при вставке кода.';
+            scanError.classList.remove('d-none');
+        }
+    });
+
+    scanAddButton.addEventListener('click', async function(e) {
+        e.preventDefault();
+        const quantity = parseInt(scanQuantityInput.value);
+        const actualPrice = parseFloat(scanActualPriceInput.value) || null;
+        const productId = scanProductId.value;
+
+        try {
+            const response = await fetch(`/cart/${cartId}/add_item/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    quantity: quantity,
+                    actual_price: actualPrice
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok && data.success) {
+                scanModal.hide();
+                window.location.reload();
+            } else {
+                throw new Error(data.error || 'Не удалось добавить товар.');
+            }
+        } catch (error) {
+            errorMessage.textContent = error.message;
+            errorModal.show();
         }
     });
 
     cancelScanBtn.addEventListener('click', function() {
+        scanModal.hide();
         resetScanForm();
     });
 
@@ -554,14 +596,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
                 body: new URLSearchParams({
-                    'comment_text': commentText,
-                }),
+                    'comment_text': commentText
+                })
             });
 
             if (response.ok) {
+                editCommentModal.hide();
                 window.location.reload();
             } else {
                 const data = await response.json();

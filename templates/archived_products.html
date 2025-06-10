@@ -1,100 +1,231 @@
 <!--templates/archived_products.html-->
 {% extends 'base.html' %}
-{% load i18n %}
+{% load pagination_tags %}
+
+{% block title %}Архивированные товары{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-img {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+    }
+    .filter-form .form-control, .filter-form .btn {
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2 class="mb-4 animate__animated animate__fadeIn">Архивированные товары</h2>
-<a href="{% url 'products' %}" class="btn btn-secondary mb-4"><i class="fas fa-arrow-left"></i> Вернуться к товарам</a>
-
-<div class="row row-cols-1 row-cols-md-3 g-4">
-    {% for product in products %}
-    <div class="col">
-        <div class="card h-100 animate__animated animate__fadeInUp">
-            {% if product.photo %}
-            <img src="{{ product.photo.url }}" class="card-img-top" alt="{{ product.name }}" style="max-width: 100%;">
-            {% else %}
-            <div class="card-img-top bg-secondary d-flex align-items-center justify-content-center" style="height: 200px;">
-                <i class="fas fa-image fa-3x text-white"></i>
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Архивированные товары</h3>
+                <a href="{% url 'products' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Вернуться к товарам</a>
             </div>
-            {% endif %}
             <div class="card-body">
-                <h5 class="card-title"><a href="{% url 'product_detail' product.id %}" class="text-decoration-none">{{ product.name }}</a></h5>
-                <p class="card-text">
-                    <strong>Категория:</strong> {{ product.category|default:"Не указана" }}<br>
-                    <strong>Подкатегория:</strong> {{ product.subcategory|default:"Не указана" }}<br>
-                    <strong>Склад:</strong> {{ product.warehouse.name }}<br>
-                    <strong>Количество:</strong> {{ product.quantity }}<br>
-                    <strong>Цена:</strong> {{ product.selling_price }} сом
-                </p>
-            </div>
-            <div class="card-footer d-flex gap-2 justify-content-center flex-wrap">
-                <button class="btn btn-success shadow-sm delete-btn" data-action="{% url 'product_unarchive' product.id %}" data-message="Вы уверены, что хотите разархивировать товар {{ product.name }}?" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-undo me-1"></i> Разархивировать</button>
-                <button class="btn btn-danger shadow-sm delete-btn" data-action="{% url 'product_delete' product.id %}" data-message="Вы уверены, что хотите удалить товар {{ product.name }}?" style="font-size: 0.9rem; padding: 0.4rem 0.8rem;"><i class="fas fa-trash me-1"></i> Удалить</button>
+                <!-- Фильтры -->
+                <form method="GET" class="filter-form mb-4">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <input type="text" name="q" class="form-control" placeholder="Поиск по названию или UUID" value="{{ query }}">
+                        </div>
+                        <div class="col-md-2">
+                            <select name="product_type" class="form-control">
+                                <option value="">Все типы</option>
+                                {% for pt in product_types %}
+                                <option value="{{ pt.id }}" {% if product_type|add:0 == pt.id %}selected{% endif %}>{{ pt.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="specification" class="form-control">
+                                <option value="">Все спецификации</option>
+                                {% for spec in specifications %}
+                                <option value="{{ spec.id }}" {% if specification|add:0 == spec.id %}selected{% endif %}>{{ spec.model.name }} ({{ spec.engine_code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="warehouse" class="form-control">
+                                <option value="">Все склады</option>
+                                {% for wh in warehouses %}
+                                <option value="{{ wh.id }}" {% if warehouse|add:0 == wh.id %}selected{% endif %}>{{ wh.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" name="min_quantity" class="form-control" placeholder="Мин. кол-во" value="{{ min_quantity }}">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i></button>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-2">
+                            <select name="sort_by" class="form-control" onchange="this.form.submit()">
+                                <option value="">Сортировка</option>
+                                <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Название (А-Я)</option>
+                                <option value="-name" {% if sort_by == '-name' %}selected{% endif %}>Название (Я-А)</option>
+                                <option value="product_type__name" {% if sort_by == 'product_type__name' %}selected{% endif %}>Тип (А-Я)</option>
+                                <option value="-product_type__name" {% if sort_by == '-product_type__name' %}selected{% endif %}>Тип (Я-А)</option>
+                                <option value="selling_price" {% if sort_by == 'selling_price' %}selected{% endif %}>Цена (возр.)</option>
+                                <option value="-selling_price" {% if sort_by == '-selling_price' %}selected{% endif %}>Цена (убыв.)</option>
+                                <option value="quantity" {% if sort_by == 'quantity' %}selected{% endif %}>Кол-во (возр.)</option>
+                                <option value="-quantity" {% if sort_by == '-quantity' %}selected{% endif %}>Кол-во (убыв.)</option>
+                                <option value="warehouse__name" {% if sort_by == 'warehouse__name' %}selected{% endif %}>Склад (А-Я)</option>
+                                <option value="-warehouse__name" {% if sort_by == '-warehouse__name' %}selected{% endif %}>Склад (Я-А)</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Таблица товаров -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Фото</th>
+                                <th>Название</th>
+                                <th>Тип</th>
+                                <th>Склад</th>
+                                <th>Кол-во</th>
+                                <th>Цена продажи</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                            <tr>
+                                <td>
+                                    {% if product.photo %}
+                                    <img src="{{ product.photo.url }}" alt="{{ product.name }}" class="product-img">
+                                    {% else %}
+                                    <i class="fas fa-image text-muted"></i>
+                                    {% endif %}
+                                </td>
+                                <td><a href="{% url 'product_detail' product.id %}">{{ product.name }}</a></td>
+                                <td>{{ product.product_type.name|default:"-" }}</td>
+                                <td>{{ product.warehouse.name|default:"-" }}</td>
+                                <td>{{ product.quantity }}</td>
+                                <td>{{ product.selling_price|floatformat:2 }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success unarchive-btn" data-bs-toggle="modal" data-bs-target="#unarchiveModal" data-product-id="{{ product.id }}" title="Разархивировать"><i class="fas fa-undo"></i></button>
+                                    <button class="btn btn-sm btn-danger delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal" data-product-id="{{ product.id }}" title="Удалить"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">Архивированные товары не найдены.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Пагинация -->
+                {% if products.has_other_pages %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if products.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% querystring request.GET page=products.previous_page_number %}" aria-label="Previous">
+                                <span aria-hidden="true">«</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        {% for num in products.paginator.page_range %}
+                        {% if num == products.number %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                        <li class="page-item"><a class="page-link" href="?{% querystring request.GET page=num %}">{{ num }}</a></li>
+                        {% endif %}
+                        {% endfor %}
+                        {% if products.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% querystring request.GET page=products.next_page_number %}" aria-label="Next">
+                                <span aria-hidden="true">»</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
             </div>
         </div>
     </div>
-    {% empty %}
-    <p>Нет архивированных товаров.</p>
-    {% endfor %}
 </div>
 
-<!-- Пагинация -->
-{% if products.has_other_pages %}
-<div class="d-flex justify-content-center mt-4">
-    <nav aria-label="Page navigation">
-        <ul class="pagination">
-            {% with query_params=request.GET|dictsort:"0" %}
-            {% with query_string="" %}
-            {% for key, value in query_params.items %}
-                {% if key != "page" and value %}
-                    {% if query_string %}
-                        {% with query_string=query_string|add:"&" %}
-                        {% endwith %}
-                    {% endif %}
-                    {% with query_string=query_string|add:key|add:"="|add:value %}
-                    {% endwith %}
-                {% endif %}
-            {% endfor %}
-
-            {% if products.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ products.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Previous">
-                    <span aria-hidden="true">«</span>
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#" aria-label="Previous">
-                    <span aria-hidden="true">«</span>
-                </a>
-            </li>
-            {% endif %}
-
-            {% for num in products.paginator.page_range %}
-            {% if products.number == num %}
-            <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
-            {% else %}
-            <li class="page-item"><a class="page-link" href="?page={{ num }}{% if query_string %}&{{ query_string }}{% endif %}">{{ num }}</a></li>
-            {% endif %}
-            {% endfor %}
-
-            {% if products.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ products.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}" aria-label="Next">
-                    <span aria-hidden="true">»</span>
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#" aria-label="Next">
-                    <span aria-hidden="true">»</span>
-                </a>
-            </li>
-            {% endif %}
-            {% endwith %}
-            {% endwith %}
-        </ul>
-    </nav>
+<!-- Модальное окно для разархивирования -->
+<div class="modal fade" id="unarchiveModal" tabindex="-1" aria-labelledby="unarchiveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="unarchiveModalLabel">Разархивировать товар</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Вы уверены, что хотите разархивировать этот товар?
+            </div>
+            <div class="modal-footer">
+                <form id="unarchiveForm" method="POST" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="product_id" id="unarchiveProductId">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-success">Разархивировать</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
-{% endif %}
+
+<!-- Модальное окно для удаления -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Удалить товар</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Вы уверены, что хотите удалить этот товар? Это действие нельзя отменить.
+            </div>
+            <div class="modal-footer">
+                <form id="deleteForm" method="POST" action="">
+                    {% csrf_token %}
+                    <input type="hidden" name="product_id" id="deleteProductId">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-danger">Удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Для разархивирования
+        document.querySelectorAll('.unarchive-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const productId = this.getAttribute('data-product-id');
+                document.getElementById('unarchiveProductId').value = productId;
+                document.getElementById('unarchiveForm').action = `/products/${productId}/unarchive/`;
+            });
+        });
+
+        // Для удаления
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const productId = this.getAttribute('data-product-id');
+                document.getElementById('deleteProductId').value = productId;
+                document.getElementById('deleteForm').action = `/products/${productId}/delete/`;
+            });
+        });
+    });
+</script>
 {% endblock %}

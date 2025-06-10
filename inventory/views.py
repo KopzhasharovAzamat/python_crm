@@ -19,7 +19,7 @@ from django.utils.timezone import now
 from .forms import RegisterForm, LoginForm, UserChangeForm, UserSettingsForm, ProductForm, WarehouseForm, CartItemForm, \
     SaleItemForm, ReturnForm, BrandForm, ModelForm, ModelSpecificationForm, ProductTypeForm
 from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, UserSettings, User, Return, LogEntry, \
-    CartComment, SaleComment, Brand, Model, ModelSpecification, ProductType
+    CartComment, SaleComment, Brand, Model, ModelSpecification, ProductType, ProductSpecification
 
 
 # Helper function to log actions
@@ -127,13 +127,17 @@ def product_list(request):
         except ValueError:
             products = products.filter(Q(name__icontains=query))
     if product_type:
-        products = products.filter(product_type__name=product_type)
+        products = products.filter(product_type__id=product_type)
     if specification:
         products = products.filter(specifications__id=specification)
     if warehouse:
-        products = products.filter(warehouse__name=warehouse)
+        products = products.filter(warehouse__id=warehouse)
     if min_quantity:
-        products = products.filter(quantity__gte=min_quantity)
+        try:
+            min_quantity = int(min_quantity)
+            products = products.filter(quantity__gte=min_quantity)
+        except ValueError:
+            messages.error(request, 'Минимальное количество должно быть целым числом.')
 
     if sort_by:
         allowed_sort_fields = [
@@ -159,9 +163,9 @@ def product_list(request):
     except EmptyPage:
         products_paginated = paginator.page(paginator.num_pages)
 
-    product_types = ProductType.objects.all()
-    specifications = ModelSpecification.objects.all()
-    warehouses = Warehouse.objects.all()
+    product_types = ProductType.objects.all().order_by('name')
+    specifications = ModelSpecification.objects.all().order_by('model__name')
+    warehouses = Warehouse.objects.all().order_by('name')
     low_stock_message = request.session.pop('low_stock', None)
 
     return render(request, 'products.html', {
@@ -170,16 +174,12 @@ def product_list(request):
         'specifications': specifications,
         'warehouses': warehouses,
         'low_stock_message': low_stock_message,
-    })
-
-@login_required
-def product_detail(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    user_settings, created = UserSettings.objects.get_or_create(owner=request.user)
-    show_cost_price = not user_settings.hide_cost_price
-    return render(request, 'product_detail.html', {
-        'product': product,
-        'show_cost_price': show_cost_price,
+        'query': query,
+        'product_type': product_type,
+        'specification': specification,
+        'warehouse': warehouse,
+        'min_quantity': min_quantity,
+        'sort_by': sort_by,
     })
 
 @login_required
@@ -187,7 +187,15 @@ def product_add(request):
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES)
         if form.is_valid():
-            product = form.save()
+            product = form.save(commit=False)
+            product.save()
+            # Сохраняем связи specifications вручную вручную
+            specifications = form.cleaned_data['specifications']
+            # Удаляем старые связи (для безопасности, хотя их нет при создании)
+            ProductSpecification.objects.filter(product=product).delete()
+            # Создаем новые связи
+            for spec in specifications:
+                ProductSpecification.objects.create(product=product, specification=spec)
             create_log_entry(request.user, 'ADD', f'Товар "{product.name}" добавлен пользователем {request.user.username}')
             if product.quantity < 5:
                 messages.warning(request, f"Товар {product.name} заканчивается (осталось {product.quantity})")
@@ -205,13 +213,34 @@ def product_edit(request, product_id):
         form = ProductForm(request.POST, request.FILES, instance=product)
         if form.is_valid():
             product = form.save()
+            # Сохраняем связи specifications вручную
+            specifications = form.cleaned_data['specifications']
+            # Удаляем старые связи
+            ProductSpecification.objects.filter(product=product).delete()
+            # Создаем новые связи
+            for spec in specifications:
+                ProductSpecification.objects.create(product=product, specification=spec)
             create_log_entry(request.user, 'UPDATE', f'Товар "{product.name}" обновлён пользователем {request.user.username}')
             if product.quantity < 5:
                 messages.warning(request, f"Товар {product.name} заканчивается (осталось {product.quantity})")
             return redirect('products')
+        else:
+            return render(request, 'product_form.html', {'form': form})
     else:
         form = ProductForm(instance=product)
     return render(request, 'product_form.html', {'form': form})
+
+@login_required
+def product_detail(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    user_settings, created = UserSettings.objects.get_or_create(owner=request.user)
+    show_cost_price = not user_settings.hide_cost_price
+    specifications = product.specifications.all()
+    return render(request, 'product_detail.html', {
+        'product': product,
+        'show_cost_price': show_cost_price,
+        'specifications': specifications,
+    })
 
 @login_required
 def product_delete(request, product_id):
@@ -228,7 +257,7 @@ def get_product_price(request):
     if request.method == 'GET':
         product_id = request.GET.get('product_id')
         try:
-            product = Product.objects.get(id=product_id)
+            product = Product.objects.get(id=product_id, is_archived=False)
             return JsonResponse({
                 'id': product.id,
                 'name': product.name,
@@ -236,10 +265,12 @@ def get_product_price(request):
                 'warehouse': product.warehouse.name if product.warehouse else '',
                 'quantity': product.quantity,
                 'selling_price': float(product.selling_price),
-                'photo': product.photo.url if product.photo else '',
+                'photo': product.photo.url if product.photo else ''
             })
         except Product.DoesNotExist:
             return JsonResponse({'error': 'Товар не найден'}, status=404)
+        except Exception as e:
+            return JsonResponse({'error': f'Ошибка сервера: {str(e)}'}, status=500)
     return JsonResponse({'error': 'Неверный метод запроса'}, status=400)
 
 ###############
@@ -248,16 +279,51 @@ def get_product_price(request):
 
 @login_required
 def archived_products(request):
-    products = Product.objects.filter(is_archived=True).order_by('name')
-    paginator = Paginator(products, 10)
-    page_number = request.GET.get('page', 1)
-    try:
-        products_paginated = paginator.page(page_number)
-    except PageNotAnInteger:
-        products_paginated = paginator.page(1)
-    except EmptyPage:
-        products_paginated = paginator.page(paginator.num_pages)
-    return render(request, 'archived_products.html', {'products': products_paginated})
+    products = Product.objects.filter(is_archived=True)
+    product_types = ProductType.objects.all()
+    specifications = ModelSpecification.objects.all()  # Исправлено: Specification -> ModelSpecification
+    warehouses = Warehouse.objects.all()
+
+    # Фильтры
+    query = request.GET.get('q', '')
+    product_type = request.GET.get('product_type', '')
+    specification = request.GET.get('specification', '')
+    warehouse = request.GET.get('warehouse', '')
+    min_quantity = request.GET.get('min_quantity', '')
+    sort_by = request.GET.get('sort_by', '')
+
+    if query:
+        products = products.filter(Q(name__icontains=query) | Q(uuid__icontains=query))
+    if product_type:
+        products = products.filter(product_type_id=product_type)
+    if specification:
+        products = products.filter(specifications__id=specification)
+    if warehouse:
+        products = products.filter(warehouse_id=warehouse)
+    if min_quantity:
+        products = products.filter(quantity__gte=min_quantity)
+    if sort_by:
+        products = products.order_by(sort_by)
+
+    # Пагинация
+    from django.core.paginator import Paginator
+    paginator = Paginator(products, 10)  # 10 товаров на страницу
+    page_number = request.GET.get('page')
+    products = paginator.get_page(page_number)
+
+    context = {
+        'products': products,
+        'product_types': product_types,
+        'specifications': specifications,
+        'warehouses': warehouses,
+        'query': query,
+        'product_type': product_type,
+        'specification': specification,
+        'warehouse': warehouse,
+        'min_quantity': min_quantity,
+        'sort_by': sort_by,
+    }
+    return render(request, 'archived_products.html', context)
 
 @login_required
 def product_archive(request, product_id):
@@ -938,7 +1004,7 @@ def cart_add_item(request, cart_id):
                 data = json.loads(request.body)
                 product_id = data.get('product_id')
                 quantity = int(data.get('quantity', 1))
-                actual_price = float(data.get('actual_price', 0))
+                actual_price = data.get('actual_price')
 
                 try:
                     product = Product.objects.get(id=product_id, is_archived=False)
@@ -951,42 +1017,60 @@ def cart_add_item(request, cart_id):
                 if quantity > product.quantity:
                     return JsonResponse({'error': f'Недостаточно товара на складе. В наличии: {product.quantity} шт.'}, status=400)
 
-                if actual_price < 0:
-                    return JsonResponse({'error': 'Фактическая цена не может быть отрицательной.'}, status=400)
+                if actual_price is not None:
+                    actual_price = float(actual_price)
+                    if actual_price < 0:
+                        return JsonResponse({'error': 'Фактическая цена не может быть отрицательной.'}, status=400)
+                else:
+                    actual_price = float(product.selling_price)
 
                 cart_item = CartItem.objects.filter(cart=cart, product=product).first()
                 if cart_item:
                     cart_item.quantity += quantity
                     cart_item.base_price_total = cart_item.quantity * product.selling_price
-                    cart_item.actual_price_total = cart_item.quantity * (actual_price or product.selling_price)
+                    cart_item.actual_price_total = cart_item.quantity * actual_price
                     cart_item.save()
-                    action_message = f'Количество товара "{product.name}" в корзине №{cart.number} увеличено на {quantity} (итого: {cart_item.quantity}) пользователем {request.user.username} через сканирование UUID'
+                    action_message = f'Количество товара "{product.name}" в корзине №{cart.number} увеличено на {quantity} (итого: {cart_item.quantity}) пользователем {request.user.username}'
                 else:
                     cart_item = CartItem(
                         cart=cart,
                         product=product,
                         quantity=quantity,
                         base_price_total=quantity * product.selling_price,
-                        actual_price_total=quantity * (actual_price or product.selling_price)
+                        actual_price_total=quantity * actual_price
                     )
                     cart_item.save()
-                    action_message = f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username} через сканирование UUID'
+                    action_message = f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username}'
 
                 create_log_entry(request.user, 'ADD', action_message)
                 return JsonResponse({'success': True, 'cart_id': cart.id})
 
             except json.JSONDecodeError:
                 return JsonResponse({'error': 'Неверный формат данных.'}, status=400)
+            except ValueError as e:
+                return JsonResponse({'error': f'Ошибка данных: {str(e)}'}, status=400)
             except Exception as e:
-                return JsonResponse({'error': str(e)}, status=500)
+                return JsonResponse({'error': f'Ошибка сервера: {str(e)}'}, status=500)
 
         form = CartItemForm(request.POST)
         if form.is_valid():
             cart_item = form.save(commit=False)
             product = cart_item.product
-            existing_item = CartItem.objects.filter(cart=cart, product=product).first()
             actual_price = form.cleaned_data['actual_price'] or product.selling_price
 
+            if cart_item.quantity <= 0:
+                messages.error(request, 'Количество должно быть больше 0.')
+                return render(request, 'cart_form.html', {'form': form, 'cart': cart, 'products': products})
+
+            if cart_item.quantity > product.quantity:
+                messages.error(request, f'Недостаточно товара на складе. В наличии: {product.quantity} шт.')
+                return render(request, 'cart_form.html', {'form': form, 'cart': cart, 'products': products})
+
+            if actual_price < 0:
+                messages.error(request, 'Фактическая цена не может быть отрицательной.')
+                return render(request, 'cart_form.html', {'form': form, 'cart': cart, 'products': products})
+
+            existing_item = CartItem.objects.filter(cart=cart, product=product).first()
             if existing_item:
                 existing_item.quantity += cart_item.quantity
                 existing_item.base_price_total = existing_item.quantity * product.selling_price
@@ -997,17 +1081,14 @@ def cart_add_item(request, cart_id):
                 cart_item.cart = cart
                 cart_item.base_price_total = cart_item.quantity * product.selling_price
                 cart_item.actual_price_total = cart_item.quantity * actual_price
-                if cart_item.quantity <= product.quantity:
-                    cart_item.save()
-                    action_message = f'Товар "{product.name}" (кол-во: {cart_item.quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username}'
-                else:
-                    messages.error(request, 'Недостаточно товара на складе.')
-                    return redirect('cart_add_item', cart_id=cart.id)
+                cart_item.save()
+                action_message = f'Товар "{product.name}" (кол-во: {cart_item.quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username}'
 
             create_log_entry(request.user, 'ADD', action_message)
             messages.success(request, f'Товар "{product.name}" добавлен в корзину.')
             return redirect('cart_add_item', cart_id=cart.id)
         else:
+            messages.error(request, 'Ошибка в форме. Проверьте данные.')
             return render(request, 'cart_form.html', {'form': form, 'cart': cart, 'products': products})
 
     total_quantity = sum(item.quantity for item in cart.items.all())
@@ -1021,7 +1102,7 @@ def cart_add_item(request, cart_id):
         'total_quantity': total_quantity,
         'base_total': base_total,
         'actual_total': actual_total,
-        'product_totals': product_totals,
+        'product_totals': product_totals
     })
 
 @login_required
@@ -1206,35 +1287,56 @@ def scan_product(request):
 def scan_product_confirm(request):
     if request.method == 'POST':
         product_id = request.POST.get('product_id')
-        quantity = int(request.POST.get('quantity', 1))
-        actual_price = float(request.POST.get('actual_price', 0))
+        quantity = request.POST.get('quantity', '1')
+        actual_price = request.POST.get('actual_price')
+
+        try:
+            quantity = int(quantity)
+        except ValueError:
+            messages.error(request, 'Количество должно быть целым числом.')
+            return redirect('products')
+
         try:
             product = Product.objects.get(id=product_id, is_archived=False)
         except Product.DoesNotExist:
             messages.error(request, 'Товар не найден.')
             return redirect('products')
+
         if quantity <= 0:
             messages.error(request, 'Количество должно быть больше 0.')
             return redirect('products')
+
         if quantity > product.quantity:
             messages.error(request, f'Недостаточно товара на складе. В наличии: {product.quantity} шт.')
             return redirect('products')
+
+        try:
+            actual_price = float(actual_price) if actual_price else float(product.selling_price)
+        except ValueError:
+            messages.error(request, 'Фактическая цена должна быть числом.')
+            return redirect('products')
+
         if actual_price < 0:
             messages.error(request, 'Фактическая цена не может быть отрицательной.')
             return redirect('products')
-        cart = Cart.objects.create()
-        create_log_entry(request.user, 'ADD', f'Новая корзина №{cart.number} создана пользователем {request.user.username} через сканирование')
-        cart_item = CartItem(
-            cart=cart,
-            product=product,
-            quantity=quantity,
-            base_price_total=quantity * product.selling_price,
-            actual_price_total=quantity * (actual_price or product.selling_price)
-        )
-        cart_item.save()
-        create_log_entry(request.user, 'ADD', f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username} через сканирование UUID')
-        messages.success(request, f'Товар "{product.name}" добавлен в корзину №{cart.number}.')
-        return redirect('cart_add_item', cart_id=cart.id)
+
+        try:
+            cart = Cart.objects.create()
+            create_log_entry(request.user, 'ADD', f'Новая корзина №{cart.number} создана пользователем {request.user.username} через сканирование')
+            cart_item = CartItem(
+                cart=cart,
+                product=product,
+                quantity=quantity,
+                base_price_total=quantity * product.selling_price,
+                actual_price_total=quantity * actual_price
+            )
+            cart_item.save()
+            create_log_entry(request.user, 'ADD', f'Товар "{product.name}" (кол-во: {quantity}) добавлен в корзину №{cart.number} пользователем {request.user.username} через сканирование UUID')
+            messages.success(request, f'Товар "{product.name}" добавлен в корзину №{cart.number}.')
+            return redirect('cart_add_item', cart_id=cart.id)
+        except Exception as e:
+            messages.error(request, f'Ошибка при добавлении товара: {str(e)}')
+            return redirect('products')
     return redirect('products')
 
 ###############

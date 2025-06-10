@@ -36,15 +36,22 @@
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item"><strong>Название:</strong> {{ product.name }}</li>
                             <li class="list-group-item"><strong>Уникальный идентификатор:</strong> {{ product.unique_id }}</li>
-                            <li class="list-group-item"><strong>Модель:</strong> {{ product.category|default:"Не указана" }}</li>
-                            <li class="list-group-item"><strong>Цвет:</strong> {{ product.subcategory|default:"Не указан" }}</li>
+                            <li class="list-group-item"><strong>Тип продукта:</strong> {{ product.product_type.name|default:"Не указан" }}</li>
+                            <li class="list-group-item"><strong>Спецификации:</strong>
+                                {% for spec in specifications %}
+                                    {{ spec }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    Не указаны
+                                {% endfor %}
+                            </li>
+                            <li class="list-group-item"><strong>Происхождение:</strong> {{ product.get_origin_display }}</li>
+                            <li class="list-group-item"><strong>Комментарий:</strong> {{ product.comment|default:"Отсутствует" }}</li>
                             <li class="list-group-item"><strong>Количество:</strong> {{ product.quantity }} шт.</li>
                             {% if show_cost_price %}
                                 <li class="list-group-item"><strong>Себестоимость:</strong> {{ product.cost_price|default:"Не указана" }} сом</li>
                             {% endif %}
                             <li class="list-group-item"><strong>Цена продажи:</strong> {{ product.selling_price }} сом</li>
                             <li class="list-group-item"><strong>Склад:</strong> {{ product.warehouse.name }}</li>
-                            <li class="list-group-item"><strong>Владелец:</strong> {{ product.owner.username }}</li>
                             <li class="list-group-item"><strong>Архивировано:</strong> {% if product.is_archived %}Да{% else %}Нет{% endif %}</li>
                         </ul>
                     </div>

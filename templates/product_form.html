@@ -37,9 +37,6 @@
                         <div class="col-md-6">
                             <label for="{{ field.id_for_label }}" class="form-label">
                                 {{ field.label }}
-                                {% if field.name == 'subcategory' %}
-                                    <span class="text-danger">*</span>
-                                {% endif %}
                             </label>
                             {{ field }}
                             {% if field.name == 'photo' and form.instance.photo %}
@@ -47,6 +44,9 @@
                                 <p>Текущее изображение:</p>
                                 <img src="{{ form.instance.photo.url }}" alt="Текущее изображение" style="max-width: 200px; max-height: 200px;">
                             </div>
+                            {% endif %}
+                            {% if field.name == 'specifications' %}
+                            <small class="form-text text-muted">Удерживайте Ctrl для выбора нескольких спецификаций.</small>
                             {% endif %}
                         </div>
                         {% endfor %}
@@ -65,9 +65,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Устанавливаем минимальные значения для полей
     const quantityInput = document.getElementById('id_quantity');
-    const costPriceInput = document.getElementBy moderatorsId('id_cost_price');
+    const costPriceInput = document.getElementById('id_cost_price');
     const sellingPriceInput = document.getElementById('id_selling_price');
-    const subcategoryInput = document.getElementById('id_subcategory');
 
     if (quantityInput) quantityInput.setAttribute('min', 0);
     if (costPriceInput) costPriceInput.setAttribute('min', 0);
@@ -78,7 +77,6 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', function(event) {
         const costPrice = parseFloat(costPriceInput.value) || 0;
         const sellingPrice = parseFloat(sellingPriceInput.value);
-        const subcategoryValue = subcategoryInput.value;
 
         if (costPrice < 0) {
             event.preventDefault();
@@ -89,12 +87,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sellingPrice < 0) {
             event.preventDefault();
             alert('Цена продажи не может быть отрицательной.');
-            return false;
-        }
-
-        if (!subcategoryValue) {
-            event.preventDefault();
-            alert('Поле "Цвет" обязательно для заполнения.');
             return false;
         }
     });

@@ -1,7 +1,10 @@
 # inventory/forms.py
 from django import forms
 from django.contrib.auth.models import User
-from .models import Product, Warehouse, UserSettings, CartItem, SaleItem, Brand, Model, ModelSpecification, ProductType
+
+from .models import Product, ProductType, Warehouse, ModelSpecification
+from .models import UserSettings, CartItem, SaleItem, Brand, Model
+
 
 class RegisterForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput, label="Пароль")
@@ -45,64 +48,37 @@ class UserSettingsForm(forms.ModelForm):
         }
 
 class ProductForm(forms.ModelForm):
+    specifications = forms.ModelMultipleChoiceField(
+        queryset=ModelSpecification.objects.all(),
+        widget=forms.SelectMultiple(attrs={'class': 'form-control'}),
+        required=False,
+        label="Спецификации моделей"
+    )
+
     class Meta:
         model = Product
-        fields = ['name', 'product_type', 'specifications', 'quantity', 'cost_price', 'selling_price', 'photo', 'warehouse']
-        labels = {
-            'name': 'Название',
-            'product_type': 'Тип товара',
-            'specifications': 'Спецификации',
-            'quantity': 'Количество',
-            'cost_price': 'Себестоимость',
-            'selling_price': 'Цена продажи',
-            'photo': 'Фото',
-            'warehouse': 'Склад',
-        }
+        fields = [
+            'name', 'product_type', 'specifications', 'origin', 'comment',
+            'photo', 'warehouse', 'cost_price', 'selling_price', 'quantity', 'is_archived'
+        ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'product_type': forms.Select(attrs={'class': 'form-control'}),
-            'specifications': forms.SelectMultiple(attrs={'class': 'form-control'}),
-            'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
-            'cost_price': forms.NumberInput(attrs={'class': 'form-control'}),
-            'selling_price': forms.NumberInput(attrs={'class': 'form-control'}),
-            'photo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'origin': forms.Select(attrs={'class': 'form-control'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+            'photo': forms.FileInput(attrs={'class': 'form-control'}),
             'warehouse': forms.Select(attrs={'class': 'form-control'}),
+            'cost_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'selling_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'is_archived': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
-    def clean_cost_price(self):
-        cost_price = self.cleaned_data.get('cost_price')
-        if cost_price is not None and cost_price < 0:
-            raise forms.ValidationError("Себестоимость не может быть отрицательной.")
-        return cost_price
-
-    def clean_selling_price(self):
-        selling_price = self.cleaned_data['selling_price']
-        if selling_price < 0:
-            raise forms.ValidationError("Цена продажи не может быть отрицательной.")
-        return selling_price
-
-    def clean(self):
-        cleaned_data = super().clean()
-        product_type = cleaned_data.get('product_type')
-        specifications = cleaned_data.get('specifications')
-        warehouse = cleaned_data.get('warehouse')
-        name = cleaned_data.get('name')
-
-        # Проверяем уникальность комбинации name, product_type, specifications, warehouse
-        if product_type and specifications and warehouse and name:
-            existing_product = Product.objects.filter(
-                name=name,
-                product_type=product_type,
-                warehouse=warehouse
-            ).filter(specifications__in=specifications).distinct()
-            if self.instance and self.instance.pk:
-                existing_product = existing_product.exclude(pk=self.instance.pk)
-            if existing_product.exists():
-                raise forms.ValidationError(
-                    f"Товар с названием '{name}', типом '{product_type.name}', спецификациями и складом '{warehouse.name}' уже существует."
-                )
-
-        return cleaned_data
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['warehouse'].queryset = Warehouse.objects.all().order_by('name')
+        self.fields['product_type'].queryset = ProductType.objects.all().order_by('name')
+        self.fields['specifications'].queryset = ModelSpecification.objects.all().order_by('model__name')
 
 class WarehouseForm(forms.ModelForm):
     class Meta:
