@@ -1,18 +1,26 @@
 # inventory/views.py
-import uuid
 import json
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.shortcuts import get_object_or_404, render, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth import authenticate, login, logout
+import uuid
+from datetime import datetime
+from datetime import timedelta
+
 from django.contrib import messages
-from django.db.models import Sum, Q, F, Value, FloatField
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q, F, Value, FloatField
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
-from django.utils import timezone
-from datetime import timedelta, datetime
-from .forms import RegisterForm, LoginForm, UserChangeForm, UserSettingsForm, ProductForm, WarehouseForm, CartItemForm, SaleItemForm, ReturnForm, BrandForm, ModelForm, ModelSpecificationForm, ProductTypeForm
-from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, UserSettings, User, Return, LogEntry, CartComment, SaleComment, Brand, Model, ModelSpecification, ProductType
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.utils import timezone
+from django.utils.timezone import now
+
+from .forms import RegisterForm, LoginForm, UserChangeForm, UserSettingsForm, ProductForm, WarehouseForm, CartItemForm, \
+    SaleItemForm, ReturnForm, BrandForm, ModelForm, ModelSpecificationForm, ProductTypeForm
+from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, UserSettings, User, Return, LogEntry, \
+    CartComment, SaleComment, Brand, Model, ModelSpecification, ProductType
+
 
 # Helper function to log actions
 def create_log_entry(user, action_type, message):
@@ -1237,46 +1245,96 @@ def scan_product_confirm(request):
 def stats(request):
     sales = Sale.objects.filter(owner=request.user)
     returns = Return.objects.filter(owner=request.user)
-    today = timezone.now().date()
+    today = now().date()
+    yesterday = today - timedelta(days=1)
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
 
-    total_sales = sales.count()
+    # Общая статистика
+    total_sales_count = sales.count()
     total_sales_amount = sales.aggregate(total=Sum('items__actual_price_total'))['total'] or 0
-    total_returns = returns.count()
+    total_returns_count = returns.count()
     total_returns_quantity = returns.aggregate(total=Sum('quantity'))['total'] or 0
+    average_check = total_sales_amount / total_sales_count if total_sales_count > 0 else 0
 
-    sales_by_day = {
-        (today - timedelta(days=i)).strftime('%Y-%m-%d'): 0
-        for i in range(7)
-    }
-    for sale in sales.filter(date__gte=week_ago):
-        sale_date = sale.date.date().strftime('%Y-%m-%d')
-        sales_by_day[sale_date] = sales_by_day.get(sale_date, 0) + sale.items.aggregate(total=Sum('actual_price_total'))['total'] or 0
+    # Выручка и прибыль за периоды
+    daily_sales = sales.filter(date__date=today).aggregate(total=Sum('items__actual_price_total'))['total'] or 0
+    daily_cost = sales.filter(date__date=today).aggregate(total=Sum(F('items__quantity') * F('items__product__cost_price')))['total'] or 0
+    daily_profit = daily_sales - daily_cost if daily_cost is not None else None
 
-    top_products = SaleItem.objects.filter(sale__owner=request.user).values('product__name').annotate(
+    weekly_sales = sales.filter(date__gte=week_ago).aggregate(total=Sum('items__actual_price_total'))['total'] or 0
+    weekly_cost = sales.filter(date__gte=week_ago).aggregate(total=Sum(F('items__quantity') * F('items__product__cost_price')))['total'] or 0
+    weekly_profit = weekly_sales - weekly_cost if weekly_cost is not None else None
+
+    monthly_sales = sales.filter(date__gte=month_ago).aggregate(total=Sum('items__actual_price_total'))['total'] or 0
+    monthly_cost = sales.filter(date__gte=month_ago).aggregate(total=Sum(F('items__quantity') * F('items__product__cost_price')))['total'] or 0
+    monthly_profit = monthly_sales - monthly_cost if monthly_cost is not None else None
+
+    total_cost = sales.aggregate(total=Sum(F('items__quantity') * F('items__product__cost_price')))['total'] or 0
+    total_profit = total_sales_amount - total_cost if total_cost is not None else None
+
+    # Динамика продаж по дням за неделю
+    sales_by_day = []
+    for i in range(7):
+        day = today - timedelta(days=i)
+        revenue = sales.filter(date__date=day).aggregate(total=Sum('items__actual_price_total'))['total'] or 0
+        sales_by_day.append({'date': day.strftime('%Y-%m-%d'), 'revenue': revenue})
+    sales_by_day.reverse()
+
+    # Топ товаров
+    top_products_by_quantity = SaleItem.objects.filter(sale__owner=request.user).values('product__name').annotate(
         total_quantity=Sum('quantity'),
         total_amount=Sum('actual_price_total')
     ).order_by('-total_quantity')[:5]
+    top_product_by_quantity = top_products_by_quantity.first() if top_products_by_quantity else None
 
+    top_products_by_revenue = SaleItem.objects.filter(sale__owner=request.user).values('product__name').annotate(
+        total_revenue=Sum('actual_price_total')
+    ).order_by('-total_revenue')[:5]
+    top_product_by_revenue = top_products_by_revenue.first() if top_products_by_revenue else None
+
+    # Товары с низким запасом
     low_stock_products = Product.objects.filter(quantity__lt=5, is_archived=False).order_by('quantity')[:5]
 
-    sales_by_month = {
-        (today - timedelta(days=30)).strftime('%Y-%m'): 0
-    }
-    for sale in sales.filter(date__gte=month_ago):
-        sale_month = sale.date.date().strftime('%Y-%m')
-        sales_by_month[sale_month] = sales_by_month.get(sale_month, 0) + sale.items.aggregate(total=Sum('actual_price_total'))['total'] or 0
+    # Статистика по категориям (product_type)
+    category_stats = SaleItem.objects.filter(sale__owner=request.user).values(
+        'product__product_type__name'
+    ).annotate(
+        total_quantity=Sum('quantity'),
+        total_revenue=Sum('actual_price_total')
+    ).order_by('-total_revenue')
+
+    # Статистика по складам
+    warehouse_stats = SaleItem.objects.filter(sale__owner=request.user).values(
+        'product__warehouse__name'
+    ).annotate(
+        total_quantity=Sum('quantity'),
+        total_revenue=Sum('actual_price_total')
+    ).order_by('-total_revenue')
+
+    user_settings, created = UserSettings.objects.get_or_create(owner=request.user)
+    show_cost_price = not user_settings.hide_cost_price
 
     return render(request, 'stats.html', {
-        'total_sales': total_sales,
-        'total_sales_amount': total_sales_amount,
-        'total_returns': total_returns,
+        'daily_revenue': daily_sales,
+        'daily_profit': daily_profit if show_cost_price else None,
+        'weekly_revenue': weekly_sales,
+        'weekly_profit': weekly_profit if show_cost_price else None,
+        'monthly_revenue': monthly_sales,
+        'monthly_profit': monthly_profit if show_cost_price else None,
+        'total_revenue': total_sales_amount,
+        'total_profit': total_profit if show_cost_price else None,
+        'total_sales_count': total_sales_count,
+        'total_returns_count': total_returns_count,
         'total_returns_quantity': total_returns_quantity,
-        'sales_by_day': sales_by_day,
-        'top_products': top_products,
+        'average_check': average_check,
+        'top_product_by_quantity': top_product_by_quantity,
+        'top_product_by_revenue': top_product_by_revenue,
         'low_stock_products': low_stock_products,
-        'sales_by_month': sales_by_month,
+        'daily_sales_last_week': sales_by_day,
+        'category_stats': category_stats,
+        'warehouse_stats': warehouse_stats,
+        'show_cost_price': show_cost_price,
     })
 
 ##############

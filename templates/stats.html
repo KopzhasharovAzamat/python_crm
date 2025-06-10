@@ -118,40 +118,7 @@
                 <tbody>
                     {% for stat in category_stats %}
                     <tr>
-                        <td>{{ stat.product__category__name|default:"Без категории" }}</td>
-                        <td>{{ stat.total_quantity }}</td>
-                        <td>{{ stat.total_revenue|floatformat:2 }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center">Нет данных</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Динамика продаж по подкатегориям -->
-<div class="card shadow-sm mb-4 animate__animated animate__fadeInUp">
-    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
-        <h3 class="mb-0">Динамика продаж по подкатегориям</h3>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Подкатегория</th>
-                        <th>Количество продаж</th>
-                        <th>Выручка (сом)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for stat in subcategory_stats %}
-                    <tr>
-                        <td>{{ stat.product__subcategory__name|default:"Без подкатегории" }}</td>
+                        <td>{{ stat.product__product_type__name|default:"Без категории" }}</td>
                         <td>{{ stat.total_quantity }}</td>
                         <td>{{ stat.total_revenue|floatformat:2 }}</td>
                     </tr>
@@ -184,7 +151,7 @@
                 <tbody>
                     {% for stat in warehouse_stats %}
                     <tr>
-                        <td>{{ stat.product__warehouse__name }}</td>
+                        <td>{{ stat.product__warehouse__name|default:"Без склада" }}</td>
                         <td>{{ stat.total_quantity }}</td>
                         <td>{{ stat.total_revenue|floatformat:2 }}</td>
                     </tr>
