@@ -8,7 +8,8 @@
 4. Установите зависимости: `pip install -r requirements.txt`.
 5. Создание миграций: `python manage.py makemigrations`
 6. Выполните миграции: `python manage.py migrate`.
-7. Запустите сервер: `python manage.py runserver`.
+7. Запустить сиды (опционально): `python seeds.py`
+8. Запустите сервер: `python manage.py runserver`.
 
 ## Функционал
 - Регистрация и авторизация.
