@@ -34,18 +34,23 @@ urlpatterns = [
     path('warehouses/<int:warehouse_id>/edit/', views.warehouse_edit, name='warehouse_edit'),
     path('warehouses/<int:warehouse_id>/delete/', views.warehouse_delete, name='warehouse_delete'),
 
-    # Brand and Model Management
-    path('brand-model/', views.brand_model_manage, name='brand_model_manage'),
-    path('brands/', views.brand_manage, name='brand_manage'),
+    # Brand Management
+    path('brands/', views.brand_manage, name='brands'),
     path('brands/<int:brand_id>/edit/', views.brand_edit, name='brand_edit'),
     path('brands/delete/<int:brand_id>/', views.brand_delete, name='brand_delete'),
+
+    # Model Management
+    path('models/', views.model_manage, name='models'),
     path('models/<int:model_id>/edit/', views.model_edit, name='model_edit'),
     path('models/delete/<int:model_id>/', views.model_delete, name='model_delete'),
+
+    # Specification Management
+    path('specifications/', views.specification_manage, name='specifications'),
     path('specifications/<int:specification_id>/edit/', views.specification_edit, name='specification_edit'),
     path('specifications/delete/<int:specification_id>/', views.specification_delete, name='specification_delete'),
 
     # ProductType
-    path('product-types/', views.product_type_manage, name='product_type_manage'),
+    path('product-types/', views.product_types, name='product_types'),
     path('product-types/<int:product_type_id>/edit/', views.product_type_edit, name='product_type_edit'),
     path('product-types/delete/<int:product_type_id>/', views.product_type_delete, name='product_type_delete'),
 

@@ -6,7 +6,7 @@
 {% block content %}
 <div class="row mt-5">
     <div class="col-12">
-        <h2 class="mb-4 animate__animated animate__fadeIn">Управление марками и моделями</h2>
+        <h2 class="mb-4 animate__animated animate__fadeIn">Управление марками, моделями, спецификациями и типами продуктов</h2>
 
         <form method="get" class="mb-4">
             <div class="row g-3">
@@ -87,6 +87,72 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm animate__animated animate__fadeInUp">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                        <h4 class="mb-0">Добавить спецификацию</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'brand_model_manage' %}">
+                            {% csrf_token %}
+                            {% if specification_form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field in specification_form %}
+                                {% for error in field.errors %}
+                                <p>{{ field.label }}: {{ error }}</p>
+                                {% endfor %}
+                                {% endfor %}
+                                {% for error in specification_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% for field in specification_form %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                {{ field|add_class:"form-control" }}
+                            </div>
+                            {% endfor %}
+                            <div class="d-grid">
+                                <button type="submit" name="add_specification" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card shadow-sm animate__animated animate__fadeInUp">
+                    <div class="card-header text-white" style="background: linear-gradient(135deg, #A3BFFA, #FBB6CE);">
+                        <h4 class="mb-0">Добавить тип продукта</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'brand_model_manage' %}">
+                            {% csrf_token %}
+                            {% if product_type_form.errors %}
+                            <div class="alert alert-danger">
+                                {% for field in product_type_form %}
+                                {% for error in field.errors %}
+                                <p>{{ field.label }}: {{ error }}</p>
+                                {% endfor %}
+                                {% endfor %}
+                                {% for error in product_type_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            {% for field in product_type_form %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                {{ field|add_class:"form-control" }}
+                            </div>
+                            {% endfor %}
+                            <div class="d-grid">
+                                <button type="submit" name="add_product_type" class="btn btn-primary"><i class="fas fa-plus"></i> Добавить</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <h3 class="mt-5 mb-3 animate__animated animate__fadeIn">Марки</h3>
@@ -110,7 +176,7 @@
         </div>
 
         <h3 class="mt-5 mb-3 animate__animated animate__fadeIn">Модели</h3>
-        <div class="list-group animate__animated animate__fadeInUp">
+        <div class="list-group animate__animated animate__fadeInUp mb-4">
             {% for model in models %}
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">{{ model.name }} ({{ model.brand.name }})</h5>
@@ -126,6 +192,46 @@
             </div>
             {% empty %}
             <div class="list-group-item text-center">Моделей нет.</div>
+            {% endfor %}
+        </div>
+
+        <h3 class="mt-5 mb-3 animate__animated animate__fadeIn">Спецификации моделей</h3>
+        <div class="list-group animate__animated animate__fadeInUp mb-4">
+            {% for spec in specifications %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ spec.model.name }} {{ spec.engine_capacity }}л ({{ spec.engine_code }})</h5>
+                <div>
+                    <a href="{% url 'specification_edit' spec.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                    <form method="post" action="{% url 'specification_delete' spec.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить спецификацию для {{ spec.model.name }}?');">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div class="list-group-item text-center">Спецификаций нет.</div>
+            {% endfor %}
+        </div>
+
+        <h3 class="mt-5 mb-3 animate__animated animate__fadeIn">Типы продуктов</h3>
+        <div class="list-group animate__animated animate__fadeInUp">
+            {% for product_type in product_types %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ product_type.name }}</h5>
+                <div>
+                    <a href="{% url 'product_type_edit' product_type.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
+                    <form method="post" action="{% url 'product_type_delete' product_type.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить тип продукта {{ product_type.name }}?');">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div class="list-group-item text-center">Типов продуктов нет.</div>
             {% endfor %}
         </div>
     </div>

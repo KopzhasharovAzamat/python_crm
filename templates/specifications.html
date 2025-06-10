@@ -1,0 +1,95 @@
+<!--templates/specifications.html-->
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}
+Управление спецификациями
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-10">
+        <div class="card shadow-sm animate__animated animate__fadeIn">
+            <div class="card-header text-white text-center">
+                <h3 class="mb-0">Управление спецификациями</h3>
+            </div>
+            <div class="card-body">
+                <!-- Поиск и сортировка -->
+                <form method="get" class="mb-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text" name="q" class="form-control" placeholder="Поиск по коду двигателя или модели..." value="{{ query|default:'' }}">
+                                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Поиск</button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="sort_by" class="form-select" onchange="this.form.submit()">
+                                <option value="">Сортировать по...</option>
+                                <option value="model__name" {% if sort_by == 'model__name' %}selected{% endif %}>Модель (А-Я)</option>
+                                <option value="-model__name" {% if sort_by == '-model__name' %}selected{% endif %}>Модель (Я-А)</option>
+                                <option value="engine_code" {% if sort_by == 'engine_code' %}selected{% endif %}>Код двигателя (А-Я)</option>
+                                <option value="-engine_code" {% if sort_by == '-engine_code' %}selected{% endif %}>Код двигателя (Я-А)</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Форма добавления спецификации -->
+                <form method="post" class="mb-4">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-8">
+                            {{ specification_form.as_p }}
+                        </div>
+                        <div class="col-md-3 align-self-end">
+                            <button type="submit" name="add_specification" class="btn btn-success w-100"><i class="fas fa-plus"></i> Добавить спецификацию</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Список спецификаций -->
+                {% if specifications %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Модель</th>
+                                <th>Объем двигателя</th>
+                                <th>Код двигателя</th>
+                                <th>Лошадиные силы</th>
+                                <th>Начало производства</th>
+                                <th>Конец производства</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for spec in specifications %}
+                            <tr>
+                                <td>{{ spec.model }}</td>
+                                <td>{{ spec.engine_capacity }} л</td>
+                                <td>{{ spec.engine_code }}</td>
+                                <td>{{ spec.horsepower }}</td>
+                                <td>{{ spec.production_start|date:"d.m.Y" }}</td>
+                                <td>{{ spec.production_end|date:"d.m.Y"|default:"-" }}</td>
+                                <td>
+                                    <a href="{% url 'specification_edit' spec.id %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i> Редактировать</a>
+                                    <form action="{% url 'specification_delete' spec.id %}" method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите удалить спецификацию для модели {{ spec.model }}?');"><i class="fas fa-trash"></i> Удалить</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Спецификации не найдены.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

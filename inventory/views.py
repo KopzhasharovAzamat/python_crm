@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.db.models import Sum, Q, F, Value, FloatField
 from django.db.models.functions import Coalesce
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from .forms import RegisterForm, LoginForm, UserChangeForm, UserSettingsForm, ProductForm, WarehouseForm, CartItemForm, SaleItemForm, ReturnForm, BrandForm, ModelForm, ModelSpecificationForm, ProductTypeForm
 from .models import Product, Warehouse, Sale, SaleItem, Cart, CartItem, UserSettings, User, Return, LogEntry, CartComment, SaleComment, Brand, Model, ModelSpecification, ProductType
 from django.http import JsonResponse
@@ -339,54 +339,6 @@ def warehouse_delete(request, warehouse_id):
 ############
 
 @login_required
-def brand_model_manage(request):
-    query = request.GET.get('q', '')
-
-    brands = Brand.objects.all()
-    models = Model.objects.all()
-
-    if query:
-        brands = brands.filter(name__icontains=query)
-        models = models.filter(Q(name__icontains=query) | Q(brand__name__icontains=query))
-
-    brands = brands.order_by('name')
-    models = models.order_by('name')
-
-    brand_form = BrandForm()
-    model_form = ModelForm()
-
-    if request.method == 'POST':
-        if 'add_brand' in request.POST:
-            brand_form = BrandForm(request.POST)
-            if brand_form.is_valid():
-                brand = brand_form.save()
-                create_log_entry(request.user, 'ADD',
-                                 f'Марка "{brand.name}" добавлена пользователем {request.user.username}')
-                messages.success(request, 'Марка добавлена.')
-                return redirect('brand_model_manage')
-            else:
-                messages.error(request, 'Ошибка при добавлении марки.')
-        elif 'add_model' in request.POST:
-            model_form = ModelForm(request.POST)
-            if model_form.is_valid():
-                model = model_form.save()
-                create_log_entry(request.user, 'ADD',
-                                 f'Модель "{model.name}" добавлена пользователем {request.user.username}')
-                messages.success(request, 'Модель добавлена.')
-                return redirect('brand_model_manage')
-            else:
-                messages.error(request, 'Ошибка при добавлении модели.')
-
-    return render(request, 'brand_model_manage.html', {
-        'brands': brands,
-        'models': models,
-        'brand_form': brand_form,
-        'model_form': model_form,
-        'query': query,
-    })
-
-
-@login_required
 def brand_manage(request):
     query = request.GET.get('q', '')
     sort_by = request.GET.get('sort_by', '')
@@ -400,14 +352,14 @@ def brand_manage(request):
         brands = brands.order_by('name')
 
     brand_form = BrandForm()
-    if request.method == 'POST':
+    if request.method == 'POST' and 'add_brand' in request.POST:
         brand_form = BrandForm(request.POST)
         if brand_form.is_valid():
             brand = brand_form.save()
             create_log_entry(request.user, 'ADD',
                              f'Марка "{brand.name}" добавлена пользователем {request.user.username}')
             messages.success(request, 'Марка добавлена.')
-            return redirect('brand_model_manage')
+            return redirect('brands')
         else:
             messages.error(request, 'Ошибка при добавлении марки.')
 
@@ -417,7 +369,6 @@ def brand_manage(request):
         'query': query,
         'sort_by': sort_by,
     })
-
 
 @login_required
 def brand_edit(request, brand_id):
@@ -430,13 +381,15 @@ def brand_edit(request, brand_id):
             create_log_entry(request.user, 'UPDATE',
                              f'Марка "{old_name}" обновлена на "{brand.name}" пользователем {request.user.username}')
             messages.success(request, 'Марка обновлена.')
-            return redirect('brand_model_manage')
+            return redirect('brands')
         else:
             messages.error(request, 'Ошибка при обновлении марки.')
     else:
         form = BrandForm(instance=brand)
-    return render(request, 'brand_model_form.html', {'form': form})
-
+    return render(request, 'brand_edit.html', {
+        'form': form,
+        'brand': brand
+    })
 
 @login_required
 def brand_delete(request, brand_id):
@@ -445,12 +398,12 @@ def brand_delete(request, brand_id):
         related_models = Model.objects.filter(brand=brand)
         if related_models.exists():
             messages.error(request, f'Нельзя удалить марку "{brand.name}", так как с ней связаны модели.')
-            return redirect('brand_model_manage')
+            return redirect('brands')
         brand_name = brand.name
         brand.delete()
         create_log_entry(request.user, 'DELETE', f'Марка "{brand_name}" удалена')
         messages.success(request, f'Марка "{brand_name}" удалена.')
-    return redirect('brand_model_manage')
+    return redirect('brands')
 
 
 ############
@@ -471,24 +424,23 @@ def model_manage(request):
         models = models.order_by('name')
 
     model_form = ModelForm()
-    if request.method == 'POST':
+    if request.method == 'POST' and 'add_model' in request.POST:
         model_form = ModelForm(request.POST)
         if model_form.is_valid():
             model = model_form.save()
             create_log_entry(request.user, 'ADD',
                              f'Модель "{model.name}" добавлена пользователем {request.user.username}')
             messages.success(request, 'Модель добавлена.')
-            return redirect('brand_model_manage')
+            return redirect('models')
         else:
             messages.error(request, 'Ошибка при добавлении модели.')
 
-    return render(request, 'brands.html', {
+    return render(request, 'models.html', {
         'models': models,
         'model_form': model_form,
         'query': query,
         'sort_by': sort_by,
     })
-
 
 @login_required
 def model_edit(request, model_id):
@@ -501,13 +453,15 @@ def model_edit(request, model_id):
             create_log_entry(request.user, 'UPDATE',
                              f'Модель "{old_name}" обновлена на "{model.name}" пользователем {request.user.username}')
             messages.success(request, 'Модель обновлена.')
-            return redirect('brand_model_manage')
+            return redirect('models')
         else:
             messages.error(request, 'Ошибка при обновлении модели.')
     else:
         form = ModelForm(instance=model)
-    return render(request, 'brand_model_form.html', {'form': form})
-
+    return render(request, 'model_edit.html', {
+        'form': form,
+        'model': model
+    })
 
 @login_required
 def model_delete(request, model_id):
@@ -516,12 +470,12 @@ def model_delete(request, model_id):
         related_specifications = ModelSpecification.objects.filter(model=model)
         if related_specifications.exists():
             messages.error(request, f'Нельзя удалить модель "{model.name}", так как с ней связаны спецификации.')
-            return redirect('brand_model_manage')
+            return redirect('models')
         model_name = model.name
         model.delete()
         create_log_entry(request.user, 'DELETE', f'Модель "{model_name}" удалена пользователем {request.user.username}')
         messages.success(request, f'Модель "{model_name}" удалена.')
-    return redirect('brand_model_manage')
+    return redirect('models')
 
 ######################
 ### SPECIFICATION ###
@@ -541,17 +495,18 @@ def specification_manage(request):
         specifications = specifications.order_by('model__name')
 
     specification_form = ModelSpecificationForm()
-    if request.method == 'POST':
+    if request.method == 'POST' and 'add_specification' in request.POST:
         specification_form = ModelSpecificationForm(request.POST)
         if specification_form.is_valid():
             specification = specification_form.save()
-            create_log_entry(request.user, 'ADD', f'Спецификация для модели "{specification.model.name}" добавлена пользователем {request.user.username}')
+            create_log_entry(request.user, 'ADD',
+                             f'Спецификация для модели "{specification.model.name}" добавлена пользователем {request.user.username}')
             messages.success(request, 'Спецификация добавлена.')
-            return redirect('brand_manage')
+            return redirect('specifications')
         else:
             messages.error(request, 'Ошибка при добавлении спецификации.')
 
-    return render(request, 'brands.html', {
+    return render(request, 'specifications.html', {
         'specifications': specifications,
         'specification_form': specification_form,
         'query': query,
@@ -565,14 +520,18 @@ def specification_edit(request, specification_id):
         form = ModelSpecificationForm(request.POST, instance=specification)
         if form.is_valid():
             specification = form.save()
-            create_log_entry(request.user, 'UPDATE', f'Спецификация для модели "{specification.model.name}" обновлена пользователем {request.user.username}')
+            create_log_entry(request.user, 'UPDATE',
+                             f'Спецификация для модели "{specification.model.name}" обновлена пользователем {request.user.username}')
             messages.success(request, 'Спецификация обновлена.')
-            return redirect('brand_manage')
+            return redirect('specifications')
         else:
             messages.error(request, 'Ошибка при обновлении спецификации.')
     else:
         form = ModelSpecificationForm(instance=specification)
-    return render(request, 'specification_form.html', {'form': form, 'specification': specification})
+    return render(request, 'specification_edit.html', {
+        'form': form,
+        'specification': specification
+    })
 
 @login_required
 def specification_delete(request, specification_id):
@@ -581,19 +540,20 @@ def specification_delete(request, specification_id):
         related_products = Product.objects.filter(specifications=specification)
         if related_products.exists():
             messages.error(request, f'Нельзя удалить спецификацию для модели "{specification.model.name}", так как с ней связаны товары.')
-            return redirect('brand_manage')
-        specification_model = specification.model.name
+            return redirect('specifications')
+        specification_model_name = specification.model.name
         specification.delete()
-        create_log_entry(request.user, 'DELETE', f'Спецификация для модели "{specification_model}" удалена пользователем {request.user.username}')
-        messages.success(request, f'Спецификация для модели "{specification_model}" удалена.')
-    return redirect('brand_manage')
+        create_log_entry(request.user, 'DELETE',
+                         f'Спецификация для модели "{specification_model_name}" удалена пользователем {request.user.username}')
+        messages.success(request, f'Спецификация для модели "{specification_model_name}" удалена.')
+    return redirect('specifications')
 
 ###################
 ### PRODUCT TYPE ###
 ###################
 
 @login_required
-def product_type_manage(request):
+def product_types(request):
     query = request.GET.get('q', '')
     sort_by = request.GET.get('sort_by', '')
 
@@ -606,15 +566,16 @@ def product_type_manage(request):
         product_types = product_types.order_by('name')
 
     product_type_form = ProductTypeForm()
-    if request.method == 'POST':
+    if request.method == 'POST' and 'add_product_type' in request.POST:
         product_type_form = ProductTypeForm(request.POST)
         if product_type_form.is_valid():
             product_type = product_type_form.save()
-            create_log_entry(request.user, 'ADD', f'Тип товара "{product_type.name}" добавлен пользователем {request.user.username}')
-            messages.success(request, 'Тип товара добавлен.')
-            return redirect('product_type_manage')
+            create_log_entry(request.user, 'ADD',
+                             f'Тип продукта "{product_type.name}" добавлен пользователем {request.user.username}')
+            messages.success(request, 'Тип продукта добавлен.')
+            return redirect('product_types')
         else:
-            messages.error(request, 'Ошибка при добавлении типа товара.')
+            messages.error(request, 'Ошибка при добавлении типа продукта.')
 
     return render(request, 'product_types.html', {
         'product_types': product_types,
@@ -631,14 +592,18 @@ def product_type_edit(request, product_type_id):
         if form.is_valid():
             old_name = product_type.name
             product_type = form.save()
-            create_log_entry(request.user, 'UPDATE', f'Тип товара "{old_name}" обновлен на "{product_type.name}" пользователем {request.user.username}')
-            messages.success(request, 'Тип товара обновлен.')
-            return redirect('product_type_manage')
+            create_log_entry(request.user, 'UPDATE',
+                             f'Тип продукта "{old_name}" обновлен на "{product_type.name}" пользователем {request.user.username}')
+            messages.success(request, 'Тип продукта обновлен.')
+            return redirect('product_types')
         else:
-            messages.error(request, 'Ошибка при обновлении типа товара.')
+            messages.error(request, 'Ошибка при обновлении типа продукта.')
     else:
         form = ProductTypeForm(instance=product_type)
-    return render(request, 'product_type_form.html', {'form': form, 'product_type': product_type})
+    return render(request, 'product_type_edit.html', {
+        'form': form,
+        'product_type': product_type
+    })
 
 @login_required
 def product_type_delete(request, product_type_id):
@@ -646,13 +611,14 @@ def product_type_delete(request, product_type_id):
     if request.method == 'POST':
         related_products = Product.objects.filter(product_type=product_type)
         if related_products.exists():
-            messages.error(request, f'Нельзя удалить тип товара "{product_type.name}", так как с ним связаны товары.')
-            return redirect('product_type_manage')
+            messages.error(request, f'Нельзя удалить тип продукта "{product_type.name}", так как с ним связаны товары.')
+            return redirect('product_types')
         product_type_name = product_type.name
         product_type.delete()
-        create_log_entry(request.user, 'DELETE', f'Тип товара "{product_type_name}" удален пользователем {request.user.username}')
-        messages.success(request, f'Тип товара "{product_type_name}" удален.')
-    return redirect('product_type_manage')
+        create_log_entry(request.user, 'DELETE',
+                         f'Тип продукта "{product_type_name}" удален пользователем {request.user.username}')
+        messages.success(request, f'Тип продукта "{product_type_name}" удален.')
+    return redirect('product_types')
 
 ############
 ### SALE ###

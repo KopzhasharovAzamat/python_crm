@@ -170,13 +170,14 @@ class ModelForm(forms.ModelForm):
 class ModelSpecificationForm(forms.ModelForm):
     class Meta:
         model = ModelSpecification
-        fields = ['model', 'engine_capacity', 'engine_code', 'horsepower', 'production_start']
+        fields = ['model', 'engine_capacity', 'engine_code', 'horsepower', 'production_start', 'production_end']
         labels = {
             'model': 'Модель',
             'engine_capacity': 'Объем двигателя',
             'engine_code': 'Код двигателя',
             'horsepower': 'Лошадиные силы',
             'production_start': 'Начало производства',
+            'production_end': 'Конец производства',
         }
         widgets = {
             'model': forms.Select(attrs={'class': 'form-control'}),
@@ -184,6 +185,7 @@ class ModelSpecificationForm(forms.ModelForm):
             'engine_code': forms.TextInput(attrs={'class': 'form-control'}),
             'horsepower': forms.NumberInput(attrs={'class': 'form-control'}),
             'production_start': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'production_end': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
 
 class ProductTypeForm(forms.ModelForm):
