@@ -1,0 +1,171 @@
+<!--templates/home.html-->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Furnivio{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+    <!-- Banner Carousel -->
+    <div class="carousel-container" id="banner">
+        <div class="slick-carousel">
+            <div>
+                <div class="carousel-slide" style="background-image: url('https://i.pinimg.com/736x/35/e7/51/35e751a34d3c9502577919ab06e9ab5c.jpg');">
+                    <div class="carousel-content">
+                        <h2 class="display-4">Диван Comfort Plus</h2>
+                        <p class="lead">Удобство и стиль для вашего интерьера</p>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="carousel-slide" style="background-image: url('https://i.pinimg.com/736x/26/4e/72/264e72b0eb6274f6d924118c3b234287.jpg');">
+                    <div class="carousel-content">
+                        <h2 class="display-4">Кресло Relax Deluxe</h2>
+                        <p class="lead">Идеальное сочетание комфорта и дизайна</p>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="carousel-slide" style="background-image: url('https://i.pinimg.com/736x/0f/bf/2e/0fbf2e021df8e8730992bc6b7940b5c0.jpg');">
+                    <div class="carousel-content">
+                        <h2 class="display-4">Столовый набор</h2>
+                        <p class="lead">Элегантность для вашей столовой</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Products -->
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">Популярные товары</h2>
+        <div class="row">
+            {% for product in products %}
+                <div class="col-md-4 col-sm-6 mb-4">
+                    <div class="card h-100 shadow-sm product-card">
+                        {% if product.rating >= 4.8 %}
+                            <div class="discount-badge">
+                                <i class="fas fa-tag text-white"></i>
+                            </div>
+                        {% endif %}
+                        <div class="slick-carousel product-images">
+                            {% for image in product.images.all %}
+                                <div>
+                                    <img src="{{ image.image.url }}" class="card-img-top" alt="{{ product.name }}">
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="card-body text-center">
+                            <h5 class="card-title">{{ product.name }}</h5>
+                            <p class="card-text text-muted">{{ product.description|truncatewords:20 }}</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="price-box">{{ product.price }} ₽</span>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-star text-warning"></i>
+                                    <span class="ms-1">{{ product.rating }}</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-eye text-secondary"></i>
+                                    <span class="ms-1">{{ product.views }}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex align-items-center">
+                                    <img src="{% static 'images/LogMebel.png' %}" alt="Furnivio" class="store-avatar">
+                                    <span class="ms-2">Furnivio <i class="fas fa-check-circle text-primary"></i></span>
+                                </div>
+                                <div class="social-icons">
+                                    <a href="https://t.me/+996709757873" target="_blank" class="pulse"><i class="fab fa-telegram"></i></a>
+                                    <a href="https://api.whatsapp.com/send?phone=996709757873" target="_blank" class="pulse"><i class="fab fa-whatsapp"></i></a>
+                                    <a href="https://www.instagram.com/furn1vo" target="_blank" class="pulse"><i class="fab fa-instagram"></i></a>
+                                </div>
+                            </div>
+                            <a href="{% url 'order_product' product.id %}" class="btn btn-order w-100">Заказать</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12 text-center">
+                    <p>Товары не найдены.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">Отзывы наших клиентов</h2>
+        <div class="slick-carousel reviews-carousel">
+            {% for review in reviews %}
+                <div class="px-2">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-2">
+                                <img src="{% static 'images/reviews/'|add:review.avatar %}" alt="{{ review.name }}" class="avatar">
+                                <div class="ms-2">
+                                    <h6 class="mb-0">{{ review.name }}</h6>
+                                    <p class="text-muted small mb-0">{{ review.city }}</p>
+                                </div>
+                            </div>
+                            <p>{{ review.review }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function(){
+    $('.slick-carousel:not(.product-images)').slick({
+        dots: true,
+        arrows: false,
+        autoplay: true,
+        autoplaySpeed: 15000,
+        slidesToShow: 1,
+        slidesToScroll: 1,
+        responsive: [
+            {
+                breakpoint: 768,
+                settings: {
+                    arrows: false,
+                    dots: true
+                }
+            }
+        ]
+    });
+
+    $('.product-images').slick({
+        dots: true,
+        arrows: false,
+        slidesToShow: 1,
+        slidesToScroll: 1
+    });
+
+    $('.reviews-carousel').slick({
+        dots: true,
+        arrows: false,
+        autoplay: true,
+        autoplaySpeed: 5000,
+        slidesToShow: 4,
+        slidesToScroll: 1,
+        responsive: [
+            {
+                breakpoint: 1200,
+                settings: { slidesToShow: 3 }
+            },
+            {
+                breakpoint: 900,
+                settings: { slidesToShow: 2 }
+            },
+            {
+                breakpoint: 600,
+                settings: { slidesToShow: 1 }
+            }
+        ]
+    });
+});
+</script>
+{% endblock %}
