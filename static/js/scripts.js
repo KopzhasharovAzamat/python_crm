@@ -71,4 +71,56 @@ $(document).ready(function(){
             $('#navbar').removeClass('scrolled');
         }
     });
+
+    // Order Modal Logic
+    $('#orderModal').on('show.bs.modal', function () {
+        // Сброс состояния модального окна при открытии
+        $('#orderModal .payment-options').show();
+        $('#orderModal .payment-details').hide();
+        $('#orderModal .payment-card').hide();
+        $('#orderModal .product-price').text('');
+        $('#orderModal').removeData('product-id product-name product-price');
+    });
+
+    $('.btn-order').click(function() {
+        var productId = $(this).data('product-id');
+        var productName = $(this).data('product-name');
+        var productPrice = $(this).data('product-price');
+
+        $('#orderModal').data('product-id', productId);
+        $('#orderModal').data('product-name', productName);
+        $('#orderModal').data('product-price', productPrice);
+
+        $('#orderModal .product-price').text(productPrice);
+        $('#orderModal .payment-options').show();
+        $('#orderModal .payment-details').hide();
+        $('#orderModal .payment-card').hide();
+    });
+
+    $('.payment-method').click(function() {
+        var method = $(this).data('method');
+        var productId = $('#orderModal').data('product-id');
+        var productName = $('#orderModal').data('product-name') || 'Неизвестный товар';
+        var productPrice = $('#orderModal').data('product-price') || '0';
+
+        if (method === 'cash') {
+            var message = encodeURIComponent(`Здравствуйте! Хочу заказать товар:\n${productName}\nЦена: ${productPrice} ₽\nСпособ оплаты: Наличными при встрече.\nПожалуйста, свяжитесь со мной для подтверждения заказа.`);
+            window.location.href = `https://wa.me/996709757873?text=${message}`;
+        } else {
+            $('#orderModal .payment-options').hide();
+            $('#orderModal .payment-details').show();
+            $('#orderModal .payment-card').hide();
+            $('#orderModal .payment-card.' + method).show();
+
+            var receiptMessage = encodeURIComponent(`Здравствуйте! Отправляю чек за товар:\n${productName}\nЦена: ${productPrice} ₽\nСпособ оплаты: ${method === 'mbank' ? 'MBank' : 'OptimaBank'}`);
+            $('#orderModal .payment-card.' + method + ' .send-receipt').attr('href', `https://wa.me/996709757873?text=${receiptMessage}`);
+        }
+    });
+
+    // Back to payment options
+    $('.back-to-options').click(function() {
+        $('#orderModal .payment-options').show();
+        $('#orderModal .payment-details').hide();
+        $('#orderModal .payment-card').hide();
+    });
 });

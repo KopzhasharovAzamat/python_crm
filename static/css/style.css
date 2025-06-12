@@ -63,7 +63,7 @@ body {
 }
 
 .carousel-content {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 0.7, 0.7);
     padding: 2rem;
     border-radius: 8px;
     text-align: center;
@@ -122,15 +122,16 @@ body {
 }
 
 .btn-order {
-    background-color: #071c29;
-    color: #fff;
+    background-color: #28a745;
+    color: white;
+    border: none;
     border-radius: 5px;
     box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.3s, transform 0.3s;
+    transition: background-color 0.3s;
 }
 
 .btn-order:hover {
-    background-color: #0a2278;
+    background-color: #218838;
 }
 
 .btn-order:active {
@@ -189,4 +190,36 @@ footer {
 footer img {
     max-width: 150px;
     margin-bottom: 1rem;
+}
+
+/* Стили для модального окна оплаты */
+.payment-options button {
+    font-size: 16px;
+    padding: 10px;
+}
+
+.payment-card {
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.payment-card img {
+    max-height: 200px;
+    object-fit: contain;
+}
+
+.payment-card .product-price {
+    font-weight: bold;
+    color: #333;
+}
+
+.payment-card .btn-success {
+    background-color: #28a745;
+    border: none;
+    padding: 10px 20px;
+}
+
+.payment-card .btn-success:hover {
+    background-color: #218838;
 }

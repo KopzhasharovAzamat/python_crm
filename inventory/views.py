@@ -4,6 +4,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponseRedirect
 from .models import Product, RoomType, FurnitureType, Review
 from .forms import FeedbackForm, ProductFilterForm
+from urllib.parse import quote as encodeURIComponent
 
 def home(request):
     products = Product.objects.order_by('-rating')[:6]
@@ -35,12 +36,12 @@ def products_list(request):
     return render(request, 'products_list.html', {
         'products': products,
         'form': form,
-        'gostinnaya_products': products,
-        'kuhnya_products': products,
-        'spalnya_products': products,
+        'gostinnaya_products': gostinnaya_products,
+        'kuhnya_products': kuhnya_products,
+        'spalnya_products': spalnya_products,
     })
 
-def product_detail(request, product):
+def product_detail(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     product.views += 1
     product.save()
@@ -58,6 +59,10 @@ def feedback(request):
 
 def order_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    message = f"Здравствуйте! Хочу заказать товар:\n{product.name}\nЦена: {product.price} ₽.\nПожалуйста, свяжитесь со мной для подтверждения заказа."
+    payment_method = request.GET.get('payment_method', 'default')
+    if payment_method == 'cash':
+        message = f"Здравствуйте! Хочу заказать товар:\n{product.name}\nЦена: {product.price} ₽.\nСпособ оплаты: Наличными при встрече.\nПожалуйста, свяжитесь со мной для подтверждения заказа."
+    else:
+        message = f"Здравствуйте! Хочу заказать товар:\n{product.name}\nЦена: {product.price} ₽.\nПожалуйста, свяжитесь со мной для подтверждения заказа."
     whatsapp_url = f"https://wa.me/996709757873?text={encodeURIComponent(message)}"
     return HttpResponseRedirect(whatsapp_url)
