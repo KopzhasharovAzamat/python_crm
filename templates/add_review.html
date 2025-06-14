@@ -1,0 +1,15 @@
+<!--templates/add_review.html-->
+
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <div class="container">
+    <h2>Оставить отзыв для "{{ design.title }}"</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="btn" type="submit">Оставить отзыв</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

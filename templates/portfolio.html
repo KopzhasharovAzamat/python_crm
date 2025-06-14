@@ -1,0 +1,17 @@
+<!--templates/portfolio.html-->
+
+{% extends "base.html" %}
+{% block content %}
+<section class="portfolio-preview">
+  <div class="container">
+    <h2>Портфолио</h2>
+    <div class="portfolio-grid">
+      {% for item in items %}
+        <a href="{% url 'portfolio_detail' item.pk %}">
+          <img src="{{ item.design.preview.url }}" alt="{{ item.design.title }}">
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

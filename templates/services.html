@@ -1,0 +1,20 @@
+<!--template/services.html-->
+
+{% extends "base.html" %}
+{% block content %}
+<section class="services-section">
+  <div class="container">
+    <h2>Наши Услуги</h2>
+    {% for tariff in tariffs %}
+      <div class="service-item">
+        <div class="text">
+          <h3>{{ tariff.name }}</h3>
+          <p>{{ tariff.description }}</p>
+          <p>Цена: {{ tariff.price }} сом</p>
+          <a href="{% url 'order' %}" class="btn">Заказать</a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

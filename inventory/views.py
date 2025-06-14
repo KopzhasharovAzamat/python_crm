@@ -1,68 +1,79 @@
 # inventory/views.py
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponseRedirect
-from .models import Product, RoomType, FurnitureType, Review
-from .forms import FeedbackForm, ProductFilterForm
-from urllib.parse import quote as encodeURIComponent
+from django.contrib.auth.decorators import login_required
+from .models import Design, PortfolioItem, Tariff, Review
+from .forms import ConsultationRequestForm, OrderForm, ReviewForm
+from django.contrib import messages
 
 def home(request):
-    products = Product.objects.order_by('-rating')[:6]
-    reviews = Review.objects.all()[:7]
+    portfolio_preview = PortfolioItem.objects.filter(show_on_main=True).select_related('design')[:9]
+    reviews = Review.objects.order_by('-created_at')[:3]
     return render(request, 'home.html', {
-        'products': products,
+        'portfolio_preview': portfolio_preview,
         'reviews': reviews
     })
 
-def products_list(request):
-    form = ProductFilterForm(request.GET or None)
-    products = Product.objects.all()
+def portfolio(request):
+    items = PortfolioItem.objects.select_related('design').all()
+    return render(request, 'portfolio.html', {'items': items})
 
-    if form.is_valid():
-        if form.cleaned_data['room_type']:
-            products = products.filter(furniture_type__room_type=form.cleaned_data['room_type'])
-        if form.cleaned_data['furniture_type']:
-            products = products.filter(furniture_type=form.cleaned_data['furniture_type'])
-        if form.cleaned_data['min_price']:
-            products = products.filter(price__gte=form.cleaned_data['min_price'])
-        if form.cleaned_data['max_price']:
-            products = products.filter(price__lte=form.cleaned_data['max_price'])
+def portfolio_detail(request, pk):
+    item = get_object_or_404(PortfolioItem, pk=pk)
+    reviews = item.design.reviews.all()
+    return render(request, 'portfolio_detail.html', {'item': item, 'reviews': reviews})
 
-    # Фильтрация по категориям
-    gostinnaya_products = products.filter(furniture_type__room_type__name="Гостиная")
-    kuhnya_products = products.filter(furniture_type__room_type__name="Кухня")
-    spalnya_products = products.filter(furniture_type__room_type__name="Спальня")
+def services(request):
+    tariffs = Tariff.objects.all()
+    return render(request, 'services.html', {'tariffs': tariffs})
 
-    return render(request, 'products_list.html', {
-        'products': products,
-        'form': form,
-        'gostinnaya_products': gostinnaya_products,
-        'kuhnya_products': kuhnya_products,
-        'spalnya_products': spalnya_products,
-    })
-
-def product_detail(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    product.views += 1
-    product.save()
-    return render(request, 'product_detail.html', {'product': product})
-
-def feedback(request):
-    if request.method == 'POST':
-        form = FeedbackForm(request.POST)
+def consultation(request):
+    if request.method == "POST":
+        form = ConsultationRequestForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('products_list')
+            messages.success(request, "Ваша заявка отправлена!")
+            return redirect('home')
     else:
-        form = FeedbackForm()
-    return render(request, 'feedback.html', {'form': form})
+        form = ConsultationRequestForm()
+    return render(request, 'consultation.html', {'form': form})
 
-def order_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    payment_method = request.GET.get('payment_method', 'default')
-    if payment_method == 'cash':
-        message = f"Здравствуйте! Хочу заказать товар:\n{product.name}\nЦена: {product.price} ₽.\nСпособ оплаты: Наличными при встрече.\nПожалуйста, свяжитесь со мной для подтверждения заказа."
+@login_required
+def order(request):
+    if request.method == "POST":
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.client = request.user
+            order.save()
+            messages.success(request, "Заказ успешно оформлен!")
+            return redirect('home')
     else:
-        message = f"Здравствуйте! Хочу заказать товар:\n{product.name}\nЦена: {product.price} ₽.\nПожалуйста, свяжитесь со мной для подтверждения заказа."
-    whatsapp_url = f"https://wa.me/996709757873?text={encodeURIComponent(message)}"
-    return HttpResponseRedirect(whatsapp_url)
+        form = OrderForm()
+    return render(request, 'order.html', {'form': form})
+
+def reviews(request):
+    all_reviews = Review.objects.order_by('-created_at')
+    return render(request, 'reviews.html', {'reviews': all_reviews})
+
+@login_required
+def add_review(request, design_id):
+    design = get_object_or_404(Design, pk=design_id)
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            rev = form.save(commit=False)
+            rev.design = design
+            rev.user = request.user
+            rev.save()
+            messages.success(request, "Спасибо за ваш отзыв!")
+            return redirect('portfolio_detail', pk=design.portfolioitem.pk)
+    else:
+        form = ReviewForm()
+    return render(request, 'add_review.html', {'form': form, 'design': design})
+
+def about(request):
+    return render(request, 'about.html')
+
+def contacts(request):
+    return render(request, 'contacts.html')

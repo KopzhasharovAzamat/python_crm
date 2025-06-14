@@ -1,0 +1,15 @@
+<!--templates/consultation.html-->
+
+{% extends "base.html" %}
+{% block content %}
+<section class="contact-section">
+  <div class="container">
+    <h2>Получить консультацию</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="btn" type="submit">Отправить</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

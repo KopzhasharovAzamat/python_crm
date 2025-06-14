@@ -1,45 +1,36 @@
 # inventory/forms.py
 
 from django import forms
-from .models import Feedback, RoomType, FurnitureType
+from .models import ConsultationRequest, Order, Review
 
-class FeedbackForm(forms.ModelForm):
+class ConsultationRequestForm(forms.ModelForm):
     class Meta:
-        model = Feedback
-        fields = ['name', 'email', 'message']
-        labels = {
-            'name': 'Имя',
-            'email': 'Электронная почта',
-            'message': 'Сообщение',
-        }
+        model = ConsultationRequest
+        fields = ['name', 'phone', 'message']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'email': forms.EmailInput(attrs={'class': 'form-control'}),
-            'message': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'message': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
 
-class ProductFilterForm(forms.Form):
-    room_type = forms.ModelChoiceField(
-        queryset=RoomType.objects.all(),
-        required=False,
-        label="Тип комнаты",
-        empty_label="Все",
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    furniture_type = forms.ModelChoiceField(
-        queryset=FurnitureType.objects.all(),
-        required=False,
-        label="Тип мебели",
-        empty_label="Все",
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    min_price = forms.FloatField(
-        required=False,
-        label="Минимальная цена",
-        widget=forms.NumberInput(attrs={'class': 'form-control'})
-    )
-    max_price = forms.FloatField(
-        required=False,
-        label="Максимальная цена",
-        widget=forms.NumberInput(attrs={'class': 'form-control'})
-    )
+class OrderForm(forms.ModelForm):
+    class Meta:
+        model = Order
+        fields = ['category', 'style', 'area', 'tariff', 'comment']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'style': forms.Select(attrs={'class': 'form-control'}),
+            'area': forms.NumberInput(attrs={'class': 'form-control'}),
+            'tariff': forms.Select(attrs={'class': 'form-control'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ['text', 'client_name', 'city']
+        widgets = {
+            'text': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'client_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'city': forms.TextInput(attrs={'class': 'form-control'}),
+        }

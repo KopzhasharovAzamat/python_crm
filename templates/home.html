@@ -1,241 +1,48 @@
 <!--templates/home.html-->
 
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}Furnivio{% endblock %}
-
+{% extends "base.html" %}
 {% block content %}
-<style>
-.btn-detail {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    margin-right: 8px;
-}
-.btn-detail:hover {
-    background-color: #5a6268;
-    color: white;
-}
-.btn-order {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-}
-.btn-order:hover {
-    background-color: #218838;
-    color: white;
-}
-</style>
-
-<div class="container-fluid p-0">
-    <!-- Banner Carousel -->
-    <div class="carousel-container" id="banner">
-        <div class="slick-carousel">
-            <div>
-                <div class="carousel-slide" style="background-image: url('https://i.pinimg.com/736x/35/e7/51/35e751a34d3c9502577919ab06e9ab5c.jpg');">
-                    <div class="carousel-content">
-                        <h2 class="display-4">Диван Comfort Plus</h2>
-                        <p class="lead">Удобство и стиль для вашего интерьера</p>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <div class="carousel-slide" style="background-image: url('https://i.pinimg.com/736x/26/4e/72/264e72b0eb6274f6d924118c3b234287.jpg');">
-                    <div class="carousel-content">
-                        <h2 class="display-4">Кресло Relax Deluxe</h2>
-                        <p class="lead">Идеальное сочетание комфорта и дизайна</p>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <div class="carousel-slide" style="background-image: url('https://i.pinimg.com/736x/0f/bf/2e/0fbf2e021df8e8730992bc6b7940b5c0.jpg');">
-                    <div class="carousel-content">
-                        <h2 class="display-4">Столовый набор</h2>
-                        <p class="lead">Элегантность для вашей столовой</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+<section class="interior-types">
+    <div class="container">
+      <h2>Дизайн интерьера</h2>
+      <div class="interior-options">
+        <a href="#" class="option-card">Дизайн квартир</a>
+        <a href="#" class="option-card">Дизайн домов</a>
+        <a href="#" class="option-card">Коммерческие помещения</a>
+      </div>
     </div>
+</section>
 
-    <!-- Popular Products -->
-    <div class="container mt-5">
-        <h2 class="text-center mb-4">Популярные товары</h2>
-        <div class="row">
-            {% for product in products %}
-                <div class="col-md-4 col-sm-6 mb-4">
-                    <div class="card h-100 shadow-sm product-card">
-                        {% if product.rating >= 4.8 %}
-                            <div class="discount-badge">
-                                <i class="fas fa-tag text-white"></i>
-                            </div>
-                        {% endif %}
-                        <div class="slick-carousel product-images">
-                            {% for image in product.images.all %}
-                                <div>
-                                    <img src="{{ image.image.url }}" class="card-img-top" alt="{{ product.name }}">
-                                </div>
-                            {% endfor %}
-                        </div>
-                        <div class="card-body text-center">
-                            <h5 class="card-title">{{ product.name }}</h5>
-                            <p class="card-text text-muted">{{ product.description|truncatewords:20 }}</p>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="price-box">{{ product.price }} ₽</span>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-star text-warning"></i>
-                                    <span class="ms-1">{{ product.rating }}</span>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-eye text-secondary"></i>
-                                    <span class="ms-1">{{ product.views }}</span>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="d-flex align-items-center">
-                                    <img src="{% static 'images/LogMebel.png' %}" alt="Furnivio" class="store-avatar">
-                                    <span class="ms-2">Furnivio <i class="fas fa-check-circle text-primary"></i></span>
-                                </div>
-                                <div class="social-icons">
-                                    <a href="https://t.me/+996709757873" target="_blank" class="pulse"><i class="fab fa-telegram"></i></a>
-                                    <a href="https://api.whatsapp.com/send?phone=996709757873" target="_blank" class="pulse"><i class="fab fa-whatsapp"></i></a>
-                                    <a href="https://www.instagram.com/furn1vo" target="_blank" class="pulse"><i class="fab fa-instagram"></i></i></a>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-center">
-                                <a href="{% url 'product_detail' product.id %}" class="btn btn-detail">Подробнее</a>
-                                <button class="btn btn-order" data-bs-toggle="modal" data-bs-target="#orderModal" data-product-id="{{ product.id }}" data-product-name="{{ product.name }}" data-product-price="{{ product.price }}">Заказать</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% empty %}
-                <div class="col-12 text-center">
-                    <p>Товары не найдены.</p>
-                </div>
-            {% endfor %}
-        </div>
+<section class="portfolio-preview">
+  <div class="container">
+    <h2>Портфолио команды Artnova</h2>
+    <div class="portfolio-grid">
+      {% for item in portfolio_preview %}
+        <a href="{% url 'portfolio_detail' item.pk %}">
+          <img src="{{ item.design.preview.url }}" alt="{{ item.design.title }}">
+        </a>
+      {% endfor %}
     </div>
-
-    <!-- Reviews -->
-    <div class="container mt-5">
-        <h2 class="text-center mb-4">Отзывы наших клиентов</h2>
-        <div class="slick-carousel reviews-carousel">
-            {% for review in reviews %}
-                <div class="px-2">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center mb-2">
-                                {% if review.avatar %}
-                                    <img src="{{ review.avatar.url }}" alt="{{ review.name }}" class="avatar" style="width: 40px; height: 40px; border-radius: 50%;">
-                                {% else %}
-                                    <img src="{% static 'images/placeholder.jpg' %}" alt="No avatar" class="avatar" style="width: 40px; height: 40px; border-radius: 50%;">
-                                {% endif %}
-                                <div class="ms-2">
-                                    <h6 class="mb-0">{{ review.name }}</h6>
-                                    <p class="text-muted small mb-0">{{ review.city }}</p>
-                                </div>
-                            </div>
-                            <p>{{ review.review }}</p>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
+    <div class="see-all">
+      <a href="{% url 'portfolio' %}" class="btn">Все работы</a>
     </div>
+  </div>
+</section>
 
-    <!-- Order Modal -->
-    <div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="orderModalLabel">Выберите способ оплаты</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="payment-options">
-                        <button class="btn btn-outline-primary w-100 mb-3 payment-method" data-method="mbank">MBank</button>
-                        <button class="btn btn-outline-primary w-100 mb-3 payment-method" data-method="optimabank">OptimaBank</button>
-                        <button class="btn btn-outline-primary w-100 mb-3 payment-method" data-method="cash">Наличными при встрече</button>
-                    </div>
-                    <div class="payment-details" style="display: none;">
-                        <div class="card payment-card mbank" style="display: none;">
-                            <div class="card-body text-center">
-                                <h5>Оплата через MBank</h5>
-                                <p>Цена: <span class="product-price"></span> ₽</p>
-                                <img src="{% static 'images/mbank.png' %}" alt="MBank QR Code" class="img-fluid mb-3" style="max-width: 200px;">
-                                <p>Необходимо отправить чек менеджеру</p>
-                                <a href="#" class="btn btn-success send-receipt">Отправить чек</a>
-                            </div>
-                        </div>
-                        <div class="card payment-card optimabank" style="display: none;">
-                            <div class="card-body text-center">
-                                <h5>Оплата через OptimaBank</h5>
-                                <p>Цена: <span class="product-price"></span> ₽</p>
-                                <img src="{% static 'images/optima.png' %}" alt="OptimaBank QR Code" class="img-fluid mb-3" style="max-width: 200px;">
-                                <p>Необходимо отправить чек менеджеру</p>
-                                <a href="#" class="btn btn-success send-receipt">Отправить чек</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<section class="reviews-section">
+  <div class="container">
+    <h2>Отзывы наших клиентов</h2>
+    <div class="reviews-grid">
+      {% for review in reviews %}
+      <div class="review-card">
+        <p>{{ review.text|linebreaksbr }}</p>
+        <h4>{% if review.client_name %}— {{ review.client_name }}{% endif %}</h4>
+      </div>
+      {% endfor %}
     </div>
-</div>
-
-<script>
-$(document).ready(function(){
-    $('.slick-carousel:not(.product-images, .reviews-carousel)').slick({
-        dots: true,
-        arrows: false,
-        autoplay: true,
-        autoplaySpeed: 15000,
-        slidesToShow: 1,
-        slidesToScroll: 1,
-        responsive: [
-            {
-                breakpoint: 768,
-                settings: {
-                    arrows: false,
-                    dots: true
-                }
-            }
-        ]
-    });
-
-    $('.product-images').slick({
-        dots: true,
-        arrows: false,
-        slidesToShow: 1,
-        slidesToScroll: 1
-    });
-
-    $('.reviews-carousel').slick({
-        dots: true,
-        arrows: false,
-        autoplay: true,
-        autoplaySpeed: 5000,
-        slidesToShow: 4,
-        slidesToScroll: 1,
-        responsive: [
-            {
-                breakpoint: 1200,
-                settings: { slidesToShow: 3 }
-            },
-            {
-                breakpoint: 900,
-                settings: { slidesToShow: 2 }
-            },
-            {
-                breakpoint: 600,
-                settings: { slidesToShow: 1 }
-            }
-        ]
-    });
-});
-</script>
+    <div class="see-all">
+      <a href="{% url 'reviews' %}" class="btn">Читать все отзывы</a>
+    </div>
+  </div>
+</section>
 {% endblock %}

@@ -1,0 +1,37 @@
+<!--templates/portfolio_detail.html-->
+
+{% extends "base.html" %}
+{% block content %}
+<section>
+  <div class="container">
+    <h2>{{ item.design.title }}</h2>
+    <div>
+      <img src="{{ item.design.preview.url }}" alt="{{ item.design.title }}" style="max-width: 500px">
+      <p>{{ item.design.description }}</p>
+      <div>
+        <h4>Галерея</h4>
+        {% for img in item.design.images.all %}
+          <img src="{{ img.image.url }}" style="max-width:200px; margin:5px;">
+        {% endfor %}
+      </div>
+      <div>
+        <a href="{% url 'order' %}" class="btn">Заказать подобный проект</a>
+      </div>
+    </div>
+    <div class="reviews-section">
+      <h3>Отзывы</h3>
+      <div class="reviews-grid">
+        {% for review in reviews %}
+        <div class="review-card">
+          <p>{{ review.text|linebreaksbr }}</p>
+          <h4>{% if review.client_name %}— {{ review.client_name }}{% endif %}</h4>
+        </div>
+        {% endfor %}
+      </div>
+      {% if user.is_authenticated %}
+      <a href="{% url 'add_review' item.design.pk %}" class="btn">Оставить отзыв</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
