@@ -1,3 +1,5 @@
+/* static/css/main.css */
+
 body { margin: 0; font-family: Arial, sans-serif; background: #fff; color: #222;}
 .container { width: 90%; max-width: 1200px; margin: 0 auto;}
 .site-header { background: #f8f8f8; padding: 20px 0; text-align: center;}
@@ -23,3 +25,4 @@ body { margin: 0; font-family: Arial, sans-serif; background: #fff; color: #222;
 .language-switch .active { color: #000;}
 .login-btn { background: #333; color: white; padding: 6px 12px; border-radius: 5px; text-decoration: none; transition: .3s;}
 .login-btn:hover { background: #555;}
+.option-card.active { background: #333; color: #fff; }

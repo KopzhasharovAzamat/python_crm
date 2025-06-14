@@ -14,4 +14,9 @@ urlpatterns = [
     path('add_review/<int:design_id>/', views.add_review, name='add_review'),
     path('about/', views.about, name='about'),
     path('contacts/', views.contacts, name='contacts'),
+    path('faq/', views.faq, name='faq'),
+    path('idea/', views.idea, name='idea'),
+    path('portfolio/', views.portfolio, name='portfolio'),
+    path('portfolio/category/<int:category_id>/', views.portfolio_by_category, name='portfolio_by_category'),
+
 ]

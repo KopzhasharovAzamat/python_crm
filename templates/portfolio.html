@@ -5,13 +5,25 @@
 <section class="portfolio-preview">
   <div class="container">
     <h2>Портфолио</h2>
-    <div class="portfolio-grid">
+    <div class="interior-options" style="justify-content: flex-start;">
+      <a href="{% url 'portfolio' %}" class="option-card{% if not selected_category %} active{% endif %}">Все</a>
+      {% for category in categories %}
+        <a href="{% url 'portfolio_by_category' category.id %}" class="option-card{% if selected_category and category == selected_category %} active{% endif %}">
+          {{ category.name }}
+        </a>
+      {% endfor %}
+    </div>
+    <div class="portfolio-grid" style="margin-top: 30px;">
       {% for item in items %}
         <a href="{% url 'portfolio_detail' item.pk %}">
           <img src="{{ item.design.preview.url }}" alt="{{ item.design.title }}">
         </a>
       {% endfor %}
+      {% if not items %}
+        <p>Работы не найдены.</p>
+      {% endif %}
     </div>
   </div>
 </section>
 {% endblock %}
+

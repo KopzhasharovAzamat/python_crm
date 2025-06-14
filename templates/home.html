@@ -6,9 +6,9 @@
     <div class="container">
       <h2>Дизайн интерьера</h2>
       <div class="interior-options">
-        <a href="#" class="option-card">Дизайн квартир</a>
-        <a href="#" class="option-card">Дизайн домов</a>
-        <a href="#" class="option-card">Коммерческие помещения</a>
+        {% for category in categories %}
+          <a href="{% url 'portfolio_by_category' category.id %}" class="option-card">{{ category.name }}</a>
+        {% endfor %}
       </div>
     </div>
 </section>
@@ -46,3 +46,4 @@
   </div>
 </section>
 {% endblock %}
+
