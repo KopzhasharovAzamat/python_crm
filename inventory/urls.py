@@ -15,8 +15,9 @@ urlpatterns = [
     path('about/', views.about, name='about'),
     path('contacts/', views.contacts, name='contacts'),
     path('faq/', views.faq, name='faq'),
-    path('idea/', views.idea, name='idea'),
-    path('portfolio/', views.portfolio, name='portfolio'),
+    path('idea/', views.designers, name='designers'),
     path('portfolio/category/<int:category_id>/', views.portfolio_by_category, name='portfolio_by_category'),
-
+    path('signup/', views.signup, name='signup'),
+    path('login/', views.login, name='login'),
+    path('logout/', views.logout, name='logout'),
 ]

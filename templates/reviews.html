@@ -1,18 +1,20 @@
 <!--templates/reviews.html-->
 
 {% extends "base.html" %}
+{% block bodyclass %}page-reviews{% endblock %}
 {% block content %}
 <section class="reviews-section">
-  <div class="container">
-    <h2>Отзывы наших клиентов</h2>
-    <div class="reviews-grid">
-      {% for review in reviews %}
-      <div class="review-card">
-        <p>{{ review.text|linebreaksbr }}</p>
-        <h4>{% if review.client_name %}— {{ review.client_name }}{% endif %}</h4>
-      </div>
-      {% endfor %}
+    <div class="container">
+        <h2>Отзывы наших клиентов</h2>
+        <div class="reviews-grid">
+            {% for review in reviews %}
+                <div class="review-card">
+                    <p>{{ review.text|linebreaksbr }}</p>
+                    <h4>{% if review.client_name %}— {{ review.client_name }}{% endif %}</h4>
+                </div>
+            {% endfor %}
+        </div>
     </div>
-  </div>
 </section>
 {% endblock %}
+

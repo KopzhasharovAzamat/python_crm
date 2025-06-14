@@ -1,0 +1,19 @@
+<!--templates/registration/signup.html-->
+
+{% extends "base.html" %}
+{% block content %}
+<section class="contact-section">
+  <div class="container" style="max-width:400px;margin:auto;">
+    <h2>Регистрация</h2>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="btn" type="submit">Зарегистрироваться</button>
+    </form>
+    <p style="margin-top:15px;">
+      Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a>
+    </p>
+  </div>
+</section>
+{% endblock %}
+

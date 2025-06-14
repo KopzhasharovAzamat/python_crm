@@ -7,9 +7,12 @@
     <title>Artnova — Дизайн интерьера</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     {% load static %}
+    <!-- Google Fonts — все шрифты разом -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@400;700&family=Quicksand:wght@400;600&family=Nunito:wght@400;600&family=Roboto:wght@400;700&family=Pacifico&family=Bebas+Neue&family=UnifrakturCook:wght@700&family=Bungee&family=Luckiest+Guy&family=Gloria+Hallelujah&family=Permanent+Marker&family=Faster+One&family=Fredoka+One&family=Caveat:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/main.css' %}">
 </head>
-<body>
+<body class="{% block bodyclass %}{% endblock %}">
+    <a href="{% url 'consultation' %}" class="konsultashka-btn">Консульташка</a>
     <header class="site-header">
         <div class="container">
             <h1 class="logo"><a href="{% url 'home' %}">ARTNOVA</a></h1>
@@ -20,16 +23,19 @@
                         <a href="#" class="lang">EN</a>
                     </div>
                     {% if user.is_authenticated %}
-                        <a href="{% url 'logout' %}" class="login-btn">Выйти</a>
+                        {% if user.is_superuser %}
+                            <a href="{% url 'admin:index' %}" class="admin-btn">Админ-панель</a>
+                        {% endif %}
+                        <a href="{% url 'logout' %}" class="logout-btn">Выйти <span class="sad-emoji">😭</span></a>
                     {% else %}
-                        <a href="{% url 'login' %}" class="login-btn">Войти</a>
+                        <a href="{% url 'login' %}" class="login-btn">Войти <span class="happy-emoji">😄</span></a>
                     {% endif %}
                 </div>
                 <ul>
                     <li><a href="{% url 'about' %}">О нас</a></li>
                     <li><a href="{% url 'services' %}">Услуги и цены</a></li>
                     <li><a href="{% url 'portfolio' %}">Портфолио</a></li>
-                    <li><a href="{% url 'idea' %}">Идеи дизайна</a></li>
+                    <li><a href="{% url 'designers' %}">Наши дизайнеры</a></li>
                     <li><a href="{% url 'reviews' %}">Отзывы</a></li>
                     <li><a href="{% url 'faq' %}">Вопросы</a></li>
                     <li><a href="{% url 'contacts' %}">Контакты</a></li>
@@ -47,7 +53,7 @@
     </main>
     <footer class="site-footer">
         <div class="container">
-            <p>&copy; 2025 Artnova. Все права защищены.</p>
+            <p>© 2025 Artnova. Все права защищены.</p>
         </div>
     </footer>
 </body>

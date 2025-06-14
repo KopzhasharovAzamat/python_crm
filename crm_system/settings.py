@@ -95,8 +95,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/products/'  # Перенаправление после входа
-LOGOUT_REDIRECT_URL = '/login/'   # Перенаправление после выхода
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/login/'
 
 # Настройки сессий
 SESSION_COOKIE_AGE = 1209600  # 2 недели в секундах

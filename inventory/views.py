@@ -2,10 +2,11 @@
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from .models import Design, PortfolioItem, Tariff, Review
-from .forms import ConsultationRequestForm, OrderForm, ReviewForm
+from django.contrib.auth import login as auth_login, logout as auth_logout, authenticate
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
-from .models import Category
+from .models import Design, PortfolioItem, Tariff, Review, Category
+from .forms import ConsultationRequestForm, OrderForm, ReviewForm
 
 def home(request):
     categories = Category.objects.all()
@@ -18,8 +19,9 @@ def home(request):
     })
 
 def portfolio(request):
+    categories = Category.objects.all()
     items = PortfolioItem.objects.select_related('design').all()
-    return render(request, 'portfolio.html', {'items': items})
+    return render(request, 'portfolio.html', {'items': items, 'categories': categories, 'selected_category': None})
 
 def portfolio_detail(request, pk):
     item = get_object_or_404(PortfolioItem, pk=pk)
@@ -55,6 +57,38 @@ def order(request):
         form = OrderForm()
     return render(request, 'order.html', {'form': form})
 
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            auth_login(request, user)
+            messages.success(request, "Регистрация успешна! Добро пожаловать!")
+            return redirect('home')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/signup.html', {'form': form})
+
+def login(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            auth_login(request, user)
+            messages.success(request, "Вы успешно вошли!")
+            next_url = request.POST.get('next', '/')
+            return redirect(next_url)
+        else:
+            messages.error(request, "Неверное имя пользователя или пароль.")
+    else:
+        form = AuthenticationForm()
+    return render(request, 'registration/login.html', {'form': form})
+
+def logout(request):
+    auth_logout(request)
+    messages.success(request, "Вы успешно вышли.")
+    return redirect('login')
+
 def reviews(request):
     all_reviews = Review.objects.order_by('-created_at')
     return render(request, 'reviews.html', {'reviews': all_reviews})
@@ -75,11 +109,6 @@ def add_review(request, design_id):
         form = ReviewForm()
     return render(request, 'add_review.html', {'form': form, 'design': design})
 
-def portfolio(request):
-    categories = Category.objects.all()
-    items = PortfolioItem.objects.select_related('design').all()
-    return render(request, 'portfolio.html', {'items': items, 'categories': categories, 'selected_category': None})
-
 def portfolio_by_category(request, category_id):
     categories = Category.objects.all()
     selected_category = get_object_or_404(Category, pk=category_id)
@@ -95,5 +124,5 @@ def contacts(request):
 def faq(request):
     return render(request, 'faq.html')
 
-def idea(request):
-    return render(request, 'idea.html')
+def designers(request):
+    return render(request, 'designers.html')

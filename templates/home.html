@@ -1,49 +1,51 @@
 <!--templates/home.html-->
 
 {% extends "base.html" %}
+{% block bodyclass %}page-home{% endblock %}
 {% block content %}
-<section class="interior-types">
-    <div class="container">
-      <h2>Дизайн интерьера</h2>
-      <div class="interior-options">
-        {% for category in categories %}
-          <a href="{% url 'portfolio_by_category' category.id %}" class="option-card">{{ category.name }}</a>
-        {% endfor %}
-      </div>
-    </div>
-</section>
-
-<section class="portfolio-preview">
-  <div class="container">
-    <h2>Портфолио команды Artnova</h2>
-    <div class="portfolio-grid">
-      {% for item in portfolio_preview %}
-        <a href="{% url 'portfolio_detail' item.pk %}">
-          <img src="{{ item.design.preview.url }}" alt="{{ item.design.title }}">
-        </a>
-      {% endfor %}
-    </div>
-    <div class="see-all">
-      <a href="{% url 'portfolio' %}" class="btn">Все работы</a>
-    </div>
-  </div>
-</section>
-
-<section class="reviews-section">
-  <div class="container">
-    <h2>Отзывы наших клиентов</h2>
-    <div class="reviews-grid">
-      {% for review in reviews %}
-      <div class="review-card">
-        <p>{{ review.text|linebreaksbr }}</p>
-        <h4>{% if review.client_name %}— {{ review.client_name }}{% endif %}</h4>
-      </div>
-      {% endfor %}
-    </div>
-    <div class="see-all">
-      <a href="{% url 'reviews' %}" class="btn">Читать все отзывы</a>
-    </div>
-  </div>
-</section>
+<div class="page-home">
+    <section class="interior-types">
+        <div class="container">
+            <h2>Дизайн интерьера</h2>
+            <div class="interior-options">
+                {% for category in categories %}
+                    <a href="{% url 'portfolio_by_category' category.id %}" class="option-card">{{ category.name }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    <section class="portfolio-preview">
+        <div class="container">
+            <h2>Портфолио команды Artnova</h2>
+            <div class="portfolio-grid">
+                {% for item in portfolio_preview %}
+                    <a href="{% url 'portfolio_detail' item.pk %}">
+                        <img src="{{ item.design.preview.url }}" alt="{{ item.design.title }}">
+                    </a>
+                {% endfor %}
+            </div>
+            <div class="see-all">
+                <a href="{% url 'portfolio' %}" class="btn">Все работы</a>
+            </div>
+        </div>
+    </section>
+    <section class="reviews-section">
+        <div class="container">
+            <h2>Отзывы наших клиентов</h2>
+            <div class="reviews-grid">
+                {% for review in reviews %}
+                    <div class="review-card">
+                        <p>{{ review.text|linebreaksbr }}</p>
+                        <h4>{% if review.client_name %}— {{ review.client_name }}{% endif %}</h4>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="see-all">
+                <a href="{% url 'reviews' %}" class="btn">Читать все отзывы</a>
+            </div>
+        </div>
+    </section>
+</div>
 {% endblock %}
+
 
