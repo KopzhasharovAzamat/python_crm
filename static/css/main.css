@@ -1,9 +1,9 @@
 body {
     margin: 0;
-    font-family: 'Inter', 'Montserrat', 'Segoe UI', Arial, sans-serif;
-    background: linear-gradient(120deg, #f8fafc 0%, #e3f0ff 100%);
-    color: #1a1c1f;
+    font-family: 'Montserrat', 'Inter', Arial, sans-serif;
     min-height: 100vh;
+    background: linear-gradient(120deg, #39c1c5 0%, #e2e1dd 100%);
+    color: #183a39;
 }
 
 body, .container { font-family: 'Montserrat', 'Inter', Arial, sans-serif; }
@@ -25,69 +25,83 @@ body.page-contacts    { font-family: 'Faster One', cursive; font-size: 1.06em; }
 body.page-services    { font-family: 'Fredoka One', Arial, sans-serif; font-size: 1.09em; }
 body.page-login, body.page-signup { font-family: 'Caveat', cursive; font-size: 1.11em; }
 
-
-
 .site-header {
-    background: rgba(245,248,255,0.94);
-    box-shadow: 0 6px 48px #64b5ff22;
-    padding: 30px 0 15px 0;
-    border-bottom-left-radius: 40px;
-    border-bottom-right-radius: 40px;
-    position: relative;
-    z-index: 10;
-    transition: box-shadow 0.3s;
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    background: #116a7b;
+    border-bottom: 4px solid #39c1c5;
+    box-shadow: 0 8px 40px #116a7b11, 0 2px 20px #39c1c522;
+    border-bottom-left-radius: 28px;
+    border-bottom-right-radius: 28px;
+    transition: box-shadow 0.3s, background 0.4s;
+    /* для выделения рамки: */
+    border-top: 3px solid #f7f6f2;
 }
 
+.logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 15px auto;
+    text-align: center;
+}
 .logo a {
-    text-decoration: none;
-    font-size: 38px;
-    font-weight: 800;
-    color: #232b5a;
-    letter-spacing: 0.03em;
-    text-shadow: 0 4px 24px #9ed8ff50, 0 1px 1px #fff9;
-    transition: color 0.2s;
+    font-family: 'Pacifico', cursive;
+    font-size: 2.6rem;
+    font-weight: 900;
+    color: #f7f6f2 !important;
+    text-shadow: 0 3px 16px #0c3c4177, 0 1px 0 #116a7b77;
+    letter-spacing: 0.04em;
+    margin: 0;
+    transition: color 0.22s;
 }
-
 .logo a:hover {
-    color: #0096ff;
+    color: #39c1c5 !important;
+    text-shadow: 0 3px 16px #5ef0f577, 0 1px 0 #116a7b44;
 }
 
+.site-header .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.main-nav {
+    width: 100%;
+}
 .main-nav ul {
     list-style: none;
     padding: 0;
-    margin: 18px 0 0;
+    margin: 0 0 0 0;
     display: flex;
     justify-content: center;
-    gap: 32px;
+    gap: 36px;
+    width: 100%;
 }
-
 .main-nav a:not(.login-btn):not(.logout-btn):not(.admin-btn):not(.konsultashka-btn) {
     text-decoration: none;
-    color: #26314c;
+    color: #f7f6f2;
     font-weight: 600;
     font-size: 1.18rem;
     letter-spacing: 0.02em;
-    padding: 8px 12px;
-    border-radius: 7px;
-    transition:
-        background 0.17s,
-        color 0.17s,
-        box-shadow 0.17s,
-        transform 0.13s;
-    position: relative;
-    z-index: 5;
+    padding: 8px 20px;
+    border-radius: 12px;
+    transition: background 0.15s, color 0.17s, box-shadow 0.16s, transform 0.12s;
+    background: transparent;
 }
 .main-nav a:not(.login-btn):not(.logout-btn):not(.admin-btn):not(.konsultashka-btn):hover {
-    background: linear-gradient(90deg, #e1ecff 20%, #c3eaff 100%);
-    color: #0d58af;
-    box-shadow: 0 2px 16px #87c4fa22;
+    background: #39c1c5;
+    color: #116a7b;
+    box-shadow: 0 2px 16px #39c1c522;
     transform: scale(1.08) translateY(-1px);
 }
 
 .header-actions {
     position: absolute;
-    top: 28px;
-    right: 36px;
+    top: 35px;
+    right: 38px;
     display: flex;
     gap: 18px;
     align-items: center;
@@ -122,6 +136,7 @@ body.page-login, body.page-signup { font-family: 'Caveat', cursive; font-size: 1
     width: 92%;
     max-width: 1200px;
     margin: 0 auto;
+    background: transparent;
 }
 
 h2, h3, h4 {
@@ -137,32 +152,36 @@ section {
 }
 
 .btn {
-    display: inline-block;
-    padding: 14px 32px;
-    background: linear-gradient(90deg, #0096ff 0%, #5de0ff 100%);
-    color: white;
-    text-decoration: none;
-    border-radius: 11px;
+    background: linear-gradient(90deg, #116a7b 0%, #39c1c5 100%);
+    color: #fff !important;
+    border: none;
+    border-radius: 12px;
     font-weight: 700;
-    font-size: 1.11rem;
-    box-shadow: 0 6px 32px #48d6ff44;
-    transition: background 0.22s, transform 0.12s, box-shadow 0.12s;
-    margin-top: 6px;
+    font-size: 1.13rem;
+    box-shadow: 0 4px 16px #39c1c540;
     letter-spacing: 0.02em;
+    padding: 14px 34px;
+    margin-top: 6px;
+    transition: background 0.21s, color 0.19s, box-shadow 0.18s, transform 0.15s;
 }
 .btn:hover {
-    background: linear-gradient(90deg, #355c7d 0%, #6c5b7b 100%);
-    color: #fff;
-    box-shadow: 0 8px 32px #6c5b7b33;
+    background: linear-gradient(90deg, #39c1c5 0%, #116a7b 100%);
+    color: #fff !important;
+    box-shadow: 0 8px 24px #116a7b55;
     transform: scale(1.07) translateY(-2px);
 }
 
-.interior-types, .portfolio-preview, .reviews-section, .services-section, .contact-section {
-    padding: 64px 0 36px 0;
-    background: linear-gradient(100deg, #e3f0ff 0%, #f6faff 90%);
+.interior-types,
+.portfolio-preview,
+.reviews-section,
+.services-section,
+.contact-section {
+    padding: 54px 0 36px 0;
+    background: linear-gradient(100deg, #f7f6f2 60%, #e2e1dd 100%);
     border-radius: 36px;
     margin-bottom: 38px;
-    box-shadow: 0 4px 48px #d3ebff17;
+    box-shadow: 0 4px 48px #116a7b14;
+    border: 2.5px solid #39c1c5;
 }
 
 .interior-options {
@@ -269,6 +288,7 @@ section {
     border: 1.3px solid #c8e5ff;
 }
 
+/* Скрыть фон на контейнерах */
 .contact-section .container, .faq-list, .about-section, .site-footer .container {
     background: none !important;
     box-shadow: none !important;
@@ -287,15 +307,13 @@ section {
 }
 
 .site-footer {
-    padding: 34px 0 28px 0;
-    background: linear-gradient(90deg, #e3f0ff 0%, #e1d6ff 100%);
-    color: #4a6580;
-    text-align: center;
-    font-size: 1.09rem;
-    box-shadow: 0 -2px 24px #c2deff14;
-    border-top-left-radius: 28px;
-    border-top-right-radius: 28px;
+    background: #116a7b;
+    color: #f7f6f2;
+    border-top: 3px solid #39c1c5;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
     margin-top: 48px;
+    box-shadow: 0 -2px 16px #116a7b44;
 }
 
 .contact-link {
