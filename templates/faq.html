@@ -1,24 +1,42 @@
 <!--templates/faq.html-->
 
 {% extends "base.html" %}
+{% load static %}
 {% block bodyclass %}page-faq{% endblock %}
 {% block content %}
 <section>
     <div class="container">
         <h2>Часто задаваемые вопросы</h2>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
         <div class="faq-list">
-            <div class="faq-item">
-                <strong>Как заказать дизайн-проект?</strong>
-                <p>Выберите услугу, заполните заявку или свяжитесь с нами по контактам.</p>
-            </div>
-            <div class="faq-item">
-                <strong>В каких стилях вы работаете?</strong>
-                <p>Мы работаем со всеми современными стилями: минимализм, сканди, лофт, неоклассика и др.</p>
-            </div>
-            <div class="faq-item">
-                <strong>Сколько занимает времени создание дизайн-проекта?</strong>
-                <p>В среднем, 2-4 недели — в зависимости от объёма и сложности задачи.</p>
-            </div>
+            <details class="faq-item">
+                <summary>Как заказать дизайн-проект?</summary>
+                <p>Выберите услугу, заполните заявку или свяжитесь с нами по контактам. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            </details>
+            <details class="faq-item">
+                <summary>В каких стилях вы работаете?</summary>
+                <p>Мы работаем со всеми современными стилями: минимализм, сканди, лофт, неоклассика и др. Sed do eiusmod tempor incididunt ut labore.</p>
+            </details>
+            <details class="faq-item">
+                <summary>Сколько занимает времени создание дизайн-проекта?</summary>
+                <p>В среднем, 2-4 недели — в зависимости от объёма и сложности задачи. Ut enim ad minim veniam.</p>
+            </details>
+            <details class="faq-item">
+                <summary>Можно ли вносить правки в проект?</summary>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            </details>
+            <details class="faq-item">
+                <summary>Как проходит оплата?</summary>
+                <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            </details>
+            <details class="faq-item">
+                <summary>Работаете ли вы с коммерческими помещениями?</summary>
+                <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+            </details>
+            <details class="faq-item">
+                <summary>Предоставляете ли вы 3D-визуализации?</summary>
+                <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+            </details>
         </div>
     </div>
 </section>

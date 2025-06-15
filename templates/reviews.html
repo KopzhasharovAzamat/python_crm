@@ -1,19 +1,25 @@
 <!--templates/reviews.html-->
 
 {% extends "base.html" %}
+{% load static %}
 {% block bodyclass %}page-reviews{% endblock %}
 {% block content %}
 <section class="reviews-section">
     <div class="container">
         <h2>Отзывы наших клиентов</h2>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
         <div class="reviews-grid">
             {% for review in reviews %}
                 <div class="review-card">
                     <p>{{ review.text|linebreaksbr }}</p>
                     <h4>{% if review.client_name %}— {{ review.client_name }}{% endif %}</h4>
+                    {% if review.design %}
+                        <a href="{% url 'portfolio_detail' review.design.portfolioitem.pk %}">Посмотреть проект</a>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>
+        <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
     </div>
 </section>
 {% endblock %}

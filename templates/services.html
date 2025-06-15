@@ -1,16 +1,20 @@
 <!--template/services.html-->
 
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
 <section class="services-section">
   <div class="container">
     <h2>Наши Услуги</h2>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+    <p> Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
     {% for tariff in tariffs %}
       <div class="service-item">
         <div class="text">
           <h3>{{ tariff.name }}</h3>
           <p>{{ tariff.description }}</p>
           <p>Цена: {{ tariff.price }} сом</p>
+          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
           <a href="{% url 'order' %}" class="btn">Заказать</a>
         </div>
       </div>

@@ -1,12 +1,42 @@
 <!--templates/designers.html-->
 
 {% extends "base.html" %}
+{% load static %}
 {% block bodyclass %}page-designers{% endblock %}
 {% block content %}
 <section>
     <div class="container">
         <h2>Наша команда дизайнеров</h2>
-        <p>Вот наша команда дизайнеров.</p>
+        <p>Вот наша команда дизайнеров, которая создаёт уникальные и вдохновляющие пространства. Каждый из наших специалистов привносит в проекты свой уникальный стиль и профессиональный подход.</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+        <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+        <div class="designer-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div class="designer-card">
+                <img src="{% static 'images/designer1.jpg' %}" alt="Дизайнер 1">
+                <h4>Анна Иванова</h4>
+                <p>Специалист по минимализму и скандинавскому стилю. Более 10 лет опыта в создании уютных интерьеров. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+            </div>
+            <div class="designer-card">
+                <img src="{% static 'images/designer2.jpg' %}" alt="Дизайнер 2">
+                <h4>Максим Петров</h4>
+                <p>Эксперт в лофт-дизайне и коммерческих помещениях. Любит смелые решения и нестандартные подходы. Sed do eiusmod tempor incididunt.</p>
+            </div>
+            <div class="designer-card">
+                <img src="{% static 'images/designer3.jpg' %}" alt="Дизайнер 3">
+                <h4>Екатерина Смирнова</h4>
+                <p>Специализируется на неоклассике и арт-деко. Создаёт элегантные и изысканные пространства. Ut enim ad minim veniam.</p>
+            </div>
+            <div class="designer-card">
+                <img src="{% static 'images/designer3.jpg' %}" alt="Дизайнер 3">
+                <h4>Екатерина Смирнова</h4>
+                <p>Специализируется на неоклассике и арт-деко. Создаёт элегантные и изысканные пространства. Ut enim ad minim veniam.</p>
+            </div>
+            <div class="designer-card">
+                <img src="{% static 'images/designer3.jpg' %}" alt="Дизайнер 3">
+                <h4>Екатерина Смирнова</h4>
+                <p>Специализируется на неоклассике и арт-деко. Создаёт элегантные и изысканные пространства. Ut enim ad minim veniam.</p>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}

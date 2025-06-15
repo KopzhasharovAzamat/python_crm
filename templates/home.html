@@ -7,6 +7,8 @@
     <section class="interior-types">
         <div class="container">
             <h2>Дизайн интерьера</h2>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
             <div class="interior-options">
                 {% for category in categories %}
                     <a href="{% url 'portfolio_by_category' category.id %}" class="option-card">{{ category.name }}</a>
@@ -17,6 +19,7 @@
     <section class="portfolio-preview">
         <div class="container">
             <h2>Портфолио команды Artnova</h2>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
             <div class="portfolio-grid">
                 {% for item in portfolio_preview %}
                     <a href="{% url 'portfolio_detail' item.pk %}">
@@ -24,6 +27,7 @@
                     </a>
                 {% endfor %}
             </div>
+            <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.</p>
             <div class="see-all">
                 <a href="{% url 'portfolio' %}" class="btn">Все работы</a>
             </div>
@@ -32,14 +36,19 @@
     <section class="reviews-section">
         <div class="container">
             <h2>Отзывы наших клиентов</h2>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam.</p>
             <div class="reviews-grid">
                 {% for review in reviews %}
                     <div class="review-card">
                         <p>{{ review.text|linebreaksbr }}</p>
                         <h4>{% if review.client_name %}— {{ review.client_name }}{% endif %}</h4>
+                        {% if review.design %}
+                            <a href="{% url 'portfolio_detail' review.design.portfolioitem.pk %}">Посмотреть проект</a>
+                        {% endif %}
                     </div>
                 {% endfor %}
             </div>
+            <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium.</p>
             <div class="see-all">
                 <a href="{% url 'reviews' %}" class="btn">Читать все отзывы</a>
             </div>

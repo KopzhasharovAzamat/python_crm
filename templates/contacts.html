@@ -1,12 +1,15 @@
 <!--templates/contacts.html-->
 
 {% extends "base.html" %}
+{% load static %}
 {% block bodyclass %}page-contacts{% endblock %}
 {% block content %}
 <section class="contact-section">
     <div class="container">
         <h2>Контакты</h2>
         <p>Свяжитесь с нами любым удобным способом:</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+        <img src="{% static 'images/logo-placeholder.jpg' %}" alt="Логотип Artnova" class="contact-logo">
         <div class="contact-options">
             <a href="https://wa.me/996704121033" target="_blank" class="contact-link">
                 WhatsApp: Чолпонбек
@@ -20,6 +23,11 @@
             <a href="https://www.facebook.com/artnova.kg" target="_blank" class="contact-link">
                 Facebook: Artnova.kg
             </a>
+        </div>
+        <div class="social-icons">
+            <a href="https://wa.me/996704121033" target="_blank"><img src="{% static 'images/whatsapp-icon.png' %}" alt="WhatsApp"></a>
+            <a href="https://www.instagram.com/artnova.kg" target="_blank"><img src="{% static 'images/instagram-icon.png' %}" alt="Instagram"></a>
+            <a href="https://www.facebook.com/artnova.kg" target="_blank"><img src="{% static 'images/facebook-icon.png' %}" alt="Facebook"></a>
         </div>
     </div>
 </section>
