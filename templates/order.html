@@ -5,10 +5,53 @@
 {% block content %}
 <section class="contact-section">
   <div class="container">
-    <h2>Заказать дизайн</h2>
+    <h2 style="display:flex;align-items:center;gap:10px;">
+      <svg width="32" height="32" fill="none" style="vertical-align:middle;">
+        <circle cx="16" cy="16" r="14" fill="#a7eaff" stroke="#36b6fa" stroke-width="2"/>
+        <path d="M12 16h8m-4-4v8" stroke="#0369a1" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Заказать дизайн
+    </h2>
     <form method="post">
       {% csrf_token %}
-      {{ form.as_p }}
+      {% if form.non_field_errors %}
+        <div class="form-errors">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="form-group">
+        <label for="{{ form.category.id_for_label }}">Категория</label>
+        {{ form.category }}
+        {% if form.category.errors %}
+          <div class="form-errors">{{ form.category.errors }}</div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.style.id_for_label }}">Стиль</label>
+        {{ form.style }}
+        {% if form.style.errors %}
+          <div class="form-errors">{{ form.style.errors }}</div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.area.id_for_label }}">Площадь (м²)</label>
+        {{ form.area }}
+        {% if form.area.errors %}
+          <div class="form-errors">{{ form.area.errors }}</div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.tariff.id_for_label }}">Тариф</label>
+        {{ form.tariff }}
+        {% if form.tariff.errors %}
+          <div class="form-errors">{{ form.tariff.errors }}</div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.comment.id_for_label }}">Комментарий</label>
+        {{ form.comment }}
+        {% if form.comment.errors %}
+          <div class="form-errors">{{ form.comment.errors }}</div>
+        {% endif %}
+      </div>
       <button class="btn" type="submit">Оформить заказ</button>
     </form>
   </div>

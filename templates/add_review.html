@@ -1,13 +1,43 @@
 <!--templates/add_review.html-->
 
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
-<section>
+<section class="contact-section">
   <div class="container">
-    <h2>Оставить отзыв для "{{ design.title }}"</h2>
+    <h2 style="display:flex;align-items:center;gap:10px;">
+      <svg width="32" height="32" fill="none" style="vertical-align:middle;">
+        <circle cx="16" cy="16" r="14" fill="#a7eaff" stroke="#36b6fa" stroke-width="2"/>
+        <path d="M12 16h8m-4-4v8m-6-6h-2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2v8a2 2 0 01-2-2h-2" stroke="#0369a1" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      Оставить отзыв для "{{ design.title }}"
+    </h2>
     <form method="post">
       {% csrf_token %}
-      {{ form.as_p }}
+      {% if form.non_field_errors %}
+        <div class="form-errors">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="form-group">
+        <label for="{{ form.text.id_for_label }}">Текст отзыва</label>
+        {{ form.text }}
+        {% if form.text.errors %}
+          <div class="form-errors">{{ form.text.errors }}</div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.client_name.id_for_label }}">Имя</label>
+        {{ form.client_name }}
+        {% if form.client_name.errors %}
+          <div class="form-errors">{{ form.client_name.errors }}</div>
+        {% endif %}
+      </div>
+      <div class="form-group">
+        <label for="{{ form.city.id_for_label }}">Город</label>
+        {{ form.city }}
+        {% if form.city.errors %}
+          <div class="form-errors">{{ form.city.errors }}</div>
+        {% endif %}
+      </div>
       <button class="btn" type="submit">Оставить отзыв</button>
     </form>
   </div>
