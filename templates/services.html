@@ -15,7 +15,7 @@
           <p>{{ tariff.description }}</p>
           <p>Цена: {{ tariff.price }} сом</p>
           <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-          <a href="{% url 'order' %}" class="btn">Заказать</a>
+          <a href="{% url 'order' %}?tariff={{ tariff.id }}" class="btn">Заказать</a>
         </div>
       </div>
     {% endfor %}

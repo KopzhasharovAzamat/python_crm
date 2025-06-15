@@ -45,6 +45,14 @@ def consultation(request):
 
 @login_required
 def order(request):
+    tariff_id = request.GET.get('tariff')
+    initial_data = {}
+    if tariff_id:
+        try:
+            tariff = Tariff.objects.get(id=tariff_id)
+            initial_data['tariff'] = tariff
+        except Tariff.DoesNotExist:
+            pass
     if request.method == "POST":
         form = OrderForm(request.POST)
         if form.is_valid():
@@ -54,7 +62,7 @@ def order(request):
             messages.success(request, "Заказ успешно оформлен!")
             return redirect('home')
     else:
-        form = OrderForm()
+        form = OrderForm(initial=initial_data)
     return render(request, 'order.html', {'form': form})
 
 def signup(request):

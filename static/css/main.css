@@ -1,3 +1,4 @@
+/* Существующие стили */
 :root {
   --dark-turquoise: #116a7b;
   --turquoise: #39c1c5;
@@ -8,7 +9,7 @@
 }
 
 main {
-  flex: 1 0 auto; /* Растягивает основной контент */
+  flex: 1 0 auto;
 }
 
 body {
@@ -17,11 +18,10 @@ body {
   min-height: 100vh;
   background: linear-gradient(120deg, var(--turquoise) 0%, var(--milk-dark) 100%);
   color: var(--text-main);
-    display: flex;
+  display: flex;
   flex-direction: column;
 }
 
-/* Увеличение хедера */
 .site-header {
   position: sticky;
   top: 0;
@@ -32,7 +32,7 @@ body {
   border-radius: 0 0 28px 28px;
   box-shadow: 0 8px 40px var(--shadow-main);
   transition: box-shadow 0.3s, background 0.4s;
-  padding: 12px 0; /* Добавлено для увеличения высоты */
+  padding: 12px 0;
 }
 
 .site-header .container {
@@ -41,6 +41,7 @@ body {
   align-items: center;
   background: none;
 }
+
 .logo {
   display: flex;
   justify-content: center;
@@ -48,6 +49,7 @@ body {
   text-align: center;
   margin: 0 auto 12px auto;
 }
+
 .logo a {
   font-family: 'Pacifico', cursive;
   font-size: 2.5rem;
@@ -58,6 +60,7 @@ body {
   margin: 0;
   transition: color 0.22s;
 }
+
 .logo a:hover {
   color: var(--turquoise) !important;
   text-shadow: 0 3px 12px #5ef0f577;
@@ -71,6 +74,7 @@ body {
   justify-content: center;
   gap: 34px;
 }
+
 .main-nav a:not(.login-btn):not(.logout-btn):not(.admin-btn):not(.konsultashka-btn) {
   text-decoration: none;
   color: var(--milk);
@@ -99,6 +103,7 @@ body {
   font-size: 15px;
   z-index: 15;
 }
+
 .language-switch .lang {
   background: none;
   border: none;
@@ -110,6 +115,7 @@ body {
   border-radius: 4px;
   transition: color 0.17s, background 0.16s;
 }
+
 .language-switch .active,
 .language-switch .lang:hover {
   color: var(--dark-turquoise);
@@ -127,7 +133,6 @@ section {
   margin-bottom: 54px;
 }
 
-/* Универсальная секция */
 .interior-types, .portfolio-preview, .reviews-section, .services-section, .contact-section {
   padding: 46px 0 30px 0;
   background: linear-gradient(100deg, var(--milk) 75%, var(--milk-dark) 100%);
@@ -137,7 +142,6 @@ section {
   border: 2px solid var(--turquoise);
 }
 
-/* Карточки/опции */
 .option-card {
   min-width: 172px;
   padding: 22px 36px;
@@ -153,6 +157,7 @@ section {
   margin: 8px 0;
   display: block;
 }
+
 .option-card:hover, .option-card.active {
   background: var(--turquoise);
   color: var(--milk);
@@ -160,7 +165,6 @@ section {
   transform: scale(1.05) translateY(-2px);
 }
 
-/* Кнопки */
 .btn {
   background: linear-gradient(90deg, var(--dark-turquoise) 0%, var(--turquoise) 100%);
   color: #fff !important;
@@ -173,6 +177,7 @@ section {
   margin-top: 6px;
   transition: background 0.19s, color 0.14s, box-shadow 0.13s, transform 0.12s;
 }
+
 .btn:hover {
   background: linear-gradient(90deg, var(--turquoise) 0%, var(--dark-turquoise) 100%);
   color: #fff !important;
@@ -187,19 +192,18 @@ h2, h3, h4 {
   margin-bottom: 17px;
 }
 
-/* Грид и картинки для портфолио */
+/* Уменьшение карточек и увеличение расстояния */
 .portfolio-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* Уменьшен минимальный размер */
+  gap: 40px; /* Увеличен зазор */
   margin-top: 30px;
 }
+
 .portfolio-grid img,
-.portfolio-preview img,
-.portfolio-detail img,
-.portfolio-detail-gallery img {
-  width: 320px;
-  height: 210px;
+.portfolio-preview img {
+  width: 280px; /* Уменьшен размер */
+  height: 180px; /* Уменьшен размер */
   object-fit: cover;
   border-radius: 16px;
   display: block;
@@ -209,16 +213,90 @@ h2, h3, h4 {
   background: var(--milk-dark);
 }
 
-/* Карточка отзыва */
+/* Стили для модального окна увеличения изображения */
+.portfolio-detail img,
+.portfolio-detail-gallery img {
+  width: 280px; /* Уменьшен размер для согласованности */
+  height: 180px; /* Уменьшен размер для согласованности */
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+  margin: 0 auto 20px; /* Добавлен нижний отступ */
+  box-shadow: 0 4px 18px var(--shadow-main);
+  border: 2px solid var(--turquoise);
+  background: var(--milk-dark);
+  cursor: pointer; /* Указывает на возможность клика */
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal img {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 16px;
+  border: 2px solid var(--turquoise);
+}
+
+.modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: var(--milk);
+  font-size: 2rem;
+  cursor: pointer;
+}
+
+/* Расстояние между элементами в portfolio_detail */
+.reviews-section {
+  margin-top: 40px; /* Увеличен отступ сверху */
+}
+
 .review-card {
   background: var(--milk);
   padding: 20px 24px;
   border-radius: 16px;
   box-shadow: 0 2px 16px var(--shadow-main);
   border: 1.5px solid var(--turquoise);
-  margin-bottom: 12px;
+  margin-bottom: 20px; /* Увеличен отступ снизу */
   font-size: 1.04rem;
   color: var(--text-main);
+  position: relative;
+  padding-bottom: 40px;
+}
+
+.review-card a {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  color: var(--turquoise);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.review-card a:hover {
+  color: var(--dark-turquoise);
+  text-decoration: underline;
+}
+
+.review-card p {
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.reviews-section .btn {
+  margin-top: 20px; /* Увеличен отступ сверху для кнопки */
 }
 
 .service-item {
@@ -238,22 +316,23 @@ h2, h3, h4 {
   transition: color 0.14s, text-shadow 0.13s;
   margin-right: 12px;
 }
+
 .contact-link:hover {
   color: var(--turquoise);
   text-shadow: 0 1px 8px var(--shadow-main);
   text-decoration: underline;
 }
 
-/* Форма, инпуты */
 form {
   background: linear-gradient(115deg, #fff 60%, var(--milk-dark) 100%);
   border-radius: 18px;
   box-shadow: 0 3px 16px var(--shadow-main);
   padding: 22px 20px 14px 20px;
   max-width: 420px;
-  margin: 0 auto;
+  margin: 40px auto; /* Увеличен верхний отступ для формы */
   border: 2px solid var(--turquoise);
 }
+
 input[type="text"], input[type="number"], input[type="email"], textarea, select {
   border-radius: 10px;
   border: 1.7px solid var(--turquoise);
@@ -267,12 +346,12 @@ input[type="text"], input[type="number"], input[type="email"], textarea, select 
   transition: border 0.14s, box-shadow 0.14s;
   font-family: inherit;
 }
+
 input:focus, textarea:focus, select:focus {
   border: 1.7px solid var(--dark-turquoise);
   box-shadow: 0 0 0 4px #116a7b22;
 }
 
-/* Алерт */
 .alert {
   background: linear-gradient(92deg, var(--milk) 0%, var(--milk-dark) 100%);
   border-radius: 9px;
@@ -287,9 +366,8 @@ input:focus, textarea:focus, select:focus {
   font-size: 1.07rem;
 }
 
-/* Footer */
 .site-footer {
-  flex-shrink: 0; /* Предотвращает сжатие футера */
+  flex-shrink: 0;
   background: var(--dark-turquoise);
   color: var(--milk);
   border-top: 3px solid var(--turquoise);
@@ -305,25 +383,27 @@ input:focus, textarea:focus, select:focus {
   .container { max-width: 99%; }
   .main-nav ul { flex-direction: column; gap: 10px; }
   .site-header { border-radius: 0 0 14px 14px; }
-  .portfolio-grid { grid-template-columns: 1fr; gap: 16px;}
+  .portfolio-grid { grid-template-columns: 1fr; gap: 20px; }
   .review-card, .service-item { padding: 12px 7px; border-radius: 8px; }
 }
+
 @media (max-width: 480px) {
-  .site-header, .site-footer, .interior-types, .portfolio-preview, .reviews-section, .services-section { border-radius: 0; }
-  .header-actions { position: static; margin-bottom: 6px;}
-  .main-nav ul { flex-direction: column; gap: 6px;}
-  .portfolio-grid { grid-template-columns: 1fr; gap: 8px;}
+  .site-header, .site-footer, .interior-types, .portfolio-preview, .reviews-section, .services-section {
+    border-radius: 0;
+  }
+  .header-actions { position: static; margin-bottom: 6px; }
+  .main-nav ul { flex-direction: column; gap: 6px; }
+  .portfolio-grid { grid-template-columns: 1fr; gap: 12px; }
 }
 
-/* Упрощенные стили для кнопок консульташки, логина и логаута */
 .konsultashka-btn {
   position: fixed;
   top: 18px;
   left: 18px;
   z-index: 10000;
-  font-size: 1.2rem; /* Чуть больше */
-  padding: 12px 28px; /* Чуть больше */
-  background: var(--turquoise); /* Цвет из палитры */
+  font-size: 1.2rem;
+  padding: 12px 28px;
+  background: var(--turquoise);
   color: var(--milk);
   font-weight: 600;
   border-radius: 12px;
@@ -332,6 +412,7 @@ input:focus, textarea:focus, select:focus {
   display: inline-block;
   transition: background 0.2s, transform 0.2s;
 }
+
 .konsultashka-btn:hover {
   background: var(--dark-turquoise);
   transform: scale(1.05);
@@ -342,8 +423,8 @@ input:focus, textarea:focus, select:focus {
   color: var(--milk);
   border-radius: 12px;
   font-weight: 600;
-  font-size: 1.15rem; /* Чуть больше */
-  padding: 10px 20px; /* Чуть больше */
+  font-size: 1.15rem;
+  padding: 10px 20px;
   border: none;
   margin-left: 4px;
   text-decoration: none;
@@ -352,11 +433,11 @@ input:focus, textarea:focus, select:focus {
   align-items: center;
   gap: 8px;
 }
+
 .login-btn:hover, .logout-btn:hover {
   background: var(--dark-turquoise);
   transform: scale(1.05);
 }
-
 
 .admin-btn {
   background: #e53935;
@@ -371,6 +452,7 @@ input:focus, textarea:focus, select:focus {
   transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.12s;
   margin-left: 5px;
 }
+
 .admin-btn:hover {
   background: #b71c1c;
   color: #fff;
@@ -378,26 +460,23 @@ input:focus, textarea:focus, select:focus {
   transform: scale(1.07);
 }
 
-
-/* Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   background: var(--milk-dark);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--turquoise);
   border-radius: 6px;
 }
 
-/* SERVICES */
 .services-section h3 {
-  font-size: 1.5rem; /* Увеличен размер шрифта */
-  font-weight: 800; /* Более выразительный шрифт */
+  font-size: 1.5rem;
+  font-weight: 800;
   color: var(--dark-turquoise);
-  letter-spacing: 0.02em; /* Легкое увеличение межбуквенного интервала */
+  letter-spacing: 0.02em;
 }
 
-/* DESIGNERS */
 .designer-card {
   display: flex;
   flex-direction: column;
@@ -410,10 +489,12 @@ input:focus, textarea:focus, select:focus {
   border: 1.5px solid var(--turquoise);
   transition: transform 0.2s, box-shadow 0.2s;
 }
+
 .designer-card:hover {
   transform: scale(1.03);
   box-shadow: 0 6px 20px var(--shadow-main);
 }
+
 .designer-card img {
   width: 150px;
   height: 150px;
@@ -422,17 +503,18 @@ input:focus, textarea:focus, select:focus {
   margin-bottom: 12px;
   border: 2px solid var(--turquoise);
 }
+
 .designer-card h4 {
   font-size: 1.2rem;
   margin: 8px 0;
 }
+
 .designer-card p {
   font-size: 1rem;
   text-align: center;
   color: var(--text-main);
 }
 
-/* FAQ */
 .faq-item {
   margin-bottom: 12px;
   border: 1.5px solid var(--turquoise);
@@ -440,6 +522,7 @@ input:focus, textarea:focus, select:focus {
   background: var(--milk);
   overflow: hidden;
 }
+
 .faq-item summary {
   padding: 12px 16px;
   font-weight: 600;
@@ -449,14 +532,17 @@ input:focus, textarea:focus, select:focus {
   justify-content: space-between;
   align-items: center;
 }
+
 .faq-item summary::after {
   content: '▼';
   font-size: 0.9rem;
   transition: transform 0.3s;
 }
+
 .faq-item[open] summary::after {
   transform: rotate(180deg);
 }
+
 .faq-item p {
   padding: 0 16px 12px;
   margin: 0;
@@ -464,7 +550,6 @@ input:focus, textarea:focus, select:focus {
   font-size: 1rem;
 }
 
-/* CONTACTS */
 .contact-logo {
   width: 200px;
   height: auto;
@@ -473,43 +558,24 @@ input:focus, textarea:focus, select:focus {
   border-radius: 12px;
   border: 2px solid var(--turquoise);
 }
+
 .social-icons {
   display: flex;
   gap: 16px;
   justify-content: center;
   margin-top: 20px;
 }
+
 .social-icons a {
   display: inline-block;
 }
+
 .social-icons img {
   width: 32px;
   height: 32px;
   transition: transform 0.2s;
 }
+
 .social-icons img:hover {
   transform: scale(1.1);
-}
-
-/* REVIEWS */
-.review-card {
-  position: relative;
-  padding-bottom: 40px; /* Место для ссылки */
-}
-.review-card a {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  color: var(--turquoise);
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-decoration: none;
-}
-.review-card a:hover {
-  color: var(--dark-turquoise);
-  text-decoration: underline;
-}
-.review-card p {
-  font-style: italic; /* Более интересный вид текста */
-  line-height: 1.5;
 }
